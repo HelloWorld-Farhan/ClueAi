@@ -1,7 +1,7 @@
 # 🕵️‍♂️ ClueAI - The Ultimate AI Interview Assistant
 
 <p align="center">
-  <img src="public/logo.png" width="120" style="border-radius: 20px;" alt="ClueAI Logo" />
+  <img src="public/logo_rounded.svg" width="120" alt="ClueAI Logo" />
 </p>
 
 <p align="center">
