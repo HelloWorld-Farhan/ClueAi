@@ -56,7 +56,6 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
     formData.append('temperature', '0'); // Force deterministic output to reduce hallucinations
-    formData.append('condition_on_previous_text', 'false'); // Prevents repetition loops in Whisper
     // formData.append('language', 'en'); // Remove hardcoded English so it auto-detects Hindi/etc.
     
     // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
