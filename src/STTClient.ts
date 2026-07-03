@@ -55,6 +55,8 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
+    formData.append('temperature', '0'); // Force deterministic output to reduce hallucinations
+    formData.append('condition_on_previous_text', 'false'); // Prevents repetition loops in Whisper
     // formData.append('language', 'en'); // Remove hardcoded English so it auto-detects Hindi/etc.
     
     // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
@@ -82,7 +84,24 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     }
 
     const data = await res.json();
-    return data.text || '';
+    let text = data.text || '';
+    
+    // Whisper Hallucination Filter: Whisper often hallucinates these exact phrases on silent audio
+    const lowerText = text.toLowerCase().trim();
+    if (
+      lowerText === 'thank you.' || 
+      lowerText === 'thank you' ||
+      lowerText === 'subtitle' ||
+      lowerText.includes('sampath chitluri') ||
+      lowerText.includes('amara.org') ||
+      lowerText.includes('subtitles by') ||
+      lowerText.includes('edited by') ||
+      lowerText === 'you'
+    ) {
+      return '';
+    }
+
+    return text;
   } catch (error: any) {
     console.error('Transcription error:', error);
     return `ERR: ${error.message || error}`;
