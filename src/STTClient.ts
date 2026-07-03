@@ -56,7 +56,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
     formData.append('temperature', '0'); // Force deterministic output to reduce hallucinations
-    // formData.append('language', 'en'); // Remove hardcoded English so it auto-detects Hindi/etc.
+    formData.append('language', 'en'); // Force English output (this automatically translates Hindi to English on short clips reliably!)
     
     // Prompt injection removed to improve transcription accuracy on short audio chunks.
     // formData.append('prompt', '');
@@ -64,7 +64,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const apiKey = groqApiKeys[currentGroqIndex];
     currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
 
-    const res = await fetch('https://api.groq.com/openai/v1/audio/translations', {
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey.trim()}`
@@ -89,8 +89,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
       lowerText.includes('sampath chitluri') ||
       lowerText.includes('amara.org') ||
       lowerText.includes('subtitles by') ||
-      lowerText.includes('edited by') ||
-      lowerText === 'you'
+      lowerText.includes('edited by')
     ) {
       return '';
     }
