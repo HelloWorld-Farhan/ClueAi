@@ -1,0 +1,223 @@
+const { app, BrowserWindow, ipcMain, desktopCapturer, session, screen } = require('electron');
+const path = require('path');
+
+let mainWindow;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1100,
+    height: 750,
+    center: true,
+    transparent: true,
+    frame: false,
+    backgroundColor: '#00000000',
+    skipTaskbar: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  // Stealth Mode: Hide window from screen sharing software
+  mainWindow.setContentProtection(true);
+
+  ipcMain.handle('set-stealth', (event, enable) => {
+    if (mainWindow) {
+      mainWindow.setContentProtection(enable);
+    }
+  });
+
+  ipcMain.on('toggle-fullscreen', () => {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+      mainWindow.setSize(1000, 600);
+      mainWindow.center();
+    } else {
+      mainWindow.maximize();
+    }
+  });
+
+  // Handle get-desktop-sources IPC
+  ipcMain.handle('get-desktop-sources', async () => {
+    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      display_id: source.display_id,
+    }));
+  });
+
+  const fs = require('fs');
+  const pdfParse = require('pdf-parse');
+
+  ipcMain.handle('parse-pdf', async (event, filePath) => {
+    try {
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdfParse(dataBuffer);
+      return data.text;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('parse-pdf-buffer', async (event, arrayBuffer) => {
+    try {
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Handle different versions of pdf-parse exports (v1.x function vs v2.x class)
+      if (typeof pdfParse === 'function') {
+        const data = await pdfParse(Buffer.from(arrayBuffer));
+        return data.text;
+      } else if (pdfParse.default && typeof pdfParse.default === 'function') {
+        const data = await pdfParse.default(Buffer.from(arrayBuffer));
+        return data.text;
+      } else if (pdfParse.PDFParse) {
+        const parser = new pdfParse.PDFParse(uint8Array);
+        await parser.load();
+        const data = await parser.getText();
+        return data.text;
+      } else {
+        throw new Error('Could not identify pdf-parse API.');
+      }
+    } catch (err) {
+      console.error('PDF Parse Error:', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('set-opacity', (event, opacity) => {
+    if (mainWindow) {
+      mainWindow.setOpacity(opacity);
+    }
+  });
+
+  ipcMain.handle('set-layout', (event, layout) => {
+    if (mainWindow) {
+      if (layout === 'horizontal') {
+        mainWindow.setSize(1000, 450);
+      } else {
+        mainWindow.setSize(450, 700);
+      }
+    }
+  });
+
+  ipcMain.handle('minimize-window', () => {
+    if (mainWindow) {
+      mainWindow.minimize();
+    }
+  });
+
+  let snipWindow = null;
+
+  ipcMain.handle('start-snipping', async (event, sourceId) => {
+    try {
+      if (snipWindow) return; // Already snipping
+      
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.size;
+      
+      // Capture a static frame of the screen safely
+      const sources = await desktopCapturer.getSources({ 
+        types: ['screen'], 
+        thumbnailSize: { width: width, height: height } 
+      });
+      
+      // Find the specific source or just use the first screen
+      let targetSource = sources.find(s => s.id === sourceId) || sources[0];
+      if (!targetSource) return null;
+      
+      const base64Image = targetSource.thumbnail.toDataURL();
+      
+      snipWindow = new BrowserWindow({
+        width: width,
+        height: height,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        enableLargerThanScreen: true,
+        webPreferences: {
+          nodeIntegration: true,
+          contextIsolation: false
+        }
+      });
+      
+      snipWindow.setFullScreen(true);
+      snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
+      
+      snipWindow.webContents.once('did-finish-load', () => {
+        snipWindow.webContents.send('snip-image', base64Image);
+      });
+      
+      return new Promise((resolve) => {
+        ipcMain.once('snip-complete', (e, croppedDataUrl) => {
+          if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          resolve(croppedDataUrl);
+        });
+        
+        ipcMain.once('snip-cancel', () => {
+          if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          resolve(null);
+        });
+        
+        snipWindow.on('closed', () => {
+          snipWindow = null;
+          resolve(null);
+        });
+      });
+      
+    } catch (err) {
+      console.error('Snipping error:', err);
+      if (snipWindow) { snipWindow.close(); snipWindow = null; }
+      return null;
+    }
+  });
+
+  // Automatically allow media access
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
+  // In production, load the built index.html. In dev, load Vite's dev server.
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  } else {
+    mainWindow.loadURL('http://localhost:5173');
+  }
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  
+  const { globalShortcut } = require('electron');
+  globalShortcut.register('CommandOrControl+Shift+K', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+});
+
+app.on('will-quit', () => {
+  const { globalShortcut } = require('electron');
+  globalShortcut.unregisterAll();
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
