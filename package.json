@@ -24,7 +24,7 @@
       "target": [
         "portable"
       ],
-      "icon": "public/logo.png"
+      "icon": "public/icon.ico"
     },
     "files": [
       "dist/**/*",
@@ -50,7 +50,9 @@
     "cross-env": "^7.0.3",
     "electron": "^31.1.0",
     "electron-builder": "^24.13.3",
+    "jimp": "^1.6.1",
     "oxlint": "^1.71.0",
+    "png-to-ico": "^3.0.1",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
     "typescript": "~6.0.2",
