@@ -55,11 +55,15 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
-    formData.append('temperature', '0'); // Force deterministic output to reduce hallucinations
     formData.append('language', 'en'); // Force English output (this automatically translates Hindi to English on short clips reliably!)
     
-    // Prompt injection removed to improve transcription accuracy on short audio chunks.
-    // formData.append('prompt', '');
+    // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
+    const techJargon = "SAP, Fiori, ABAP, OData, AWS, Azure, GCP, React, Node.js, Python, Java, SQL, API, CI/CD, Agile, Developer, Consultant.";
+    let promptContext = `${interviewTitle ? interviewTitle + ', ' : ''}${techJargon} Technical job interview transcript. High accuracy.`;
+    if (resumeText) promptContext += ` Context: ${resumeText.slice(0, 500)}`;
+    if (personalContext) promptContext += ` Personal Info: ${personalContext.slice(0, 300)}`;
+    
+    formData.append('prompt', promptContext);
 
     const apiKey = groqApiKeys[currentGroqIndex];
     currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
