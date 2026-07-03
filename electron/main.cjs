@@ -5,8 +5,8 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 750,
+    width: 1000,
+    height: 600,
     center: true,
     transparent: true,
     frame: false,
@@ -95,9 +95,9 @@ function createWindow() {
   ipcMain.handle('set-layout', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 450);
+        mainWindow.setSize(1000, 600);
       } else {
-        mainWindow.setSize(450, 700);
+        mainWindow.setSize(450, 850);
       }
     }
   });

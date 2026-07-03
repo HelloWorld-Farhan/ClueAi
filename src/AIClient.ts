@@ -74,7 +74,12 @@ CRITICAL EXPERTISE RULE: YOU ARE AN ABSOLUTE EXPERT. NEVER say you are "not fami
 CRITICAL INSTRUCTION: If context is provided below, use it ONLY if the interviewer asks personal questions like "tell me about yourself", "what is your experience", or questions explicitly about your background. If they ask a general or technical question, just answer the technical question directly.
 When asked about yourself, ACT AS THIS PERSON. Use the specific name, education, tools, and past projects from the context. Do NOT give a meta-answer.${contextPrompt}`;
 
-    let userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
+    let userPrompt = '';
+    if (imageBase64) {
+      userPrompt = `Here is a screenshot related to the interview (it could be a coding question, a diagram, or a prompt). Based on this image and the interview transcript so far, please provide the perfect answer or solution.\n\nInterview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
+    } else {
+      userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
+    }
 
     if (currentProvider === 'groq' && groqClients.length > 0) {
       const client = groqClients[currentGroqIndex];
@@ -99,12 +104,47 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
 
-      const stream = await client.chat.completions.create({
-        model: imageBase64 ? 'llama-3.2-11b-vision-preview' : 'llama-3.1-8b-instant',
-        messages,
-        stream: true,
-        temperature: 0.5,
-      });
+      let stream: any = null;
+      
+      if (imageBase64) {
+        const visionModels = [
+          'llama-3.2-11b-vision-preview',
+          'llama-3.2-90b-vision-preview',
+          'llama-3.2-11b-vision-instruct',
+          'llama-3.2-90b-vision-instruct',
+          'llama-3.2-11b-vision',
+          'llama-3.2-90b-vision',
+          'llama-4-scout-17b-16e-instruct',
+          'meta-llama/llama-4-scout-17b-16e-instruct'
+        ];
+        
+        let lastError = null;
+        for (const modelName of visionModels) {
+          try {
+            stream = await client.chat.completions.create({
+              model: modelName,
+              messages,
+              stream: true,
+              temperature: 0.5,
+            });
+            console.log("Successfully connected to Groq vision model:", modelName);
+            break;
+          } catch (err: any) {
+            lastError = err;
+            console.warn(`Groq vision model ${modelName} failed or decommissioned. Trying next...`);
+          }
+        }
+        if (!stream) {
+          throw new Error(`All Groq vision models failed. Last error: ${lastError?.message}`);
+        }
+      } else {
+        stream = await client.chat.completions.create({
+          model: 'llama-3.1-8b-instant',
+          messages,
+          stream: true,
+          temperature: 0.5,
+        });
+      }
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
