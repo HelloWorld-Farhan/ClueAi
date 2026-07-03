@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop } from 'lucide-react';
+import { Play, Square, Mic, Upload, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
 const { ipcRenderer, shell } = window.require('electron');
 
 function App() {
-  const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
+  const [provider, setProvider] = useState<'groq' | 'gemini'>((localStorage.getItem('active_provider') as 'groq' | 'gemini') || 'groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
     try { 
       const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]'); 
@@ -47,8 +47,8 @@ function App() {
   }, []);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [aiAnswer, setAiAnswer] = useState('');
+  const [transcript, setTranscript] = useState(localStorage.getItem('current_transcript') || '');
+  const [aiAnswer, setAiAnswer] = useState(localStorage.getItem('current_ai_answer') || '');
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [stealthMode, setStealthMode] = useState(true);
@@ -153,6 +153,30 @@ function App() {
   useEffect(() => {
     localStorage.setItem('interview_title', interviewTitle);
   }, [interviewTitle]);
+  
+  useEffect(() => {
+    localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
+    initAIClient(provider, groqKeys, geminiKeys);
+    setSTTApiKey(groqKeys.filter(k => k.trim()));
+  }, [groqKeys]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
+    initAIClient(provider, groqKeys, geminiKeys);
+  }, [geminiKeys]);
+
+  useEffect(() => {
+    localStorage.setItem('active_provider', provider);
+    initAIClient(provider, groqKeys, geminiKeys);
+  }, [provider]);
+
+  useEffect(() => {
+    localStorage.setItem('current_transcript', transcript);
+  }, [transcript]);
+
+  useEffect(() => {
+    localStorage.setItem('current_ai_answer', aiAnswer);
+  }, [aiAnswer]);
   
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -570,7 +594,7 @@ ${divider}`;
       {showSplash && (
         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#09090b] transition-opacity duration-500 ease-in-out ${isSplashFading ? 'opacity-0' : 'opacity-100'}`} style={{ WebkitAppRegion: 'drag' } as any}>
           <div className="flex flex-col items-center justify-center relative">
-            <Cpu size={42} className="text-white/80 relative z-10" strokeWidth={1.5} />
+            <img src="./logo.png" alt="ClueAI Logo" className="w-16 h-16 relative z-10 object-cover rounded-2xl drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] overflow-hidden" />
             
             <h1 className="mt-6 text-xl font-medium tracking-[0.2em] text-white/90 uppercase animate-in fade-in duration-1000 delay-300 fill-mode-both">
               ClueAI
@@ -599,7 +623,7 @@ ${divider}`;
             <Move size={16} />
           </div>
           <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent">
-            <img src="/logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
+            <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-xl shadow-sm border border-brand-accent/20 overflow-hidden" /> ClueAI
           </h1>
         </div>
         
@@ -731,7 +755,7 @@ ${divider}`;
             {/* API Keys Configuration */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><Cpu size={16}/> API Keys</h3>
+                <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded-sm overflow-hidden" /> API Keys</h3>
                 <div className="flex items-center gap-3">
                   {saveMessage && <span className="text-green-400 text-xs font-bold animate-in fade-in">{saveMessage}</span>}
                   <button onClick={saveApiKeys} className="flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accentSec text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_0_10px_rgba(6,182,212,0.3)]">
@@ -1187,7 +1211,7 @@ ${divider}`;
             }}
           >
             <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md">
-              <Cpu size={14} className="text-fuchsia-400 drop-shadow-md" /> 
+              <img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded-sm drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] overflow-hidden" />
               AI Output
               {activeAIInfo && (
                 <span className="ml-2 px-2 py-0.5 bg-fuchsia-500/20 text-fuchsia-300 rounded-md text-[10px] uppercase tracking-wider border border-fuchsia-500/30">

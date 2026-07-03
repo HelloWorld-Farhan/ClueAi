@@ -16,14 +16,15 @@
   "build": {
     "appId": "com.clueai.app",
     "productName": "ClueAI",
-    "artifactName": "ClueAiV2.exe",
+    "artifactName": "ClueAI.exe",
     "directories": {
       "output": "release"
     },
     "win": {
       "target": [
         "portable"
-      ]
+      ],
+      "icon": "public/logo.png"
     },
     "files": [
       "dist/**/*",
