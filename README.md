@@ -1,6 +1,10 @@
 # 🕵️‍♂️ ClueAI - The Ultimate AI Interview Assistant
 
 <p align="center">
+  <img src="public/logo.png" width="120" style="border-radius: 20px;" alt="ClueAI Logo" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"/>
   <img src="https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white"/>
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white"/>
