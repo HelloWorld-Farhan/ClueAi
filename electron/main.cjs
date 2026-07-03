@@ -183,6 +183,12 @@ function createWindow() {
       callback(false);
     }
   });
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    if (permission === 'media') {
+      return true;
+    }
+    return false;
+  });
 
   // In production, load the built index.html. In dev, load Vite's dev server.
   if (app.isPackaged) {
