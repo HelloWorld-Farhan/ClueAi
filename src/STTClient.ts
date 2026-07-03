@@ -55,7 +55,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
-    formData.append('language', 'en'); // Force English output (this automatically translates Hindi to English on short clips reliably!)
+    // The translations endpoint automatically detects the spoken language (Hindi, etc.) and accurately translates it into English!
     
     // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
     const techJargon = "SAP, Fiori, ABAP, OData, AWS, Azure, GCP, React, Node.js, Python, Java, SQL, API, CI/CD, Agile, Developer, Consultant.";
@@ -68,7 +68,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const apiKey = groqApiKeys[currentGroqIndex];
     currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
 
-    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    const res = await fetch('https://api.groq.com/openai/v1/audio/translations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey.trim()}`
@@ -83,8 +83,9 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
 
     const data = await res.json();
     let text = data.text || '';
+    console.log('[STTClient] Raw Groq output:', JSON.stringify(data));
     
-    // Whisper Hallucination Filter: Whisper often hallucinates these exact phrases on silent audio
+    // Whisper Hallucination Filter for silence artifacts
     const lowerText = text.toLowerCase().trim();
     if (
       lowerText === 'thank you.' || 
@@ -93,8 +94,11 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
       lowerText.includes('sampath chitluri') ||
       lowerText.includes('amara.org') ||
       lowerText.includes('subtitles by') ||
-      lowerText.includes('edited by')
+      lowerText.includes('edited by') ||
+      lowerText === 'piicl' ||
+      lowerText === 'piicl.'
     ) {
+      console.log('[STTClient] Blocked hallucination:', text);
       return '';
     }
 

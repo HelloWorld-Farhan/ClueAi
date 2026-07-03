@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
 const { ipcRenderer, shell } = window.require('electron');
 
 function App() {
-  const [provider, setProvider] = useState<'groq' | 'gemini'>((localStorage.getItem('active_provider') as 'groq' | 'gemini') || 'groq');
+  const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
     try { 
       const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]'); 
@@ -26,33 +26,12 @@ function App() {
   const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-
-  const [showSplash, setShowSplash] = useState(true);
-  const [isSplashFading, setIsSplashFading] = useState(false);
-
-  useEffect(() => {
-    // Splash screen timer
-    const timer1 = setTimeout(() => {
-      setIsSplashFading(true);
-    }, 2000); // Start fade out at 2s
-    
-    const timer2 = setTimeout(() => {
-      setShowSplash(false);
-    }, 2500); // Completely hide at 2.5s
-    
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, []);
-
   const [showSettings, setShowSettings] = useState(false);
-  const [transcript, setTranscript] = useState(localStorage.getItem('current_transcript') || '');
-  const [aiAnswer, setAiAnswer] = useState(localStorage.getItem('current_ai_answer') || '');
+  const [transcript, setTranscript] = useState('');
+  const [aiAnswer, setAiAnswer] = useState('');
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [stealthMode, setStealthMode] = useState(true);
-  const [snipImage, setSnipImage] = useState<string | null>(null);
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -83,13 +62,12 @@ function App() {
   const [copiedAnswer, setCopiedAnswer] = useState(false);
   
   // Session History
-  const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string, snips?: string[]}[]>(() => {
+  const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('sessions') || '[]'); } catch { return []; }
   });
   const [showSessionPrompt, setShowSessionPrompt] = useState(false);
   const [sessionNameInput, setSessionNameInput] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState('');
-  const [activeSnips, setActiveSnips] = useState<string[]>([]);
   
   const [sessionLog, setSessionLog] = useState('');
   const [interviewTitle, setInterviewTitle] = useState(localStorage.getItem('interview_title') || '');
@@ -153,30 +131,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem('interview_title', interviewTitle);
   }, [interviewTitle]);
-  
-  useEffect(() => {
-    localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
-    initAIClient(provider, groqKeys, geminiKeys);
-    setSTTApiKey(groqKeys.filter(k => k.trim()));
-  }, [groqKeys]);
-
-  useEffect(() => {
-    localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
-    initAIClient(provider, groqKeys, geminiKeys);
-  }, [geminiKeys]);
-
-  useEffect(() => {
-    localStorage.setItem('active_provider', provider);
-    initAIClient(provider, groqKeys, geminiKeys);
-  }, [provider]);
-
-  useEffect(() => {
-    localStorage.setItem('current_transcript', transcript);
-  }, [transcript]);
-
-  useEffect(() => {
-    localStorage.setItem('current_ai_answer', aiAnswer);
-  }, [aiAnswer]);
   
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -290,12 +244,10 @@ function App() {
          const existing = sessions.find(s => s.id === currentSessionId);
          if (existing) {
              setSessionLog(existing.transcript + `\n\n--- RESUMED ON ${new Date().toLocaleDateString()} AT ${new Date().toLocaleTimeString()} ---\n\n`);
-             setActiveSnips(existing.snips || []);
          }
       } else {
          setSessionLog('');
          setCurrentSessionId(Date.now().toString());
-         setActiveSnips([]);
       }
 
       setShowSessionPrompt(false);
@@ -303,7 +255,6 @@ function App() {
     } else if (!currentSessionId) {
       setCurrentSessionId(Date.now().toString());
       setSessionLog('');
-      setActiveSnips([]);
     }
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
@@ -425,7 +376,18 @@ function App() {
         if (Math.abs(currentAudio[i]) > maxVal) maxVal = Math.abs(currentAudio[i]);
       }
       
+      console.log(`[App.tsx] Audio chunk max volume: ${maxVal.toFixed(4)}`);
+      
+      // Prevent sending pure silence/static to Whisper, which causes extreme hallucinations like "Tell me about yourself" or "PiiCL"
+      if (maxVal < 0.01) {
+        console.log(`[App.tsx] Ignored chunk because volume ${maxVal.toFixed(4)} < 0.01 threshold`);
+        isProcessingRef.current = false;
+        return;
+      }
+      
+      console.log(`[App.tsx] Sending chunk to STT...`);
       const text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
+      console.log(`[App.tsx] Received text from STT: "${text}"`);
       
       if (text && text.startsWith('ERR:')) {
          console.error('Error during transcription');
@@ -477,8 +439,6 @@ function App() {
     
     setIsGenerating(true);
     setAiAnswer('');
-    setSnipImage(base64Img);
-    setActiveSnips(prev => [...prev, base64Img]);
     
     await getInterviewAnswer(
       transcript, 
@@ -493,9 +453,6 @@ function App() {
       },
       (info) => {
         setActiveAIInfo(info);
-        if (activeAITimeoutRef.current) clearTimeout(activeAITimeoutRef.current);
-        activeAITimeoutRef.current = setTimeout(() => setActiveAIInfo(null), 5000);
-        setSnipImage(null); // Hide from transcript when done
       }
     );
     
@@ -518,15 +475,14 @@ function App() {
       finalLog += `\n\n--- QUESTION ---\n${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`;
     }
 
-    if (finalLog.trim() || activeSnips.length > 0) {
+    if (finalLog.trim()) {
       const newSession = {
         id: currentSessionId || Date.now().toString(),
         name: sessionNameInput || 'Untitled Session',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString(),
         transcript: finalLog.trim(),
-        aiAnswer: '',
-        snips: activeSnips
+        aiAnswer: '' 
       };
       setSessions(prev => [newSession, ...prev.filter(s => s.id !== newSession.id)]);
     }
@@ -589,31 +545,10 @@ ${divider}`;
   };
 
   return (
-    <>
-      {/* Splash Screen */}
-      {showSplash && (
-        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#09090b] transition-opacity duration-500 ease-in-out ${isSplashFading ? 'opacity-0' : 'opacity-100'}`} style={{ WebkitAppRegion: 'drag' } as any}>
-          <div className="flex flex-col items-center justify-center relative">
-            <img src="./logo.png" alt="ClueAI Logo" className="w-16 h-16 relative z-10 object-cover rounded-2xl drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] overflow-hidden" />
-            
-            <h1 className="mt-6 text-xl font-medium tracking-[0.2em] text-white/90 uppercase animate-in fade-in duration-1000 delay-300 fill-mode-both">
-              ClueAI
-            </h1>
-            
-            <div className="mt-8 flex gap-2 animate-in fade-in duration-1000 delay-700 fill-mode-both">
-              <div className="w-1 h-1 rounded-full bg-cyan-400/50 animate-[pulse_1s_infinite]"></div>
-              <div className="w-1 h-1 rounded-full bg-cyan-400/50 animate-[pulse_1s_infinite_200ms]"></div>
-              <div className="w-1 h-1 rounded-full bg-cyan-400/50 animate-[pulse_1s_infinite_400ms]"></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main App Content */}
-      <div 
-        className={`flex flex-col h-screen text-brand-text p-4 font-sans overflow-hidden rounded-xl border border-white/10 transition-opacity duration-700 ease-in-out ${showSplash ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
-      >
+    <div 
+      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-hidden rounded-xl border border-white/10"
+      style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
+    >
       <div 
         className="flex items-center justify-between mb-4 pb-2 border-b border-indigo-500/20"
         style={{ WebkitAppRegion: 'drag' } as any}
@@ -623,14 +558,14 @@ ${divider}`;
             <Move size={16} />
           </div>
           <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent">
-            <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-xl shadow-sm border border-brand-accent/20 overflow-hidden" /> ClueAI
+            <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
           </h1>
         </div>
         
         <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
           {isRecording ? (
             <>
-              <div className="flex items-center gap-2 mr-2 relative">
+              <div className="flex items-center gap-2 mr-2">
                 <span className="text-[10px] font-bold text-brand-subtext uppercase tracking-wider hidden sm:block">
                   Model: <span className="text-white">{provider === 'groq' ? 'Groq' : 'Gemini'}</span>
                 </span>
@@ -649,7 +584,7 @@ ${divider}`;
                   <option value="gemini">Gemini</option>
                 </select>
                 {modelChangeMsg && (
-                  <span className="absolute top-[120%] right-0 text-green-400 text-[10px] font-bold animate-in fade-in slide-in-from-top-1 whitespace-nowrap bg-black/60 px-2 py-0.5 rounded shadow-lg border border-green-500/30">
+                  <span className="text-green-400 text-[10px] font-bold animate-in fade-in slide-in-from-left-2 whitespace-nowrap">
                     {modelChangeMsg}
                   </span>
                 )}
@@ -667,7 +602,7 @@ ${divider}`;
               <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Crop size={14} /> Snip & Ask AI
               </button>
-              <button onClick={() => { setTranscript(''); setAiAnswer(''); audioDataRef.current = new Float32Array(0); }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
+              <button onClick={() => { setTranscript(''); audioDataRef.current = new Float32Array(0); }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Trash2 size={14} fill="currentColor" /> Clear
               </button>
               <button onClick={stopRecording} className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
@@ -755,7 +690,7 @@ ${divider}`;
             {/* API Keys Configuration */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded-sm overflow-hidden" /> API Keys</h3>
+                <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><Cpu size={16}/> API Keys</h3>
                 <div className="flex items-center gap-3">
                   {saveMessage && <span className="text-green-400 text-xs font-bold animate-in fade-in">{saveMessage}</span>}
                   <button onClick={saveApiKeys} className="flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accentSec text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_0_10px_rgba(6,182,212,0.3)]">
@@ -1052,7 +987,7 @@ ${divider}`;
           </div>
           
           <div className="flex-1 overflow-y-auto mt-4 pb-4">
-            <h3 className="text-brand-subtext font-bold mb-3 text-sm px-2">Session Records</h3>
+            <h3 className="text-brand-subtext font-bold mb-3 text-sm px-2">Yesterday</h3>
             <div className="space-y-1">
               {sessions.length === 0 ? (
                 <div className="text-brand-subtext text-sm italic px-2 py-4">No sessions saved yet. Start capturing to see history here!</div>
@@ -1103,7 +1038,6 @@ ${divider}`;
 
       {/* Main UI */}
       {isRecording && (
-        <>
         <div className={`flex-1 flex gap-4 ${layout === 'horizontal' ? 'flex-row' : 'flex-col'} min-h-0`}>
           {/* Left/Top Panel - Transcript */}
         <div 
@@ -1151,18 +1085,6 @@ ${divider}`;
             onChange={handleTranscriptEdit}
             placeholder="Listening to interviewer..."
           />
-          {snipImage && (
-            <div className="px-5 py-2 mb-2 relative inline-block group">
-              <img src={snipImage} alt="Captured Snip" className="max-h-32 object-contain border border-white/20 rounded-md shadow-lg" />
-              <button 
-                onClick={() => setSnipImage(null)} 
-                className="absolute top-3 right-3 bg-red-500/80 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                title="Remove Snip"
-              >
-                <X size={12} strokeWidth={3} />
-              </button>
-            </div>
-          )}
           <div className="px-5 py-2 flex gap-2 flex-wrap bg-transparent border-t border-white/5">
             {['Example', 'Types', 'Explain', 'Pros & Cons', 'Difference'].map(keyword => (
                <button 
@@ -1211,7 +1133,7 @@ ${divider}`;
             }}
           >
             <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md">
-              <img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded-sm drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] overflow-hidden" />
+              <Cpu size={14} className="text-fuchsia-400 drop-shadow-md" /> 
               AI Output
               {activeAIInfo && (
                 <span className="ml-2 px-2 py-0.5 bg-fuchsia-500/20 text-fuchsia-300 rounded-md text-[10px] uppercase tracking-wider border border-fuchsia-500/30">
@@ -1248,55 +1170,6 @@ ${divider}`;
           </div>
         </div>
         </div>
-          
-        {/* Bottom Snips Panel */}
-        {activeSnips.length > 0 && (
-            <div className="bg-[#09090b]/80 backdrop-blur-sm border-t border-white/5 p-3 overflow-x-auto flex gap-3 custom-scrollbar flex-shrink-0 z-10 w-full" style={{ WebkitAppRegion: 'no-drag' } as any}>
-              {activeSnips.map((snip, index) => (
-                <div key={index} className="relative group w-28 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 hover:border-cyan-500/50 transition-colors shadow-lg bg-black/50">
-                  <img src={snip} alt={`Saved Snip ${index + 1}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                  
-                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 backdrop-blur-[2px]">
-                    <button 
-                      onClick={() => {
-                        setIsPaused(true);
-                        setIsGenerating(true);
-                        setAiAnswer('');
-                        getInterviewAnswer(
-                          transcript, 
-                          resumeText,
-                          resumeText2,
-                          resumePriority,
-                          personalContextText,
-                          interviewTitle, 
-                          snip,
-                          (chunk) => { setAiAnswer(prev => prev + chunk); },
-                          (info) => {
-                            setActiveAIInfo(info);
-                            if (activeAITimeoutRef.current) clearTimeout(activeAITimeoutRef.current);
-                            activeAITimeoutRef.current = setTimeout(() => setActiveAIInfo(null), 5000);
-                          }
-                        );
-                      }}
-                      className="bg-cyan-500 text-black hover:bg-cyan-400 w-full py-1 text-[9px] font-bold uppercase rounded flex items-center justify-center gap-1"
-                      title="Ask Again"
-                    >
-                      <Play size={10} fill="currentColor" /> Ask Again
-                    </button>
-                    <button 
-                      onClick={() => setActiveSnips(prev => prev.filter((_, i) => i !== index))}
-                      className="bg-rose-500/20 text-rose-300 hover:bg-rose-500/40 w-full py-1 text-[9px] font-bold uppercase rounded flex items-center justify-center gap-1"
-                      title="Delete"
-                    >
-                      <Trash2 size={10} /> Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-        </>
       )}
 
       {/* Session Name Prompt Modal */}
@@ -1361,7 +1234,6 @@ ${divider}`;
         </div>
       )}
     </div>
-    </>
   );
 }
 
