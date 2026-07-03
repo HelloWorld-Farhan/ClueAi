@@ -55,7 +55,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
-    // The translations endpoint automatically detects the spoken language (Hindi, etc.) and accurately translates it into English!
+    formData.append('language', 'en');
     
     // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
     const techJargon = "SAP, Fiori, ABAP, OData, AWS, Azure, GCP, React, Node.js, Python, Java, SQL, API, CI/CD, Agile, Developer, Consultant.";
@@ -68,7 +68,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const apiKey = groqApiKeys[currentGroqIndex];
     currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
 
-    const res = await fetch('https://api.groq.com/openai/v1/audio/translations', {
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey.trim()}`
@@ -82,27 +82,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     }
 
     const data = await res.json();
-    let text = data.text || '';
-    console.log('[STTClient] Raw Groq output:', JSON.stringify(data));
-    
-    // Whisper Hallucination Filter for silence artifacts
-    const lowerText = text.toLowerCase().trim();
-    if (
-      lowerText === 'thank you.' || 
-      lowerText === 'thank you' ||
-      lowerText === 'subtitle' ||
-      lowerText.includes('sampath chitluri') ||
-      lowerText.includes('amara.org') ||
-      lowerText.includes('subtitles by') ||
-      lowerText.includes('edited by') ||
-      lowerText === 'piicl' ||
-      lowerText === 'piicl.'
-    ) {
-      console.log('[STTClient] Blocked hallucination:', text);
-      return '';
-    }
-
-    return text;
+    return data.text || '';
   } catch (error: any) {
     console.error('Transcription error:', error);
     return `ERR: ${error.message || error}`;

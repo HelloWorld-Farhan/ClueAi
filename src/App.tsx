@@ -376,18 +376,7 @@ function App() {
         if (Math.abs(currentAudio[i]) > maxVal) maxVal = Math.abs(currentAudio[i]);
       }
       
-      console.log(`[App.tsx] Audio chunk max volume: ${maxVal.toFixed(4)}`);
-      
-      // Prevent sending pure silence/static to Whisper, which causes extreme hallucinations like "Tell me about yourself" or "PiiCL"
-      if (maxVal < 0.01) {
-        console.log(`[App.tsx] Ignored chunk because volume ${maxVal.toFixed(4)} < 0.01 threshold`);
-        isProcessingRef.current = false;
-        return;
-      }
-      
-      console.log(`[App.tsx] Sending chunk to STT...`);
       const text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
-      console.log(`[App.tsx] Received text from STT: "${text}"`);
       
       if (text && text.startsWith('ERR:')) {
          console.error('Error during transcription');
