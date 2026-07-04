@@ -29,7 +29,7 @@ export async function getInterviewAnswer(
   transcript: string, 
   resumeText1: string, 
   resumeText2: string,
-  _resumePriority: number,
+  resumePriority: number,
   personalContext: string,
   interviewTitle: string, 
   imageBase64: string,
@@ -47,9 +47,12 @@ export async function getInterviewAnswer(
     }
 
     if (resumeText1 || resumeText2) {
-      contextPrompt += `\n\n--- RESUMES (EQUAL PRIORITY) ---\nUse these resumes to answer questions about past experience, projects, and skills.`;
-      if (resumeText1) contextPrompt += `\n[RESUME 1]\n${resumeText1}`;
-      if (resumeText2) contextPrompt += `\n[RESUME 2]\n${resumeText2}`;
+      contextPrompt += `\n\n--- RESUMES ---\nUse these resumes to answer questions about past experience, projects, and skills.`;
+      if (resumeText1 && resumePriority === 1) contextPrompt += `\n[RESUME 1 (HIGH PRIORITY - Primary focus for background)]\n${resumeText1}`;
+      else if (resumeText1) contextPrompt += `\n[RESUME 1]\n${resumeText1}`;
+      
+      if (resumeText2 && resumePriority === 2) contextPrompt += `\n[RESUME 2 (HIGH PRIORITY - Primary focus for background)]\n${resumeText2}`;
+      else if (resumeText2) contextPrompt += `\n[RESUME 2]\n${resumeText2}`;
     }
 
     const systemPrompt = `You are a job candidate in a live interview${interviewTitle ? ` for the role of ${interviewTitle}` : ''}. 
@@ -156,8 +159,8 @@ Respond directly to the interviewer as the candidate. Speak your answer now. STA
       
       onStart({ provider: 'gemini', index: usedIndex + 1 });
       
-      // Use gemini-2.5-flash as it was previously working for the user
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
+      // Use gemini-1.5-flash-latest to avoid 404 errors
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
       if (imageBase64) {
