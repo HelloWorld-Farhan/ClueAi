@@ -120,20 +120,16 @@ function App() {
   const geminiValidationCache = useRef<Record<string, boolean>>({});
 
   const saveApiKeys = () => {
-    const hasInvalid = groqKeyStatus.includes('invalid') || geminiKeyStatus.includes('invalid');
-    
-    if (hasInvalid) {
-      setSaveMessage('Invalid API Key detected! Please correct or remove the invalid key (Red Cross).');
-      setTimeout(() => setSaveMessage(''), 3000);
-      return;
-    }
-
     const dupGroq = groqKeyStatus.map((s, i) => s === 'duplicate' ? i + 1 : -1).filter(i => i !== -1);
     const dupGem = geminiKeyStatus.map((s, i) => s === 'duplicate' ? i + 1 : -1).filter(i => i !== -1);
+    const invGroq = groqKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
+    const invGem = geminiKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     
     let warningMsg = '';
     if (dupGroq.length > 0) warningMsg += `Warning: Groq Key ${dupGroq.join(' and ')} are duplicates. `;
-    if (dupGem.length > 0) warningMsg += `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates.`;
+    if (dupGem.length > 0) warningMsg += `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates. `;
+    if (invGroq.length > 0) warningMsg += `Warning: Groq Key ${invGroq.join(' and ')} are invalid. `;
+    if (invGem.length > 0) warningMsg += `Warning: Gemini Key ${invGem.join(' and ')} are invalid. `;
 
     localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
     localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
@@ -145,55 +141,93 @@ function App() {
     } else {
       setSaveMessage('Saved successfully!');
     }
-    setTimeout(() => setSaveMessage(''), 5000);
+    setTimeout(() => setSaveMessage(''), 8000);
   };
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      const newStatus = [...groqKeyStatus];
-      for (let i = 0; i < 15; i++) {
-        const key = groqKeys[i].trim();
-        if (!key) {
-          newStatus[i] = 'idle';
-          continue;
+      const keysToValidate = new Set<string>();
+      
+      setGroqKeyStatus(prev => {
+        const next = [...prev];
+        for (let i = 0; i < 15; i++) {
+          const key = groqKeys[i].trim();
+          if (!key) {
+            next[i] = 'idle';
+          } else if (groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) !== -1) {
+            next[i] = 'duplicate';
+          } else {
+            if (groqValidationCache.current[key] === undefined) {
+              next[i] = 'validating';
+              keysToValidate.add(key);
+            } else {
+              next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
         }
-        if (groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) !== -1) {
-          newStatus[i] = 'duplicate';
-          continue;
-        }
-        
-        if (groqValidationCache.current[key] === undefined) {
-          setGroqKeyStatus(prev => { const p = [...prev]; p[i] = 'validating'; return p; });
+        return next;
+      });
+
+      if (keysToValidate.size > 0) {
+        await Promise.all(Array.from(keysToValidate).map(async (key) => {
           groqValidationCache.current[key] = await validateGroqKey(key);
-        }
-        newStatus[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+        }));
+
+        setGroqKeyStatus(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 15; i++) {
+            const key = groqKeys[i].trim();
+            if (key && groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
+               next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+          return next;
+        });
       }
-      setGroqKeyStatus(newStatus);
     }, 800);
     return () => clearTimeout(timeoutId);
   }, [groqKeys]);
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      const newStatus = [...geminiKeyStatus];
-      for (let i = 0; i < 15; i++) {
-        const key = geminiKeys[i].trim();
-        if (!key) {
-          newStatus[i] = 'idle';
-          continue;
+      const keysToValidate = new Set<string>();
+      
+      setGeminiKeyStatus(prev => {
+        const next = [...prev];
+        for (let i = 0; i < 15; i++) {
+          const key = geminiKeys[i].trim();
+          if (!key) {
+            next[i] = 'idle';
+          } else if (geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) !== -1) {
+            next[i] = 'duplicate';
+          } else {
+            if (geminiValidationCache.current[key] === undefined) {
+              next[i] = 'validating';
+              keysToValidate.add(key);
+            } else {
+              next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
         }
-        if (geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) !== -1) {
-          newStatus[i] = 'duplicate';
-          continue;
-        }
-        
-        if (geminiValidationCache.current[key] === undefined) {
-          setGeminiKeyStatus(prev => { const p = [...prev]; p[i] = 'validating'; return p; });
+        return next;
+      });
+
+      if (keysToValidate.size > 0) {
+        await Promise.all(Array.from(keysToValidate).map(async (key) => {
           geminiValidationCache.current[key] = await validateGeminiKey(key);
-        }
-        newStatus[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+        }));
+
+        setGeminiKeyStatus(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 15; i++) {
+            const key = geminiKeys[i].trim();
+            if (key && geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
+               next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+          return next;
+        });
       }
-      setGeminiKeyStatus(newStatus);
     }, 800);
     return () => clearTimeout(timeoutId);
   }, [geminiKeys]);
