@@ -75,9 +75,9 @@ CRITICAL RULE: DO NOT acknowledge the screenshot in your response. NEVER say "in
 Interview transcript so far:
 ${transcript}
 
-Respond directly to the interviewer as the candidate. Speak your answer now. START IMMEDIATELY WITHOUT INTRODUCTORY FILLER:`;
+Respond directly to the interviewer as the candidate. Speak your answer now. START IMMEDIATELY WITHOUT INTRODUCTORY FILLER. DO NOT START WITH "Hi, I'm" or "Yeah, definitely" or "Well":`;
     } else {
-      userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now. START IMMEDIATELY WITHOUT INTRODUCTORY FILLER:`;
+      userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now. START IMMEDIATELY WITHOUT INTRODUCTORY FILLER. DO NOT START WITH "Hi, I'm" or "Yeah, definitely" or "Well":`;
     }
 
     if (currentProvider === 'groq' && groqClients.length > 0) {
