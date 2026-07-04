@@ -159,7 +159,6 @@ function App() {
           } else {
             if (groqValidationCache.current[key] === undefined) {
               next[i] = 'validating';
-              keysToValidate.add(key);
             } else {
               next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
             }
@@ -167,6 +166,15 @@ function App() {
         }
         return next;
       });
+
+      for (let i = 0; i < 15; i++) {
+        const key = groqKeys[i].trim();
+        if (key && groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
+          if (groqValidationCache.current[key] === undefined) {
+            keysToValidate.add(key);
+          }
+        }
+      }
 
       if (keysToValidate.size > 0) {
         await Promise.all(Array.from(keysToValidate).map(async (key) => {
@@ -203,7 +211,6 @@ function App() {
           } else {
             if (geminiValidationCache.current[key] === undefined) {
               next[i] = 'validating';
-              keysToValidate.add(key);
             } else {
               next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
             }
@@ -211,6 +218,15 @@ function App() {
         }
         return next;
       });
+
+      for (let i = 0; i < 15; i++) {
+        const key = geminiKeys[i].trim();
+        if (key && geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
+          if (geminiValidationCache.current[key] === undefined) {
+            keysToValidate.add(key);
+          }
+        }
+      }
 
       if (keysToValidate.size > 0) {
         await Promise.all(Array.from(keysToValidate).map(async (key) => {
