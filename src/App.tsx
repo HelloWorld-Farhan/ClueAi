@@ -605,7 +605,17 @@ ${divider}`;
               <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Crop size={14} /> Snip & Ask AI
               </button>
-              <button onClick={() => { setTranscript(''); setCurrentSnapshot(null); audioDataRef.current = new Float32Array(0); }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
+              <button onClick={() => { 
+                if (currentSnapshot) {
+                  setSnapshotHistory(prev => {
+                    const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+                    return newHistory.length > 4 ? newHistory.slice(newHistory.length - 4) : newHistory;
+                  });
+                }
+                setTranscript(''); 
+                setCurrentSnapshot(null); 
+                audioDataRef.current = new Float32Array(0); 
+              }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Trash2 size={14} fill="currentColor" /> Clear
               </button>
               <button onClick={stopRecording} className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
@@ -1211,7 +1221,13 @@ ${divider}`;
           
           {/* Bottom Snapshot History UI */}
           {snapshotHistory.length > 0 && (
-            <div className="relative">
+            <div className="relative mt-2">
+              <div className="flex justify-between items-center mb-1.5 px-2">
+                <h4 className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                  <Crop size={10} /> Snap Records
+                </h4>
+                <span className="text-[9px] font-bold text-brand-subtext uppercase">Max 4 Snaps (Auto-Rotate)</span>
+              </div>
               <div className="h-[80px] shrink-0 bg-[#18181b] rounded-2xl border border-white/5 flex items-center p-2 gap-3 overflow-x-auto shadow-inner transition-all duration-300 relative z-10" style={{ 
                 backgroundColor: `rgba(24, 24, 27, ${opacity * 0.95})`,
                 borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`
