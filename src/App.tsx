@@ -548,8 +548,8 @@ function App() {
         if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
       }
       
-      // Dynamic noise gate threshold (sensitive enough for quiet voices, high enough to block static)
-      if (maxVal < 0.02) {
+      // Dynamic noise gate threshold (highly sensitive for MS Teams automatic gain control)
+      if (maxVal < 0.003) {
         // User is silent. Do NOT send to API. This prevents Whisper from hallucinating on static.
         // We DO NOT flush the buffer here, so we don't break their sentence!
         isProcessingRef.current = false;
