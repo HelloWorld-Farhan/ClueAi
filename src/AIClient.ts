@@ -99,7 +99,14 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
 
-      const groqVisionModels = ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'llama-3.2-11b-vision'];
+      const groqVisionModels = [
+        'llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 
+        'llama-3.2-11b-vision-instruct', 'llama-3.2-90b-vision-instruct',
+        'llama-3.2-11b-vision', 'llama-3.2-90b-vision',
+        'llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-scout-17b-16e-instruct',
+        'qwen-2.5-vl', 'qwen-vl-max', 'qwen/qwen3.6-27b', 'qwen3.6-27b', 
+        'llava-v1.5-7b-4096-preview'
+      ];
       const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama3-70b-8192'];
       
       const modelsToTry = imageBase64 ? groqVisionModels : groqTextModels;
