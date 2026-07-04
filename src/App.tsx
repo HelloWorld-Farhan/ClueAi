@@ -1111,7 +1111,7 @@ ${divider}`;
             </span>
             <div className="flex items-center gap-3">
               <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm">
-                {!isRecording ? 'READY' : (isPaused ? 'PAUSED' : 'LISTENING...')}
+                {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
               </span>
               <button 
                 onClick={() => { 
@@ -1170,11 +1170,11 @@ ${divider}`;
           >
              <button 
                 onClick={manualTriggerAI}
-                disabled={isGenerating || (!transcript && !currentSnapshot)}
+                disabled={isGenerating}
                 className="w-full py-2.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2 transform active:scale-95 text-xs"
              >
                 {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
-                {isGenerating ? 'Analyzing Context...' : 'Generate AI Response'}
+                Generate AI Response
              </button>
           </div>
         </div>
