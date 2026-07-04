@@ -76,7 +76,13 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
 
     let userPrompt = '';
     if (imageBase64) {
-      userPrompt = `Here is a screenshot related to the interview (it could be a coding question, a diagram, or a prompt). Based on this image and the interview transcript so far, please provide the perfect answer or solution.\n\nInterview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
+      userPrompt = `Here is a screenshot related to the interview. Based on this image and the transcript, provide the perfect answer.
+CRITICAL RULE: DO NOT acknowledge the screenshot in your response. NEVER say "in this screenshot" or "the image shows" or "Okay, so this screenshot". Just speak the answer naturally.
+
+Interview transcript so far:
+${transcript}
+
+Respond directly to the interviewer as the candidate. Speak your answer now:`;
     } else {
       userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
     }
