@@ -494,7 +494,7 @@ function App() {
     console.log('Idle');
 
     let finalLog = sessionLog;
-    if (transcript.trim() || aiAnswer.trim() || currentSnapshot) {
+    if (aiAnswer.trim()) {
       finalLog += `\n\n--- QUESTION ---\n${currentSnapshot ? `[IMAGE_BASE64:${currentSnapshot}]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`;
     }
     
@@ -641,7 +641,7 @@ function App() {
   };
 
   const resumeListening = () => {
-    if (transcript.trim() || aiAnswer.trim() || currentSnapshot) {
+    if (aiAnswer.trim()) {
       setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${currentSnapshot ? `[IMAGE_BASE64:${currentSnapshot}]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`);
     }
     
@@ -715,11 +715,11 @@ function App() {
               </div>
               
               {isPaused ? (
-                <button onClick={resumeListening} className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black px-4 py-1.5 rounded-md font-black text-xs transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)]">
-                  <Play size={14} fill="currentColor" /> NEXT QUESTION
+                <button onClick={resumeListening} className="flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-black w-[130px] py-1.5 rounded-md font-black text-[11px] transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] tracking-wide">
+                  <Play size={14} fill="currentColor" /> NEXT Q.
                 </button>
               ) : (
-                <button onClick={() => setIsPaused(true)} className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
+                <button onClick={() => setIsPaused(true)} className="flex items-center justify-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 w-[130px] py-1.5 rounded-md font-bold text-xs transition-all">
                   <Pause size={14} fill="currentColor" /> Pause
                 </button>
               )}
@@ -1172,7 +1172,7 @@ function App() {
                           <FileText size={14} /> Rename
                         </button>
                         <button onClick={() => { exportSession(session); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors border-t border-brand-border">
-                          <Download size={14} /> Export TXT
+                          <Download size={14} /> Export
                         </button>
                         <button onClick={() => { deleteSession(session.id); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 transition-colors border-t border-brand-border">
                           <Trash2 size={14} /> Delete
