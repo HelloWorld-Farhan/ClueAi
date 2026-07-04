@@ -110,7 +110,7 @@ function App() {
   const [interviewTitle, setInterviewTitle] = useState(localStorage.getItem('interview_title') || '');
   const [sessionError, setSessionError] = useState('');
   
-  const [saveMessage, setSaveMessage] = useState('');
+  const [saveMessages, setSaveMessages] = useState<{type: 'success' | 'invalid' | 'duplicate', text: string}[]>([]);
   const [deleteMessage, setDeleteMessage] = useState<{provider: string, index: number} | null>(null);
 
   const [activeAIInfo, setActiveAIInfo] = useState<{provider: string, index: number} | null>(null);
@@ -125,23 +125,23 @@ function App() {
     const invGroq = groqKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     const invGem = geminiKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     
-    let warningMsg = '';
-    if (dupGroq.length > 0) warningMsg += `Warning: Groq Key ${dupGroq.join(' and ')} are duplicates. `;
-    if (dupGem.length > 0) warningMsg += `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates. `;
-    if (invGroq.length > 0) warningMsg += `Warning: Groq Key ${invGroq.join(' and ')} are invalid. `;
-    if (invGem.length > 0) warningMsg += `Warning: Gemini Key ${invGem.join(' and ')} are invalid. `;
+    let msgs: {type: 'success' | 'invalid' | 'duplicate', text: string}[] = [];
+    if (dupGroq.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Groq Key ${dupGroq.join(' and ')} are duplicates.` });
+    if (dupGem.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates.` });
+    if (invGroq.length > 0) msgs.push({ type: 'invalid', text: `Error: Groq Key ${invGroq.join(' and ')} are invalid.` });
+    if (invGem.length > 0) msgs.push({ type: 'invalid', text: `Error: Gemini Key ${invGem.join(' and ')} are invalid.` });
 
     localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
     localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
     initAIClient(provider, groqKeys, geminiKeys);
     setSTTApiKey(groqKeys.filter(k => k.trim()));
     
-    if (warningMsg) {
-      setSaveMessage(warningMsg.trim());
-    } else {
-      setSaveMessage('Saved successfully!');
+    if (msgs.length === 0) {
+      msgs.push({ type: 'success', text: 'Saved successfully!' });
     }
-    setTimeout(() => setSaveMessage(''), 8000);
+    
+    setSaveMessages(msgs);
+    setTimeout(() => setSaveMessages([]), 8000);
   };
 
   useEffect(() => {
@@ -984,7 +984,17 @@ function App() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><Cpu size={16}/> API Keys</h3>
                 <div className="flex items-center gap-3">
-                  {saveMessage && <span className={`${saveMessage.startsWith('Invalid') ? 'text-rose-500' : 'text-green-400'} text-xs font-bold animate-in fade-in`}>{saveMessage}</span>}
+                  <div className="flex flex-col items-end gap-1">
+                    {saveMessages.map((msg, i) => (
+                      <span key={i} className={`text-xs font-bold animate-in fade-in ${
+                        msg.type === 'invalid' ? 'text-rose-500' :
+                        msg.type === 'duplicate' ? 'text-yellow-500' :
+                        'text-green-400'
+                      }`}>
+                        {msg.text}
+                      </span>
+                    ))}
+                  </div>
                   <button onClick={saveApiKeys} className="flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accentSec text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_0_10px_rgba(6,182,212,0.3)]">
                     <Save size={14} /> Save API Keys
                   </button>
