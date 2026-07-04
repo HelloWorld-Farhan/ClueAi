@@ -395,8 +395,10 @@ function App() {
       
       const text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
       
+      console.log('--- TRANSCRIPT LOG ---', text);
+
       if (text && text.startsWith('ERR:')) {
-         console.error('Error during transcription');
+         console.error('Error during transcription:', text);
       } else if (text) {
         setTranscript(text);
       }
