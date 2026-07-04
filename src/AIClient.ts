@@ -157,8 +157,8 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       
       onStart({ provider: 'gemini', index: usedIndex + 1 });
       
-      // Use gemini-1.5-flash or gemini-2.0-flash-exp for extreme speed
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
+      // Use gemini-2.5-flash as it was previously working for the user
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
       if (imageBase64) {
