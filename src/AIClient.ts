@@ -99,12 +99,32 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
 
-      const stream = await client.chat.completions.create({
-        model: imageBase64 ? 'llama-3.2-11b-vision-preview' : 'llama-3.1-8b-instant',
-        messages,
-        stream: true,
-        temperature: 0.5,
-      });
+      const groqVisionModels = ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'llama-3.2-11b-vision'];
+      const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama3-70b-8192'];
+      
+      const modelsToTry = imageBase64 ? groqVisionModels : groqTextModels;
+      let stream: any = null;
+      let lastGroqError: any = null;
+
+      for (const modelName of modelsToTry) {
+        try {
+          stream = await client.chat.completions.create({
+            model: modelName,
+            messages,
+            stream: true,
+            temperature: 0.5,
+          });
+          console.log(`Successfully connected to Groq model: ${modelName}`);
+          break; // Successfully connected
+        } catch (err: any) {
+          lastGroqError = err;
+          console.warn(`Groq model ${modelName} failed. Trying next...`);
+        }
+      }
+
+      if (!stream) {
+        throw new Error(`Groq API Error: All models failed. Last error: ${lastGroqError?.message || lastGroqError}`);
+      }
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
