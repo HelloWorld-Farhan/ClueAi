@@ -348,7 +348,7 @@ function App() {
 
       intervalRef.current = setInterval(() => {
         processAudioRef.current();
-      }, 1200);
+      }, 500);
     } catch (e) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
@@ -371,7 +371,7 @@ function App() {
     }
     if (isProcessingRef.current) return;
 
-    if (audioDataRef.current.length < 16000 * 1.2) {
+    if (audioDataRef.current.length < 16000 * 0.5) {
       console.log('Buffering...');
       return; 
     }
