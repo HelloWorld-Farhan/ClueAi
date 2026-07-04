@@ -561,29 +561,31 @@ ${divider}`;
         <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
           {isRecording ? (
             <>
-              <div className="flex items-center gap-2 mr-2">
-                <span className="text-[10px] font-bold text-brand-subtext uppercase tracking-wider hidden sm:block">
-                  Model: <span className="text-white">{provider === 'groq' ? 'Groq' : 'Gemini'}</span>
-                </span>
-                <select 
-                  value={provider} 
-                  onChange={e => {
-                    const newProvider = e.target.value as 'groq' | 'gemini';
-                    setProvider(newProvider);
-                    switchProvider(newProvider);
-                    setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}!`);
-                    setTimeout(() => setModelChangeMsg(''), 3000);
-                  }} 
-                  className="bg-brand-secondary/80 border border-brand-border rounded-md px-2 py-1 text-xs outline-none focus:border-brand-accent text-white transition-all cursor-pointer hover:bg-brand-secondary"
-                >
-                  <option value="groq">Groq</option>
-                  <option value="gemini">Gemini</option>
-                </select>
-                {modelChangeMsg && (
-                  <span className="text-green-400 text-[10px] font-bold animate-in fade-in slide-in-from-left-2 whitespace-nowrap">
-                    {modelChangeMsg}
-                  </span>
-                )}
+              <div className="flex items-center gap-3 mr-2 relative">
+                <div className="relative group">
+                  <select 
+                    value={provider} 
+                    onChange={e => {
+                      const newProvider = e.target.value as 'groq' | 'gemini';
+                      setProvider(newProvider);
+                      switchProvider(newProvider);
+                      setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}`);
+                      setTimeout(() => setModelChangeMsg(''), 3000);
+                    }} 
+                    className="appearance-none bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-7 py-1.5 text-xs font-semibold outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/30 text-white transition-all cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.2)]"
+                  >
+                    <option value="groq" className="bg-brand-card">⚡ Groq API</option>
+                    <option value="gemini" className="bg-brand-card">🧠 Gemini 2.5</option>
+                  </select>
+                  <Cpu size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-accent pointer-events-none" />
+                  <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none group-hover:text-white transition-colors" />
+                  
+                  {modelChangeMsg && (
+                    <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-green-500/10 border border-green-500/20 text-green-400 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full animate-in slide-in-from-top-1 fade-in whitespace-nowrap shadow-[0_0_10px_rgba(34,197,94,0.2)] pointer-events-none">
+                      {modelChangeMsg}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {isPaused ? (
