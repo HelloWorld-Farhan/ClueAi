@@ -1009,6 +1009,8 @@ function App() {
                 finalizedTranscriptRef.current = '';
                 interimTranscriptRef.current = '';
                 audioDataRef.current = new Float32Array(0); 
+                setCurrentSnapshot(null);
+                setAiAnswer('');
               }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Trash2 size={14} fill="currentColor" /> Clear
               </button>

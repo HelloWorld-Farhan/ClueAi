@@ -124,12 +124,21 @@ function createWindow() {
       const physicalWidth = width * scaleFactor;
       const physicalHeight = height * scaleFactor;
       
+      if (mainWindow && !mainWindow.isMinimized()) {
+        mainWindow.setOpacity(0); // Make invisible but keep focus
+        await new Promise(r => setTimeout(r, 150)); // Wait for OS compositing
+      }
+      
       // Capture a static frame of the screen safely using physical resolution
       const sources = await desktopCapturer.getSources({ 
         types: ['screen'], 
         thumbnailSize: { width: physicalWidth, height: physicalHeight },
         fetchWindowIcons: false
       });
+      
+      if (mainWindow) {
+        mainWindow.setOpacity(1); // Restore visibility
+      }
       
       // Find the specific source or just use the first screen
       let targetSource = sources.find(s => s.id === sourceId) || sources[0];
