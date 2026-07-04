@@ -1262,7 +1262,7 @@ ${divider}`;
                 return (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setMenuPos({x: 0, y: 0, id: null})}></div>
-                    <div style={{ left: menuPos.x + 15, top: menuPos.y, transform: 'translate(0%, -50%)' }} className="fixed bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden min-w-[200px] animate-in slide-in-from-left-2 fade-in duration-200">
+                    <div style={{ left: menuPos.x + 15, top: menuPos.y - 25, transform: 'translate(0%, -50%)' }} className="fixed bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden min-w-[200px] animate-in slide-in-from-left-2 fade-in duration-200">
                       <div className="text-center px-4 py-3 border-b border-white/5 bg-white/5">
                         <span className="text-[10px] uppercase font-bold text-brand-subtext tracking-widest">Snapshot Options</span>
                       </div>

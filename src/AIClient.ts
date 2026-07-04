@@ -159,34 +159,47 @@ Respond directly to the interviewer as the candidate. Speak your answer now. STA
       
       onStart({ provider: 'gemini', index: usedIndex + 1 });
       
-      // Use gemini-1.5-flash-latest to avoid 404 errors
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent?alt=sse&key=${key.trim()}`;
-      const geminiContents: any[] = [];
-      let geminiParts: any[] = [{ text: userPrompt }];
-      if (imageBase64) {
-        const mimeType = imageBase64.split(';')[0].split(':')[1] || 'image/png';
-        const base64Data = imageBase64.split(',')[1] || imageBase64;
-        geminiParts.push({
-          inlineData: { mimeType, data: base64Data }
+      const geminiModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro', 'gemini-1.0-pro-vision-latest'];
+      let response: Response | null = null;
+      let lastGeminiError = '';
+
+      for (const modelName of geminiModels) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${key.trim()}`;
+        const geminiContents: any[] = [];
+        let geminiParts: any[] = [{ text: userPrompt }];
+        if (imageBase64) {
+          const mimeType = imageBase64.split(';')[0].split(':')[1] || 'image/png';
+          const base64Data = imageBase64.split(',')[1] || imageBase64;
+          geminiParts.push({
+            inlineData: { mimeType, data: base64Data }
+          });
+        }
+        geminiContents.push({ parts: geminiParts });
+
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: geminiContents,
+            generationConfig: { temperature: 0.1, maxOutputTokens: 150 }
+          })
         });
+
+        if (response.ok) {
+          console.log(`Successfully connected to Gemini model: ${modelName}`);
+          break;
+        } else {
+          const errText = await response.text();
+          lastGeminiError = errText;
+          console.warn(`Gemini model ${modelName} failed. Trying next...`);
+        }
       }
-      geminiContents.push({ parts: geminiParts });
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: geminiContents,
-          generationConfig: { temperature: 0.1, maxOutputTokens: 150 }
-        })
-      });
-
-      if (!response.ok) {
-         const errText = await response.text();
-         throw new Error(`Gemini API Error: ${response.status} ${errText}`);
+      if (!response || !response.ok) {
+         throw new Error(`Gemini API Error: All models failed. Last error: ${lastGeminiError}`);
       }
 
       const reader = response.body?.getReader();
