@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 let groqClients: OpenAI[] = [];
 let geminiApiKeys: string[] = [];
 let currentProvider: 'groq' | 'gemini' = 'groq';
+let lastWorkingGeminiModel: string | null = null;
 
 let currentGroqIndex = 0;
 let currentGeminiIndex = 0;
@@ -159,11 +160,15 @@ Respond directly to the interviewer as the candidate. Speak your answer now. STA
       
       onStart({ provider: 'gemini', index: usedIndex + 1 });
       
-      const geminiModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro', 'gemini-1.0-pro-vision-latest'];
+      let geminiModelsToTry = lastWorkingGeminiModel 
+        ? [lastWorkingGeminiModel, 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-pro', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro', 'gemini-pro-vision', 'gemini-flash-lite-latest']
+        : ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-pro', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro', 'gemini-pro-vision', 'gemini-flash-lite-latest', 'gemini-1.5-flash-8b'];
+      geminiModelsToTry = [...new Set(geminiModelsToTry)];
+
       let response: Response | null = null;
       let lastGeminiError = '';
 
-      for (const modelName of geminiModels) {
+      for (const modelName of geminiModelsToTry) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${key.trim()}`;
         const geminiContents: any[] = [];
         let geminiParts: any[] = [{ text: userPrompt }];
@@ -190,6 +195,7 @@ Respond directly to the interviewer as the candidate. Speak your answer now. STA
 
         if (response.ok) {
           console.log(`Successfully connected to Gemini model: ${modelName}`);
+          lastWorkingGeminiModel = modelName;
           break;
         } else {
           const errText = await response.text();
