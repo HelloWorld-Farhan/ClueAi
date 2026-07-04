@@ -390,14 +390,10 @@ function App() {
         if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
       }
       
-      // Dynamic noise gate threshold (requires louder voice)
-      if (maxVal < 0.08) {
-        silenceFramesRef.current += 1;
-        
-        // If silent for ~3.6 seconds (3 frames), flush the buffer so we don't keep transcribing old static
-        if (silenceFramesRef.current > 2) {
-           audioDataRef.current = new Float32Array(0);
-        }
+      // Dynamic noise gate threshold (sensitive enough for quiet voices, high enough to block static)
+      if (maxVal < 0.02) {
+        // User is silent. Do NOT send to API. This prevents Whisper from hallucinating on static.
+        // We DO NOT flush the buffer here, so we don't break their sentence!
         isProcessingRef.current = false;
         return;
       }
