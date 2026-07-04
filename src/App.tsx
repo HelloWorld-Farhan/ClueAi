@@ -12,6 +12,28 @@ const formatTimer = (totalSeconds: number) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+const validateGroqKey = async (key: string): Promise<boolean> => {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { Authorization: `Bearer ${key}` }
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+const validateGeminiKey = async (key: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
+
 function App() {
   const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
@@ -27,6 +49,8 @@ function App() {
     } catch { return Array(15).fill(''); }
   });
 
+  const [groqKeyStatus, setGroqKeyStatus] = useState<KeyValidationState[]>(Array(15).fill('idle'));
+  const [geminiKeyStatus, setGeminiKeyStatus] = useState<KeyValidationState[]>(Array(15).fill('idle'));
   const [showGroqKeys, setShowGroqKeys] = useState<boolean[]>(Array(15).fill(false));
   const [showGeminiKeys, setShowGeminiKeys] = useState<boolean[]>(Array(15).fill(false));
 
@@ -92,21 +116,87 @@ function App() {
   const [activeAIInfo, setActiveAIInfo] = useState<{provider: string, index: number} | null>(null);
   const [modelChangeMsg, setModelChangeMsg] = useState('');
 
-  const saveApiKeys = () => {
-    const invalidGroq = groqKeys.some(k => k.trim() !== '' && !(k.trim().startsWith('gsk_') && k.trim().length === 56));
-    const invalidGemini = geminiKeys.some(k => k.trim() !== '' && !((k.trim().startsWith('AIza') || k.trim().startsWith('AQ.')) && k.trim().length === 39));
+  const groqValidationCache = useRef<Record<string, boolean>>({});
+  const geminiValidationCache = useRef<Record<string, boolean>>({});
 
-    if (invalidGroq || invalidGemini) {
+  const saveApiKeys = () => {
+    const hasInvalid = groqKeyStatus.includes('invalid') || geminiKeyStatus.includes('invalid');
+    
+    if (hasInvalid) {
       setSaveMessage('Invalid API Key detected! Please correct or remove the invalid key (Red Cross).');
+      setTimeout(() => setSaveMessage(''), 3000);
+      return;
+    }
+
+    const dupGroq = groqKeyStatus.map((s, i) => s === 'duplicate' ? i + 1 : -1).filter(i => i !== -1);
+    const dupGem = geminiKeyStatus.map((s, i) => s === 'duplicate' ? i + 1 : -1).filter(i => i !== -1);
+    
+    let warningMsg = '';
+    if (dupGroq.length > 0) warningMsg += `Warning: Groq Key ${dupGroq.join(' and ')} are duplicates. `;
+    if (dupGem.length > 0) warningMsg += `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates.`;
+
+    localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
+    localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
+    initAIClient(provider, groqKeys, geminiKeys);
+    setSTTApiKey(groqKeys.filter(k => k.trim()));
+    
+    if (warningMsg) {
+      setSaveMessage(warningMsg.trim());
     } else {
-      localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
-      localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
-      initAIClient(provider, groqKeys, geminiKeys);
-      setSTTApiKey(groqKeys.filter(k => k.trim()));
       setSaveMessage('Saved successfully!');
     }
-    setTimeout(() => setSaveMessage(''), 3000);
+    setTimeout(() => setSaveMessage(''), 5000);
   };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const newStatus = [...groqKeyStatus];
+      for (let i = 0; i < 15; i++) {
+        const key = groqKeys[i].trim();
+        if (!key) {
+          newStatus[i] = 'idle';
+          continue;
+        }
+        if (groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) !== -1) {
+          newStatus[i] = 'duplicate';
+          continue;
+        }
+        
+        if (groqValidationCache.current[key] === undefined) {
+          setGroqKeyStatus(prev => { const p = [...prev]; p[i] = 'validating'; return p; });
+          groqValidationCache.current[key] = await validateGroqKey(key);
+        }
+        newStatus[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+      }
+      setGroqKeyStatus(newStatus);
+    }, 800);
+    return () => clearTimeout(timeoutId);
+  }, [groqKeys]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const newStatus = [...geminiKeyStatus];
+      for (let i = 0; i < 15; i++) {
+        const key = geminiKeys[i].trim();
+        if (!key) {
+          newStatus[i] = 'idle';
+          continue;
+        }
+        if (geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) !== -1) {
+          newStatus[i] = 'duplicate';
+          continue;
+        }
+        
+        if (geminiValidationCache.current[key] === undefined) {
+          setGeminiKeyStatus(prev => { const p = [...prev]; p[i] = 'validating'; return p; });
+          geminiValidationCache.current[key] = await validateGeminiKey(key);
+        }
+        newStatus[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+      }
+      setGeminiKeyStatus(newStatus);
+    }, 800);
+    return () => clearTimeout(timeoutId);
+  }, [geminiKeys]);
 
   useEffect(() => {
     localStorage.setItem('resume_text', resumeText);
@@ -879,13 +969,10 @@ function App() {
                               placeholder={`gsk_...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                              {groqKeys[i].trim() !== '' && (
-                                groqKeys[i].trim().startsWith('gsk_') && groqKeys[i].trim().length === 56 ? (
-                                  <CheckCircle2 size={16} className="text-green-500" />
-                                ) : (
-                                  <XCircle size={16} className="text-rose-500" />
-                                )
-                              )}
+                              {groqKeyStatus[i] === 'validating' && <div title="Validating API Key..."><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                              {groqKeyStatus[i] === 'valid' && <div title="Valid API Key"><CheckCircle2 size={16} className="text-green-500" /></div>}
+                              {groqKeyStatus[i] === 'invalid' && <div title="Invalid API Key"><XCircle size={16} className="text-rose-500" /></div>}
+                              {groqKeyStatus[i] === 'duplicate' && <div title="Duplicate Key"><AlertTriangle size={16} className="text-yellow-500" /></div>}
                               <button onClick={() => {
                                 const newShow = [...showGroqKeys];
                                 newShow[i] = !newShow[i];
@@ -941,13 +1028,10 @@ function App() {
                               placeholder={`AIza... or AQ...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                              {geminiKeys[i].trim() !== '' && (
-                                (geminiKeys[i].trim().startsWith('AIza') || geminiKeys[i].trim().startsWith('AQ.')) && geminiKeys[i].trim().length === 39 ? (
-                                  <CheckCircle2 size={16} className="text-green-500" />
-                                ) : (
-                                  <XCircle size={16} className="text-rose-500" />
-                                )
-                              )}
+                              {geminiKeyStatus[i] === 'validating' && <div title="Validating API Key..."><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                              {geminiKeyStatus[i] === 'valid' && <div title="Valid API Key"><CheckCircle2 size={16} className="text-green-500" /></div>}
+                              {geminiKeyStatus[i] === 'invalid' && <div title="Invalid API Key"><XCircle size={16} className="text-rose-500" /></div>}
+                              {geminiKeyStatus[i] === 'duplicate' && <div title="Duplicate Key"><AlertTriangle size={16} className="text-yellow-500" /></div>}
                               <button onClick={() => {
                                 const newShow = [...showGeminiKeys];
                                 newShow[i] = !newShow[i];
