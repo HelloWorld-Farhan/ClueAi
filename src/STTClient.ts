@@ -46,7 +46,7 @@ function encodeWAV(samples: Float32Array, sampleRate: number = 16000) {
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
-export async function transcribeAudioChunk(audioData: Float32Array, resumeText: string = '', personalContext: string = '', interviewTitle: string = ''): Promise<string> {
+export async function transcribeAudioChunk(audioData: Float32Array, contextText: string = ''): Promise<string> {
   if (groqApiKeys.length === 0) return 'ERR: No API Key';
   if (audioData.length === 0) return '';
 
@@ -55,16 +55,19 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
-    formData.append('language', 'en'); // Force English to prevent Whisper hallucinations and improve accuracy
-    formData.append('temperature', '0.0'); // 0.0 temperature for deterministic, highly accurate transcription
+    formData.append('language', 'en'); 
+    formData.append('temperature', '0.0');
     
-    // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
-    const techJargon = "SAP, Fiori, ABAP, OData, AWS, Azure, GCP, React, Node.js, Python, Java, SQL, API, CI/CD, Agile, Developer, Consultant.";
-    let promptContext = `${interviewTitle ? interviewTitle + ', ' : ''}${techJargon} Technical job interview transcript. High accuracy.`;
-    if (resumeText) promptContext += ` Context: ${resumeText.slice(0, 500)}`;
-    if (personalContext) promptContext += ` Personal Info: ${personalContext.slice(0, 300)}`;
+    // Build a targeted prompt using standard jargon ONLY, no sentences or periods to prevent Whisper prompt-leaking!
+    let promptString = "SAP, ABAP, OData, ALV, RAP, CDS, REST API, Fiori, BAPI, SQL, Java, Python, Developer, Consultant, Data Dictionary, Transparent Table, Pool Table";
+    if (contextText) {
+      // Add context as comma-separated words to prevent sentence hallucination
+      const cleanContext = contextText.replace(/[^a-zA-Z0-9 ]/g, ' ').slice(0, 100).trim().split(/\s+/).join(', ');
+      promptString += ", " + cleanContext;
+    }
     
-    formData.append('prompt', promptContext);
+    formData.append('prompt', promptString);
+
 
     const apiKey = groqApiKeys[currentGroqIndex];
     currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;

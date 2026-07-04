@@ -12,6 +12,19 @@ const formatTimer = (totalSeconds: number) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+declare global {
+  interface Window {
+    debugLogs: string;
+  }
+}
+window.debugLogs = window.debugLogs || '';
+
+const logEvent = (msg: string) => {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  window.debugLogs += line;
+  console.log(`[DEBUG] ${msg}`);
+};
+
 const validateGroqKey = async (key: string): Promise<boolean> => {
   try {
     const res = await fetch('https://api.groq.com/openai/v1/models', {
@@ -63,6 +76,8 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const finalizedTranscriptRef = useRef('');
+  const interimTranscriptRef = useRef('');
   const [aiAnswer, setAiAnswer] = useState('');
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
@@ -317,6 +332,23 @@ function App() {
     ipcRenderer.invoke('set-stealth', true);
   }, []);
 
+  const [deleteMsg, setDeleteMsg] = useState('');
+
+  const handleDeleteFile = (type: 'resume1' | 'resume2' | 'personal') => {
+    if (type === 'resume1') {
+      setResumeText('');
+      setResumeFileName('');
+    } else if (type === 'resume2') {
+      setResumeText2('');
+      setResumeFileName2('');
+    } else if (type === 'personal') {
+      setPersonalContextText('');
+      setPersonalContextFileName('');
+    }
+    setDeleteMsg('Successfully deleted');
+    setTimeout(() => setDeleteMsg(''), 3000);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'resume1' | 'resume2' | 'personal') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -333,7 +365,16 @@ function App() {
       let parsedText = '';
       if (file.name.endsWith('.pdf')) {
         const arrayBuffer = await file.arrayBuffer();
-        parsedText = await ipcRenderer.invoke('parse-pdf-buffer', arrayBuffer);
+        const result = await ipcRenderer.invoke('parse-pdf-buffer', arrayBuffer);
+        
+        if (result && typeof result === 'object') {
+           if (result.isScanned) {
+              alert("Warning: This PDF appears to be a scanned document (images only) without selectable text. CrackIt cannot read text from images. Please upload a text-based PDF or convert this file using an OCR tool first.");
+           }
+           parsedText = result.text || '';
+        } else if (typeof result === 'string') {
+           parsedText = result;
+        }
       } else {
         const reader = new FileReader();
         parsedText = await new Promise((resolve) => {
@@ -427,7 +468,8 @@ function App() {
     setSTTApiKey(validGroqKeys);
 
     setTranscript('');
-    setAiAnswer('');
+    finalizedTranscriptRef.current = '';
+    interimTranscriptRef.current = '';
     
     await initSTT(() => {}); 
     setIsRecording(true);
@@ -486,6 +528,8 @@ function App() {
       processorRef.current = processor;
       
       processor.onaudioprocess = (e) => {
+        if (isPausedRef.current) return;
+        
         const inputData = e.inputBuffer.getChannelData(0);
         const newData = new Float32Array(audioDataRef.current.length + inputData.length);
         newData.set(audioDataRef.current);
@@ -530,7 +574,6 @@ function App() {
     if (isProcessingRef.current) return;
 
     if (audioDataRef.current.length < 16000 * 0.5) {
-      console.log('Buffering...');
       return; 
     }
 
@@ -548,35 +591,86 @@ function App() {
         if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
       }
       
-      // Dynamic noise gate threshold (highly sensitive for MS Teams automatic gain control)
-      if (maxVal < 0.003) {
-        // User is silent. Do NOT send to API. This prevents Whisper from hallucinating on static.
-        // We DO NOT flush the buffer here, so we don't break their sentence!
+      // Dynamic noise gate threshold. Raised to 0.04 to correctly ignore MS Teams static/hum (which sits at ~0.02)
+      if (maxVal < 0.04) {
+        silenceFramesRef.current += 1;
+        // If silent for more than 2 seconds (4 frames of 500ms) and buffer is not empty
+        if (silenceFramesRef.current > 4 && audioDataRef.current.length > 0) {
+           logEvent("Silence >2s detected. Committing sentence and flushing STT buffer.");
+           
+           if (interimTranscriptRef.current) {
+             finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
+           }
+           
+           audioDataRef.current = new Float32Array(0); // FLUSH buffer!
+           interimTranscriptRef.current = ''; // Reset interim
+           silenceFramesRef.current = 0;
+           
+           if (!isPausedRef.current) {
+             setTranscript(finalizedTranscriptRef.current);
+           }
+        }
         isProcessingRef.current = false;
         return;
       }
       
+      logEvent(`Triggering STT. Buffer size: ${(currentAudio.length / 16000).toFixed(2)}s, Max Volume: ${maxVal.toFixed(4)}`);
+      
       silenceFramesRef.current = 0; // Reset silence counter since they are speaking
       
-      let text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
+      // FORCE COMMIT: If the buffer exceeds 12 seconds, Whisper large-v3-turbo might start dropping earlier sentences.
+      // We force a commit here to start a fresh sentence chunk.
+      if (currentAudio.length > 16000 * 12) {
+         logEvent("Buffer exceeded 12s. Force-committing to prevent Whisper summarization loss.");
+         if (interimTranscriptRef.current) {
+            finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
+         }
+         audioDataRef.current = new Float32Array(0);
+         interimTranscriptRef.current = '';
+         if (!isPausedRef.current) {
+            setTranscript(finalizedTranscriptRef.current);
+         }
+         isProcessingRef.current = false;
+         return; // Skip this STT cycle, the next cycle will grab the fresh audio
+      }
+      
+      const sttStart = Date.now();
+      let text = await transcribeAudioChunk(currentAudio, resumeText + ' ' + personalContextText);
+      const latency = Date.now() - sttStart;
+      
+      logEvent(`STT Latency: ${latency}ms, Raw Text: ${text}`);
       
       // Aggressive filter for common Whisper static hallucinations
-      const lowerText = (text || '').trim().toLowerCase();
-      const hallucinations = ['thank you', 'thank you.', 'hello', 'hello.', 'food', 'i.o', 'i.o.', 'you', 'you.', 'test', 'test.', 'bye', 'bye.'];
-      if (hallucinations.includes(lowerText)) {
+      const lowerText = (text || '').trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+      const hallucinations = [
+         'thank you', 'hello', 'food', 'io', 'you', 'test', 'bye', 
+         'tt', 'tep', 'teek', 'teekia', 'technical interview'
+      ];
+      if (hallucinations.includes(lowerText) || lowerText.length < 2) {
+         logEvent(`Filtered hallucination: ${text}`);
          text = ''; // Ignore hallucination
       }
       
-      console.log('--- TRANSCRIPT LOG ---', text);
-
+      // De-duplication logic to fix Whisper repeating phrases in large buffers
+      let words = text.split(' ');
+      let half = Math.floor(words.length / 2);
+      if (half >= 4) {
+         let firstHalf = words.slice(0, half).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
+         let secondHalf = words.slice(-half).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
+         if (firstHalf === secondHalf) {
+            text = words.slice(0, half).join(' ');
+            logEvent(`Filtered duplication: ${text}`);
+         }
+      }
+      
       if (text && text.startsWith('ERR:')) {
          console.error('Error during transcription:', text);
+         logEvent(`Transcription ERROR: ${text}`);
       } else if (text) {
-        setTranscript(text);
-      }
-
-      if (text && !isPausedRef.current) {
-        setTranscript(text);
+         interimTranscriptRef.current = text;
+         if (!isPausedRef.current) {
+            setTranscript((finalizedTranscriptRef.current + ' ' + text).trim());
+         }
       }
     } finally {
       isProcessingRef.current = false;
@@ -589,6 +683,7 @@ function App() {
     if (!transcript && !currentSnapshot) return alert('No speech or snapshot detected yet!');
     
     setIsPaused(true);
+    isPausedRef.current = true;
     setIsGenerating(true);
     setAiAnswer('');
     let finalAnswer = '';
@@ -623,13 +718,17 @@ function App() {
 
   const handleSnipClick = async () => {
     setIsPaused(true);
+    isPausedRef.current = true;
     const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
     if (!base64Img) {
       setIsPaused(false);
+      isPausedRef.current = false;
       return; // User cancelled
     }
     
     setTranscript('');
+    finalizedTranscriptRef.current = '';
+    interimTranscriptRef.current = '';
     setAiAnswer('');
     setCurrentSnapshot(base64Img);
   };
@@ -799,11 +898,14 @@ function App() {
 
   const handleTranscriptEdit = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setIsPaused(true);
-    setTranscript(e.target.value);
+    const val = e.target.value;
+    setTranscript(val);
+    finalizedTranscriptRef.current = val;
+    interimTranscriptRef.current = '';
+    audioDataRef.current = new Float32Array(0);
   };
 
   const resumeListening = () => {
-    
     if (currentSnapshot) {
       setSnapshotHistory(prev => {
         const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
@@ -811,12 +913,16 @@ function App() {
         return newHistory;
       });
     }
-
-    audioDataRef.current = new Float32Array(0);
+    
     setTranscript('');
+    finalizedTranscriptRef.current = '';
+    interimTranscriptRef.current = '';
+    audioDataRef.current = new Float32Array(0);
+    
     setAiAnswer('');
     setCurrentSnapshot(null);
     setIsPaused(false);
+    isPausedRef.current = false;
   };
 
   const closeApp = () => window.close();
@@ -878,7 +984,14 @@ function App() {
                   <Play size={14} fill="currentColor" /> NEXT Q.
                 </button>
               ) : (
-                <button onClick={() => setIsPaused(true)} className="flex items-center justify-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 w-[130px] py-1.5 rounded-md font-bold text-xs transition-all">
+                <button onClick={() => {
+                  setIsPaused(true);
+                  isPausedRef.current = true;
+                  setTranscript('');
+                  finalizedTranscriptRef.current = '';
+                  interimTranscriptRef.current = '';
+                  audioDataRef.current = new Float32Array(0);
+                }} className="flex items-center justify-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 w-[130px] py-1.5 rounded-md font-bold text-xs transition-all">
                   <Pause size={14} fill="currentColor" /> Pause
                 </button>
               )}
@@ -893,7 +1006,8 @@ function App() {
                   });
                 }
                 setTranscript(''); 
-                setCurrentSnapshot(null); 
+                finalizedTranscriptRef.current = '';
+                interimTranscriptRef.current = '';
                 audioDataRef.current = new Float32Array(0); 
               }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Trash2 size={14} fill="currentColor" /> Clear
@@ -937,9 +1051,12 @@ function App() {
                 <h2 className="text-3xl font-black tracking-tight text-white">Settings</h2>
                 <p className="text-brand-subtext text-sm">Configure your AI model, screen capture, and interview context.</p>
               </div>
-              <button onClick={() => setShowSettings(false)} className="bg-brand-secondary hover:bg-brand-border text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
-                Done <X size={16}/>
-              </button>
+              <div className="flex items-center gap-3">
+                {deleteMsg && <span className="text-red-400 font-bold text-xs bg-red-500/10 px-3 py-1.5 rounded border border-red-500/20">{deleteMsg}</span>}
+                <button onClick={() => setShowSettings(false)} className="bg-brand-secondary hover:bg-brand-border text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+                  Done <X size={16}/>
+                </button>
+              </div>
             </div>
 
             {/* AI Provider & Capture Screen */}
@@ -1155,9 +1272,14 @@ function App() {
                         <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume1')} disabled={isUploadingResume} />
                       </label>
                       {resumeFileName && !isUploadingResume && (
-                        <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
-                          <FileText size={14} className="flex-shrink-0" /> {resumeFileName}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
+                            <FileText size={14} className="flex-shrink-0" /> {resumeFileName}
+                          </span>
+                          <button onClick={() => handleDeleteFile('resume1')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20" title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       )}
                     </div>
                     {resumeText && (
@@ -1186,9 +1308,14 @@ function App() {
                         <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume2')} disabled={isUploadingResume2} />
                       </label>
                       {resumeFileName2 && !isUploadingResume2 && (
-                        <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
-                          <FileText size={14} className="flex-shrink-0" /> {resumeFileName2}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
+                            <FileText size={14} className="flex-shrink-0" /> {resumeFileName2}
+                          </span>
+                          <button onClick={() => handleDeleteFile('resume2')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20" title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       )}
                     </div>
                     {resumeText2 && (
@@ -1212,9 +1339,14 @@ function App() {
                         <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'personal')} disabled={isUploadingPersonalContext} />
                       </label>
                       {personalContextFileName && !isUploadingPersonalContext && (
-                        <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
-                          <FileText size={14} className="flex-shrink-0" /> {personalContextFileName}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
+                            <FileText size={14} className="flex-shrink-0" /> {personalContextFileName}
+                          </span>
+                          <button onClick={() => handleDeleteFile('personal')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20" title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       )}
                     </div>
                     {personalContextText && (

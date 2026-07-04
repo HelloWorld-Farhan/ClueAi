@@ -68,15 +68,17 @@ function createWindow() {
       // Handle different versions of pdf-parse exports (v1.x function vs v2.x class)
       if (typeof pdfParse === 'function') {
         const data = await pdfParse(Buffer.from(arrayBuffer));
-        return data.text;
+        const isScanned = data.numpages > 2 && (data.text.trim().length / data.numpages) < 100;
+        return { text: data.text, isScanned };
       } else if (pdfParse.default && typeof pdfParse.default === 'function') {
         const data = await pdfParse.default(Buffer.from(arrayBuffer));
-        return data.text;
+        const isScanned = data.numpages > 2 && (data.text.trim().length / data.numpages) < 100;
+        return { text: data.text, isScanned };
       } else if (pdfParse.PDFParse) {
         const parser = new pdfParse.PDFParse(uint8Array);
         await parser.load();
         const data = await parser.getText();
-        return data.text;
+        return { text: data.text, isScanned: false }; // v2 doesn't easily expose numpages
       } else {
         throw new Error('Could not identify pdf-parse API.');
       }

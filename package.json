@@ -44,6 +44,7 @@
     "lucide-react": "^0.400.0",
     "openai": "^4.52.0",
     "pdf-parse": "^2.4.5",
+    "pdf2json": "^4.0.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
