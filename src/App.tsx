@@ -1289,7 +1289,9 @@ ${divider}`;
             </div>
           )}
         </div>
-        {/* Session Name Prompt Modal Redesign */}
+      )}
+      
+      {/* Session Name Prompt Modal Redesign */}
       {showSessionPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
           <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">

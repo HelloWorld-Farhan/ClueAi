@@ -29,7 +29,7 @@ export async function getInterviewAnswer(
   transcript: string, 
   resumeText1: string, 
   resumeText2: string,
-  resumePriority: number,
+  _resumePriority: number,
   personalContext: string,
   interviewTitle: string, 
   imageBase64: string,
