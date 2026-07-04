@@ -55,7 +55,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     formData.append('model', 'whisper-large-v3');
-    formData.append('language', 'en');
+    // Language is omitted because translations endpoint strictly outputs English
     
     // Inject heavy tech jargon and resume context into the STT prompt so it auto-corrects names and technologies!
     const techJargon = "SAP, Fiori, ABAP, OData, AWS, Azure, GCP, React, Node.js, Python, Java, SQL, API, CI/CD, Agile, Developer, Consultant.";
@@ -68,7 +68,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, resumeText: 
     const apiKey = groqApiKeys[currentGroqIndex];
     currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
 
-    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    const res = await fetch('https://api.groq.com/openai/v1/audio/translations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey.trim()}`

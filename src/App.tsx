@@ -348,7 +348,7 @@ function App() {
 
       intervalRef.current = setInterval(() => {
         processAudioRef.current();
-      }, 600);
+      }, 1200);
     } catch (e) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
@@ -359,6 +359,7 @@ function App() {
 
   const processAudioRef = useRef<() => void>(() => {});
   const isProcessingRef = useRef(false);
+  const silenceFramesRef = useRef(0);
   const isPausedRef = useRef(isPaused);
   isPausedRef.current = isPaused;
   
@@ -370,7 +371,7 @@ function App() {
     }
     if (isProcessingRef.current) return;
 
-    if (audioDataRef.current.length < 16000 * 0.1) {
+    if (audioDataRef.current.length < 16000 * 1.2) {
       console.log('Buffering...');
       return; 
     }
@@ -382,18 +383,35 @@ function App() {
          audioDataRef.current = currentAudio.slice(currentAudio.length - 16000 * 30);
       }
 
+      // Only calculate max volume on the most recent ~1.2 seconds to know if they are speaking RIGHT NOW
+      const recentAudio = currentAudio.slice(Math.max(0, currentAudio.length - 16000 * 1.2));
       let maxVal = 0;
-      for (let i = 0; i < currentAudio.length; i++) {
-        if (Math.abs(currentAudio[i]) > maxVal) maxVal = Math.abs(currentAudio[i]);
+      for (let i = 0; i < recentAudio.length; i++) {
+        if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
       }
       
-      if (maxVal < 0.05) {
-        // Pure silence or background noise detected. Do not send to API to prevent Whisper hallucinations!
+      // Dynamic noise gate threshold (requires louder voice)
+      if (maxVal < 0.08) {
+        silenceFramesRef.current += 1;
+        
+        // If silent for ~3.6 seconds (3 frames), flush the buffer so we don't keep transcribing old static
+        if (silenceFramesRef.current > 2) {
+           audioDataRef.current = new Float32Array(0);
+        }
         isProcessingRef.current = false;
         return;
       }
       
-      const text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
+      silenceFramesRef.current = 0; // Reset silence counter since they are speaking
+      
+      let text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
+      
+      // Aggressive filter for common Whisper static hallucinations
+      const lowerText = (text || '').trim().toLowerCase();
+      const hallucinations = ['thank you', 'thank you.', 'hello', 'hello.', 'food', 'i.o', 'i.o.', 'you', 'you.', 'test', 'test.', 'bye', 'bye.'];
+      if (hallucinations.includes(lowerText)) {
+         text = ''; // Ignore hallucination
+      }
       
       console.log('--- TRANSCRIPT LOG ---', text);
 
