@@ -347,7 +347,7 @@ function App() {
 
       intervalRef.current = setInterval(() => {
         processAudioRef.current();
-      }, 100);
+      }, 600);
     } catch (e) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
@@ -1211,53 +1211,57 @@ ${divider}`;
           
           {/* Bottom Snapshot History UI */}
           {snapshotHistory.length > 0 && (
-            <div className="h-[80px] shrink-0 bg-brand-secondary/80 backdrop-blur-md rounded-2xl border border-white/5 flex items-center p-2 gap-3 overflow-x-auto shadow-inner transition-all duration-300 relative z-10" style={{ 
-              backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
-              borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`
-            }}>
-              {snapshotHistory.map((snap) => (
-                <div key={snap.id} className="relative h-full aspect-video group flex-shrink-0">
-                  <div className="w-full h-full rounded-xl overflow-hidden bg-black/50 border border-white/10">
-                    <img src={snap.image} alt="History Snapshot" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  
-                  {/* Hover Overlay */}
-                  <div className={`absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center rounded-xl ${openMenuId === snap.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <div className="relative">
+            <div className="relative">
+              <div className="h-[80px] shrink-0 bg-[#18181b] rounded-2xl border border-white/5 flex items-center p-2 gap-3 overflow-x-auto shadow-inner transition-all duration-300 relative z-10" style={{ 
+                backgroundColor: `rgba(24, 24, 27, ${opacity * 0.95})`,
+                borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`
+              }}>
+                {snapshotHistory.map((snap) => (
+                  <div key={snap.id} className="relative h-full aspect-video group flex-shrink-0">
+                    <div className="w-full h-full rounded-xl overflow-hidden bg-black/50 border border-white/10">
+                      <img src={snap.image} alt="History Snapshot" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    
+                    {/* Hover Overlay */}
+                    <div className={`absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center rounded-xl ${openMenuId === snap.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       <button className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" onClick={() => setOpenMenuId(openMenuId === snap.id ? null : snap.id)}>
                         <MoreVertical size={16} />
                       </button>
-                      
-                      {openMenuId === snap.id && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)}></div>
-                          <div className="fixed bottom-28 left-1/2 -translate-x-1/2 bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] z-50 overflow-hidden min-w-[180px] animate-in slide-in-from-bottom-4 fade-in duration-200">
-                            <div className="text-center px-4 py-2 border-b border-white/5 bg-white/5">
-                              <span className="text-[10px] uppercase font-bold text-brand-subtext tracking-widest">Snapshot Options</span>
-                            </div>
-                            <button onClick={() => { setPreviewSnapshot(snap.image); setOpenMenuId(null); }} className="w-full text-left px-4 py-3 text-xs text-white hover:bg-brand-secondary flex items-center gap-3 transition-colors">
-                              <Eye size={14} /> Preview Fullscreen
-                            </button>
-                            <button onClick={() => { 
-                              setTranscript(snap.transcriptContext || ''); 
-                              setCurrentSnapshot(snap.image); 
-                              setOpenMenuId(null); 
-                            }} className="w-full text-left px-4 py-3 text-xs text-cyan-400 hover:bg-brand-secondary flex items-center gap-3 transition-colors border-t border-brand-border">
-                              <Play size={14} fill="currentColor" /> Ask AI Again
-                            </button>
-                            <button onClick={() => { 
-                              setSnapshotHistory(prev => prev.filter(s => s.id !== snap.id)); 
-                              setOpenMenuId(null); 
-                            }} className="w-full text-left px-4 py-3 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 flex items-center gap-3 transition-colors border-t border-brand-border">
-                              <Trash2 size={14} /> Delete Snapshot
-                            </button>
-                          </div>
-                        </>
-                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Outside Menu Popup to avoid CSS clipping */}
+              {openMenuId && snapshotHistory.find(s => s.id === openMenuId) && (() => {
+                const snap = snapshotHistory.find(s => s.id === openMenuId)!;
+                return (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)}></div>
+                    <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden min-w-[200px] animate-in slide-in-from-bottom-2 fade-in duration-200">
+                      <div className="text-center px-4 py-3 border-b border-white/5 bg-white/5">
+                        <span className="text-[10px] uppercase font-bold text-brand-subtext tracking-widest">Snapshot Options</span>
+                      </div>
+                      <button onClick={() => { setPreviewSnapshot(snap.image); setOpenMenuId(null); }} className="w-full text-left px-4 py-3 text-xs text-white hover:bg-brand-secondary flex items-center gap-3 transition-colors">
+                        <Eye size={14} /> Preview Fullscreen
+                      </button>
+                      <button onClick={() => { 
+                        setTranscript(snap.transcriptContext || ''); 
+                        setCurrentSnapshot(snap.image); 
+                        setOpenMenuId(null); 
+                      }} className="w-full text-left px-4 py-3 text-xs text-cyan-400 hover:bg-brand-secondary flex items-center gap-3 transition-colors border-t border-brand-border">
+                        <Play size={14} fill="currentColor" /> Ask AI Again
+                      </button>
+                      <button onClick={() => { 
+                        setSnapshotHistory(prev => prev.filter(s => s.id !== snap.id)); 
+                        setOpenMenuId(null); 
+                      }} className="w-full text-left px-4 py-3 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 flex items-center gap-3 transition-colors border-t border-brand-border">
+                        <Trash2 size={14} /> Delete Snapshot
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
