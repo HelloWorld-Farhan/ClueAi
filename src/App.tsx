@@ -24,6 +24,10 @@ const validateGroqKey = async (key: string): Promise<boolean> => {
 };
 
 const validateGeminiKey = async (key: string): Promise<boolean> => {
+  const trimmed = key.trim();
+  if (trimmed.startsWith('AQ.') && trimmed.length === 39) {
+    return true;
+  }
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
     return res.ok;
