@@ -43,19 +43,13 @@ export async function getInterviewAnswer(
     let contextPrompt = '';
     
     if (personalContext) {
-      contextPrompt += `\n\n--- PERSONAL CONTEXT (HIGH PRIORITY) ---\nThis is about the candidate's strengths, weaknesses, hobbies, and personal background. Use this whenever answering behavioral or personal questions:\n${personalContext}`;
+      contextPrompt += `\n\n--- PERSONAL CONTEXT (ABSOLUTE HIGHEST PRIORITY) ---\nThis is about the candidate's core identity, strengths, weaknesses, and background. You MUST use this first for any personal or behavioral questions:\n${personalContext}`;
     }
 
     if (resumeText1 || resumeText2) {
-      contextPrompt += `\n\n--- RESUME(S) ---\nUse these resumes to answer questions about past experience, projects, and skills.`;
-      if (resumePriority === 1) {
-        if (resumeText1) contextPrompt += `\n[HIGH PRIORITY RESUME]\n${resumeText1}`;
-        if (resumeText2) contextPrompt += `\n[SECONDARY RESUME (Fallback)]\n${resumeText2}`;
-      } else {
-        if (resumeText2) contextPrompt += `\n[HIGH PRIORITY RESUME]\n${resumeText2}`;
-        if (resumeText1) contextPrompt += `\n[SECONDARY RESUME (Fallback)]\n${resumeText1}`;
-      }
-      contextPrompt += `\nFocus heavily on the high priority resume. Only check the fallback if the information is missing from the high priority resume.`;
+      contextPrompt += `\n\n--- RESUMES (EQUAL PRIORITY) ---\nUse these resumes to answer questions about past experience, projects, and skills.`;
+      if (resumeText1) contextPrompt += `\n[RESUME 1]\n${resumeText1}`;
+      if (resumeText2) contextPrompt += `\n[RESUME 2]\n${resumeText2}`;
     }
 
     const systemPrompt = `You are a job candidate in a live interview${interviewTitle ? ` for the role of ${interviewTitle}` : ''}. 
@@ -76,14 +70,14 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
     let userPrompt = '';
     if (imageBase64) {
       userPrompt = `Here is a screenshot related to the interview. Based on this image and the transcript, provide the perfect answer.
-CRITICAL RULE: DO NOT acknowledge the screenshot in your response. NEVER say "in this screenshot" or "the image shows" or "Okay, so this screenshot". Just speak the answer naturally.
+CRITICAL RULE: DO NOT acknowledge the screenshot in your response. NEVER say "in this screenshot", "the image shows", "Okay, so this screenshot", or "Okay, so". Just speak the answer naturally.
 
 Interview transcript so far:
 ${transcript}
 
-Respond directly to the interviewer as the candidate. Speak your answer now:`;
+Respond directly to the interviewer as the candidate. Speak your answer now. START IMMEDIATELY WITHOUT INTRODUCTORY FILLER:`;
     } else {
-      userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
+      userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now. START IMMEDIATELY WITHOUT INTRODUCTORY FILLER:`;
     }
 
     if (currentProvider === 'groq' && groqClients.length > 0) {

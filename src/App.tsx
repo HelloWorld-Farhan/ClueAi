@@ -65,6 +65,7 @@ function App() {
   const [currentSnapshot, setCurrentSnapshot] = useState<string | null>(null);
   const [snapshotHistory, setSnapshotHistory] = useState<{id: string, image: string, transcriptContext: string}[]>([]);
   const [previewSnapshot, setPreviewSnapshot] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{x: number, y: number, id: string | null}>({x: 0, y: 0, id: null});
 
   // Session History
   const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string, snapshotHistory?: {id: string, image: string, transcriptContext: string}[]}[]>(() => {
@@ -1239,8 +1240,15 @@ ${divider}`;
                     </div>
                     
                     {/* Hover Overlay */}
-                    <div className={`absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center rounded-xl ${openMenuId === snap.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      <button className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" onClick={() => setOpenMenuId(openMenuId === snap.id ? null : snap.id)}>
+                    <div className={`absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center rounded-xl ${menuPos.id === snap.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      <button className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" onClick={(e) => {
+                        if (menuPos.id === snap.id) {
+                          setMenuPos({ x: 0, y: 0, id: null });
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMenuPos({ x: rect.left + rect.width / 2, y: rect.top - 10, id: snap.id });
+                        }
+                      }}>
                         <MoreVertical size={16} />
                       </button>
                     </div>
@@ -1249,28 +1257,28 @@ ${divider}`;
               </div>
 
               {/* Outside Menu Popup to avoid CSS clipping */}
-              {openMenuId && snapshotHistory.find(s => s.id === openMenuId) && (() => {
-                const snap = snapshotHistory.find(s => s.id === openMenuId)!;
+              {menuPos.id && snapshotHistory.find(s => s.id === menuPos.id) && (() => {
+                const snap = snapshotHistory.find(s => s.id === menuPos.id)!;
                 return (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)}></div>
-                    <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden min-w-[200px] animate-in slide-in-from-bottom-2 fade-in duration-200">
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuPos({x: 0, y: 0, id: null})}></div>
+                    <div style={{ left: menuPos.x, top: menuPos.y, transform: 'translate(-50%, -100%)' }} className="fixed bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden min-w-[200px] animate-in zoom-in-95 duration-150">
                       <div className="text-center px-4 py-3 border-b border-white/5 bg-white/5">
                         <span className="text-[10px] uppercase font-bold text-brand-subtext tracking-widest">Snapshot Options</span>
                       </div>
-                      <button onClick={() => { setPreviewSnapshot(snap.image); setOpenMenuId(null); }} className="w-full text-left px-4 py-3 text-xs text-white hover:bg-brand-secondary flex items-center gap-3 transition-colors">
+                      <button onClick={() => { setPreviewSnapshot(snap.image); setMenuPos({x: 0, y: 0, id: null}); }} className="w-full text-left px-4 py-3 text-xs text-white hover:bg-brand-secondary flex items-center gap-3 transition-colors">
                         <Eye size={14} /> Preview Fullscreen
                       </button>
                       <button onClick={() => { 
                         setTranscript(snap.transcriptContext || ''); 
                         setCurrentSnapshot(snap.image); 
-                        setOpenMenuId(null); 
+                        setMenuPos({x: 0, y: 0, id: null}); 
                       }} className="w-full text-left px-4 py-3 text-xs text-cyan-400 hover:bg-brand-secondary flex items-center gap-3 transition-colors border-t border-brand-border">
                         <Play size={14} fill="currentColor" /> Ask AI Again
                       </button>
                       <button onClick={() => { 
                         setSnapshotHistory(prev => prev.filter(s => s.id !== snap.id)); 
-                        setOpenMenuId(null); 
+                        setMenuPos({x: 0, y: 0, id: null}); 
                       }} className="w-full text-left px-4 py-3 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 flex items-center gap-3 transition-colors border-t border-brand-border">
                         <Trash2 size={14} /> Delete Snapshot
                       </button>
@@ -1281,65 +1289,80 @@ ${divider}`;
             </div>
           )}
         </div>
-      )}
-
-      {/* Session Name Prompt Modal */}
+        {/* Session Name Prompt Modal Redesign */}
       {showSessionPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-[#09090b] border border-white/10 rounded-[2rem] w-full max-w-sm overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in duration-200">
-            <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center">
-              <h3 className="font-black text-xl text-white tracking-wide">Start New Session</h3>
-              <button onClick={() => setShowSessionPrompt(false)} className="text-white/40 hover:text-white transition-colors"><X size={20}/></button>
-            </div>
-            <div className="p-8">
-              <label className="block text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3">Resume Existing Session?</label>
-              <select
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all mb-6 appearance-none cursor-pointer"
-                value={currentSessionId}
-                onChange={e => {
-                  setCurrentSessionId(e.target.value);
-                  if (e.target.value) {
-                     const s = sessions.find(x => x.id === e.target.value);
-                     if (s) setSessionNameInput(s.name);
-                     setSessionError('');
-                  } else {
-                     setSessionNameInput('');
-                  }
-                }}
-              >
-                <option value="" className="bg-[#09090b] text-white">-- Start a New Session --</option>
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id} className="bg-[#09090b] text-white">
-                    {s.name} ({s.date || 'Old Session'})
-                  </option>
-                ))}
-              </select>
-
-              {!currentSessionId && (
-                <div className="animate-in fade-in slide-in-from-top-2">
-                  <label className="block text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3">Or create New Session</label>
-                  <input 
-                    type="text"
-                    autoFocus
-                    value={sessionNameInput}
-                    onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
-                    placeholder="e.g. Meta Final Round"
-                    onKeyDown={e => { if(e.key === 'Enter') startRecording(); }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder-white/30 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
-                  />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
+            {/* Glowing Accent Border */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-[2rem] blur opacity-30"></div>
+            
+            <div className="relative bg-[#09090b]/90 border border-white/10 rounded-[2rem] w-full overflow-hidden shadow-[0_0_80px_rgba(0,0,0,1)]">
+              <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Initialize Session</h3>
+                <button onClick={() => setShowSessionPrompt(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
+              </div>
+              
+              <div className="p-8 space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-brand-subtext uppercase tracking-[0.2em] mb-3">Resume Existing Session</label>
+                  <div className="relative">
+                    <select
+                      className="w-full bg-[#18181b] border border-white/10 rounded-xl px-5 py-3.5 text-sm text-white outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all appearance-none cursor-pointer"
+                      value={currentSessionId}
+                      onChange={e => {
+                        setCurrentSessionId(e.target.value);
+                        if (e.target.value) {
+                           const s = sessions.find(x => x.id === e.target.value);
+                           if (s) setSessionNameInput(s.name);
+                           setSessionError('');
+                        } else {
+                           setSessionNameInput('');
+                        }
+                      }}
+                    >
+                      <option value="" className="bg-[#09090b] text-white/50">-- Create a New Session Instead --</option>
+                      {sessions.map(s => (
+                        <option key={s.id} value={s.id} className="bg-[#09090b] text-white">
+                          {s.name} ({s.date || 'Old Session'})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                  </div>
                 </div>
-              )}
-              {sessionError && (
-                <p className="text-rose-400 text-xs font-bold mt-3 flex items-center gap-1 animate-in slide-in-from-top-1">
-                  <X size={12} /> {sessionError}
-                </p>
-              )}
-            </div>
-            <div className="px-8 py-5 bg-white/5 flex justify-end gap-3 border-t border-white/5">
-              <button onClick={() => setShowSessionPrompt(false)} className="px-5 py-2.5 text-sm font-bold text-white/50 hover:text-white transition-colors">Cancel</button>
-              <button onClick={startRecording} className="px-6 py-2.5 bg-gradient-to-r from-brand-accent to-brand-accentSec hover:opacity-90 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-brand-accent/20 flex items-center gap-2 transform active:scale-95">
-                <Play size={14} fill="currentColor"/> Start Interview
-              </button>
+
+                {!currentSessionId && (
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                    <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">New Session Name</label>
+                    <input 
+                      type="text"
+                      autoFocus
+                      value={sessionNameInput}
+                      onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
+                      placeholder="e.g. Meta Final Round"
+                      onKeyDown={e => { if(e.key === 'Enter') startRecording(); }}
+                      className="w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
+                    />
+                  </div>
+                )}
+                
+                {sessionError && (
+                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 animate-in slide-in-from-top-2">
+                    <p className="text-rose-400 text-xs font-bold flex items-center gap-2">
+                      <X size={14} className="bg-rose-500/20 rounded-full p-0.5" /> {sessionError}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md">
+                <button onClick={() => setShowSessionPrompt(false)} className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                <button onClick={startRecording} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] flex items-center gap-2 transform active:scale-95">
+                  Start AI Interview <Play size={12} fill="currentColor" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
