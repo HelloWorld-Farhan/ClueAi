@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -32,6 +32,7 @@ function App() {
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [stealthMode, setStealthMode] = useState(true);
+  const [showStealthWarning, setShowStealthWarning] = useState(false);
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -60,9 +61,13 @@ function App() {
   const [layout, setLayout] = useState('horizontal');
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
-  
+  // Snapshot States
+  const [currentSnapshot, setCurrentSnapshot] = useState<string | null>(null);
+  const [snapshotHistory, setSnapshotHistory] = useState<{id: string, image: string, transcriptContext: string}[]>([]);
+  const [previewSnapshot, setPreviewSnapshot] = useState<string | null>(null);
+
   // Session History
-  const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string}[]>(() => {
+  const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string, snapshotHistory?: {id: string, image: string, transcriptContext: string}[]}[]>(() => {
     try { return JSON.parse(localStorage.getItem('sessions') || '[]'); } catch { return []; }
   });
   const [showSessionPrompt, setShowSessionPrompt] = useState(false);
@@ -80,11 +85,11 @@ function App() {
   const [modelChangeMsg, setModelChangeMsg] = useState('');
 
   const saveApiKeys = () => {
-    const invalidGroq = groqKeys.some(k => k.trim() !== '' && !(k.trim().startsWith('gsk_') && k.trim().length > 30));
-    const invalidGemini = geminiKeys.some(k => k.trim() !== '' && !((k.trim().startsWith('AIza') || k.trim().startsWith('AQ.')) && k.trim().length > 30));
+    const invalidGroq = groqKeys.some(k => k.trim() !== '' && !(k.trim().startsWith('gsk_') && k.trim().length === 56));
+    const invalidGemini = geminiKeys.some(k => k.trim() !== '' && !((k.trim().startsWith('AIza') || k.trim().startsWith('AQ.')) && k.trim().length === 39));
 
     if (invalidGroq || invalidGemini) {
-      setSaveMessage('Invalid API Key detected! Please correct or remove it.');
+      setSaveMessage('Invalid API Key detected! Please correct or remove the invalid key (Red Cross).');
     } else {
       localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
       localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
@@ -153,11 +158,9 @@ function App() {
       if (s.length > 0) setSelectedSource(s[0].id);
     });
     
-    const savedStealth = localStorage.getItem('stealthMode');
-    if (savedStealth !== null) {
-      setStealthMode(savedStealth === 'true');
-      ipcRenderer.invoke('set-stealth', savedStealth === 'true');
-    }
+    // ALWAYS default to Stealth Mode ON every time the app opens for maximum safety
+    setStealthMode(true);
+    ipcRenderer.invoke('set-stealth', true);
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'resume1' | 'resume2' | 'personal') => {
@@ -383,6 +386,12 @@ function App() {
         if (Math.abs(currentAudio[i]) > maxVal) maxVal = Math.abs(currentAudio[i]);
       }
       
+      if (maxVal < 0.01) {
+        // Pure silence detected. Do not send to API to prevent Whisper hallucinations!
+        isProcessingRef.current = false;
+        return;
+      }
+      
       const text = await transcribeAudioChunk(currentAudio, resumeText, '', interviewTitle);
       
       if (text && text.startsWith('ERR:')) {
@@ -402,7 +411,7 @@ function App() {
   processAudioRef.current = processAudio;
 
   const manualTriggerAI = async () => {
-    if (!transcript) return alert('No speech detected yet!');
+    if (!transcript && !currentSnapshot) return alert('No speech or snapshot detected yet!');
     
     setIsPaused(true);
     setIsGenerating(true);
@@ -415,7 +424,7 @@ function App() {
       resumePriority,
       personalContextText,
       interviewTitle, 
-      '',
+      currentSnapshot || '',
       (chunk) => {
         setAiAnswer(prev => prev + chunk);
       },
@@ -431,28 +440,14 @@ function App() {
   const handleSnipClick = async () => {
     setIsPaused(true);
     const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
-    if (!base64Img) return; // User cancelled
+    if (!base64Img) {
+      setIsPaused(false);
+      return; // User cancelled
+    }
     
-    setIsGenerating(true);
+    setTranscript('');
     setAiAnswer('');
-    
-    await getInterviewAnswer(
-      transcript, 
-      resumeText,
-      resumeText2,
-      resumePriority,
-      personalContextText,
-      interviewTitle, 
-      base64Img,
-      (chunk) => {
-        setAiAnswer(prev => prev + chunk);
-      },
-      (info) => {
-        setActiveAIInfo(info);
-      }
-    );
-    
-    setIsGenerating(false);
+    setCurrentSnapshot(base64Img);
   };
 
   const stopRecording = () => {
@@ -526,12 +521,22 @@ ${divider}`;
   };
 
   const resumeListening = () => {
-    if (transcript.trim() || aiAnswer.trim()) {
+    if (transcript.trim() || aiAnswer.trim() || currentSnapshot) {
       setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`);
     }
+    
+    if (currentSnapshot) {
+      setSnapshotHistory(prev => {
+        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+        if (newHistory.length > 4) return newHistory.slice(newHistory.length - 4);
+        return newHistory;
+      });
+    }
+
     audioDataRef.current = new Float32Array(0);
     setTranscript('');
     setAiAnswer('');
+    setCurrentSnapshot(null);
     setIsPaused(false);
   };
 
@@ -575,14 +580,14 @@ ${divider}`;
                     className="appearance-none bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-7 py-1.5 text-xs font-semibold outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/30 text-white transition-all cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.2)]"
                   >
                     <option value="groq" className="bg-brand-card">⚡ Groq API</option>
-                    <option value="gemini" className="bg-brand-card">🧠 Gemini 2.5</option>
+                    <option value="gemini" className="bg-brand-card">🧠 Gemini Flash</option>
                   </select>
                   <Cpu size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-accent pointer-events-none" />
                   <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none group-hover:text-white transition-colors" />
                   
                   {modelChangeMsg && (
-                    <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-green-500/10 border border-green-500/20 text-green-400 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full animate-in slide-in-from-top-1 fade-in whitespace-nowrap shadow-[0_0_10px_rgba(34,197,94,0.2)] pointer-events-none">
-                      {modelChangeMsg}
+                    <div className="fixed top-16 right-6 z-[100] bg-green-500/15 backdrop-blur-xl border border-green-500/30 text-green-400 text-[10px] uppercase tracking-widest font-black px-4 py-2 rounded-xl animate-in slide-in-from-top-4 fade-in duration-300 whitespace-nowrap shadow-[0_0_30px_rgba(34,197,94,0.3)] pointer-events-none flex items-center gap-2">
+                      <CheckCircle2 size={14} /> {modelChangeMsg}
                     </div>
                   )}
                 </div>
@@ -600,7 +605,7 @@ ${divider}`;
               <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Crop size={14} /> Snip & Ask AI
               </button>
-              <button onClick={() => { setTranscript(''); audioDataRef.current = new Float32Array(0); }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
+              <button onClick={() => { setTranscript(''); setCurrentSnapshot(null); audioDataRef.current = new Float32Array(0); }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Trash2 size={14} fill="currentColor" /> Clear
               </button>
               <button onClick={stopRecording} className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
@@ -670,9 +675,12 @@ ${divider}`;
                     <div className="relative">
                       <input type="checkbox" className="sr-only" checked={stealthMode} onChange={e => {
                         const val = e.target.checked;
-                        setStealthMode(val);
-                        localStorage.setItem('stealthMode', val.toString());
-                        ipcRenderer.invoke('set-stealth', val);
+                        if (!val) {
+                          setShowStealthWarning(true);
+                        } else {
+                          setStealthMode(true);
+                          ipcRenderer.invoke('set-stealth', true);
+                        }
                       }} />
                       <div className={`block w-12 h-6 rounded-full transition-colors ${stealthMode ? 'bg-brand-accentSec' : 'bg-brand-border'}`}></div>
                       <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${stealthMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
@@ -726,10 +734,10 @@ ${divider}`;
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                               {groqKeys[i].trim() !== '' && (
-                                groqKeys[i].trim().startsWith('gsk_') && groqKeys[i].trim().length > 30 ? (
-                                  <CheckCircle2 size={14} className="text-green-500" />
+                                groqKeys[i].trim().startsWith('gsk_') && groqKeys[i].trim().length === 56 ? (
+                                  <CheckCircle2 size={16} className="text-green-500" />
                                 ) : (
-                                  <XCircle size={14} className="text-rose-500" />
+                                  <XCircle size={16} className="text-rose-500" />
                                 )
                               )}
                               <button onClick={() => {
@@ -788,10 +796,10 @@ ${divider}`;
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                               {geminiKeys[i].trim() !== '' && (
-                                (geminiKeys[i].trim().startsWith('AIza') || geminiKeys[i].trim().startsWith('AQ.')) && geminiKeys[i].trim().length > 30 ? (
-                                  <CheckCircle2 size={14} className="text-green-500" />
+                                (geminiKeys[i].trim().startsWith('AIza') || geminiKeys[i].trim().startsWith('AQ.')) && geminiKeys[i].trim().length === 39 ? (
+                                  <CheckCircle2 size={16} className="text-green-500" />
                                 ) : (
-                                  <XCircle size={14} className="text-rose-500" />
+                                  <XCircle size={16} className="text-rose-500" />
                                 )
                               )}
                               <button onClick={() => {
@@ -1050,8 +1058,9 @@ ${divider}`;
 
       {/* Main UI */}
       {isRecording && (
-        <div className={`flex-1 flex gap-4 ${layout === 'horizontal' ? 'flex-row' : 'flex-col'} min-h-0`}>
-          {/* Left/Top Panel - Transcript */}
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          <div className={`flex-1 flex gap-4 ${layout === 'horizontal' ? 'flex-row' : 'flex-col'} min-h-0`}>
+            {/* Left/Top Panel - Transcript */}
         <div 
           className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-200 ${layout === 'horizontal' ? 'flex-1' : 'h-1/2'}`}
           style={{ 
@@ -1091,12 +1100,29 @@ ${divider}`;
               </button>
             </div>
           </div>
-          <textarea 
-            className="flex-1 px-5 py-4 bg-transparent text-[15px] font-semibold text-white outline-none resize-none leading-relaxed placeholder-white/30 custom-scrollbar drop-shadow-md"
-            value={transcript}
-            onChange={handleTranscriptEdit}
-            placeholder="Listening to interviewer..."
-          />
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
+            <textarea 
+              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold text-white outline-none resize-none leading-relaxed placeholder-white/30 drop-shadow-md ${currentSnapshot ? 'min-h-[120px] flex-none' : 'flex-1 h-full'}`}
+              value={transcript}
+              onChange={handleTranscriptEdit}
+              placeholder="Listening to interviewer..."
+            />
+            {currentSnapshot && (
+              <div className="px-5 pb-4 flex-1 min-h-[150px] flex flex-col items-center justify-center relative">
+                <div className="relative h-full w-full max-h-[250px] rounded-xl overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.2)] border border-cyan-500/30 bg-black/50 group">
+                  <img src={currentSnapshot} alt="Snapshot" className="w-full h-full object-contain" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                    <button onClick={() => setPreviewSnapshot(currentSnapshot)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-sm">
+                      <Eye size={16} /> Preview
+                    </button>
+                    <button onClick={() => setCurrentSnapshot(null)} className="px-4 py-2 bg-rose-500/80 hover:bg-rose-500 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-sm">
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="px-5 py-2 flex gap-2 flex-wrap bg-transparent border-t border-white/5">
             {['Example', 'Types', 'Explain', 'Pros & Cons', 'Difference'].map(keyword => (
                <button 
@@ -1117,7 +1143,7 @@ ${divider}`;
           >
              <button 
                 onClick={manualTriggerAI}
-                disabled={isGenerating || !transcript}
+                disabled={isGenerating || (!transcript && !currentSnapshot)}
                 className="w-full py-2.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2 transform active:scale-95 text-xs"
              >
                 {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
@@ -1182,6 +1208,54 @@ ${divider}`;
           </div>
         </div>
         </div>
+          
+          {/* Bottom Snapshot History UI */}
+          {snapshotHistory.length > 0 && (
+            <div className="h-[80px] shrink-0 bg-brand-secondary/80 backdrop-blur-md rounded-2xl border border-white/5 flex items-center p-2 gap-3 overflow-x-auto shadow-inner transition-all duration-300 relative z-10" style={{ 
+              backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
+              borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`
+            }}>
+              {snapshotHistory.map((snap) => (
+                <div key={snap.id} className="relative h-full aspect-video bg-black/50 rounded-xl overflow-hidden border border-white/10 group flex-shrink-0">
+                  <img src={snap.image} alt="History Snapshot" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                  
+                  {/* Hover Menu */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="relative">
+                      <button className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" onClick={() => setOpenMenuId(openMenuId === snap.id ? null : snap.id)}>
+                        <MoreVertical size={16} />
+                      </button>
+                      
+                      {openMenuId === snap.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)}></div>
+                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[#09090b] border border-brand-border rounded-lg shadow-xl z-50 overflow-hidden min-w-[120px] animate-in zoom-in-95 duration-100">
+                            <button onClick={() => { setPreviewSnapshot(snap.image); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-xs text-white hover:bg-brand-secondary flex items-center gap-2 transition-colors">
+                              <Eye size={12} /> Preview
+                            </button>
+                            <button onClick={() => { 
+                              setTranscript(snap.transcriptContext || ''); 
+                              setCurrentSnapshot(snap.image); 
+                              setOpenMenuId(null); 
+                            }} className="w-full text-left px-3 py-2 text-xs text-cyan-400 hover:bg-brand-secondary flex items-center gap-2 transition-colors border-t border-brand-border">
+                              <Play size={12} fill="currentColor" /> Ask Again
+                            </button>
+                            <button onClick={() => { 
+                              setSnapshotHistory(prev => prev.filter(s => s.id !== snap.id)); 
+                              setOpenMenuId(null); 
+                            }} className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 transition-colors border-t border-brand-border">
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Session Name Prompt Modal */}
@@ -1243,6 +1317,60 @@ ${divider}`;
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Stealth Warning Modal */}
+      {showStealthWarning && (
+        <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-brand-bg border border-rose-500/30 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_40px_rgba(225,29,72,0.2)] animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black text-rose-400 mb-3 flex items-center gap-2">
+              <AlertTriangle size={24} /> Warning!
+            </h3>
+            <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
+              Disabling Stealth Mode will make ClueAI visible to screen sharing software like Zoom, Microsoft Teams, or Google Meet! 
+              <br/><br/>
+              Only turn this off if you are absolutely sure you want the app to be visible on your screen during a meeting.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setShowStealthWarning(false)} 
+                className="px-4 py-2 bg-brand-secondary hover:bg-brand-border text-white rounded-lg font-bold text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setStealthMode(false);
+                  ipcRenderer.invoke('set-stealth', false);
+                  setShowStealthWarning(false);
+                }} 
+                className="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white rounded-lg font-bold text-sm transition-colors shadow-[0_0_15px_rgba(225,29,72,0.4)]"
+              >
+                OK, Disable it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Snapshot Fullscreen Preview Modal */}
+      {previewSnapshot && (
+        <div 
+          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-200"
+          onClick={() => setPreviewSnapshot(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
+            onClick={(e) => { e.stopPropagation(); setPreviewSnapshot(null); }}
+          >
+            <X size={24} />
+          </button>
+          <img 
+            src={previewSnapshot} 
+            alt="Snapshot Preview" 
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300" 
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

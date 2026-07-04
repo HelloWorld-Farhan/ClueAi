@@ -157,7 +157,8 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       
       onStart({ provider: 'gemini', index: usedIndex + 1 });
       
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
+      // Use gemini-1.5-flash or gemini-2.0-flash-exp for extreme speed
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
       if (imageBase64) {
@@ -177,7 +178,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: geminiContents,
-          generationConfig: { temperature: 0.5 }
+          generationConfig: { temperature: 0.1, maxOutputTokens: 150 }
         })
       });
 

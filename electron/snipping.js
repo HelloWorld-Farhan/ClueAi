@@ -68,9 +68,20 @@ window.addEventListener('mouseup', (e) => {
   const scaleX = imageWidth / window.innerWidth;
   const scaleY = imageHeight / window.innerHeight;
   
+  let targetWidth = width * scaleX;
+  let targetHeight = height * scaleY;
+
+  // Max dimension limit for faster AI processing (e.g., max 1024px)
+  const MAX_DIM = 1024;
+  if (targetWidth > MAX_DIM || targetHeight > MAX_DIM) {
+    const ratio = Math.min(MAX_DIM / targetWidth, MAX_DIM / targetHeight);
+    targetWidth *= ratio;
+    targetHeight *= ratio;
+  }
+  
   const canvas = document.createElement('canvas');
-  canvas.width = width * scaleX;
-  canvas.height = height * scaleY;
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
   
   const ctx = canvas.getContext('2d');
   ctx.drawImage(
@@ -79,7 +90,8 @@ window.addEventListener('mouseup', (e) => {
     0, 0, canvas.width, canvas.height // Destination
   );
   
-  const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  // High compression for faster base64 transmission
+  const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
   
   // Send back
   ipcRenderer.send('snip-complete', croppedDataUrl);

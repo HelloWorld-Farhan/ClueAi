@@ -116,12 +116,17 @@ function createWindow() {
       
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
+      const scaleFactor = primaryDisplay.scaleFactor;
       const { width, height } = primaryDisplay.size;
       
-      // Capture a static frame of the screen safely
+      const physicalWidth = width * scaleFactor;
+      const physicalHeight = height * scaleFactor;
+      
+      // Capture a static frame of the screen safely using physical resolution
       const sources = await desktopCapturer.getSources({ 
         types: ['screen'], 
-        thumbnailSize: { width: width, height: height } 
+        thumbnailSize: { width: physicalWidth, height: physicalHeight },
+        fetchWindowIcons: false
       });
       
       // Find the specific source or just use the first screen
