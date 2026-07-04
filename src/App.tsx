@@ -5,6 +5,13 @@ import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
 const { ipcRenderer, shell } = window.require('electron');
 
+const formatTimer = (totalSeconds: number) => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
 function App() {
   const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
@@ -146,6 +153,8 @@ function App() {
   }, [interviewTitle]);
   
   const [isGenerating, setIsGenerating] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const timerIntervalRef = useRef<any>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -254,10 +263,10 @@ function App() {
       if (currentSessionId) {
          const existing = sessions.find(s => s.id === currentSessionId);
          if (existing) {
-             setSessionLog(existing.transcript + `\n\n--- RESUMED ON ${new Date().toLocaleDateString()} AT ${new Date().toLocaleTimeString()} ---\n\n`);
+             setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
          }
       } else {
-         setSessionLog('');
+         setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
          setCurrentSessionId(Date.now().toString());
       }
 
@@ -265,7 +274,7 @@ function App() {
       setSessionError('');
     } else if (!currentSessionId) {
       setCurrentSessionId(Date.now().toString());
-      setSessionLog('');
+      setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
     }
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
@@ -349,6 +358,11 @@ function App() {
       intervalRef.current = setInterval(() => {
         processAudioRef.current();
       }, 500);
+
+      setRecordingSeconds(0);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
     } catch (e) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
@@ -471,6 +485,7 @@ function App() {
     setIsRecording(false);
     setIsPaused(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (processorRef.current) processorRef.current.disconnect();
     if (audioContextRef.current) audioContextRef.current.close();
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
@@ -479,9 +494,11 @@ function App() {
     console.log('Idle');
 
     let finalLog = sessionLog;
-    if (transcript.trim() || aiAnswer.trim()) {
-      finalLog += `\n\n--- QUESTION ---\n${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`;
+    if (transcript.trim() || aiAnswer.trim() || currentSnapshot) {
+      finalLog += `\n\n--- QUESTION ---\n${currentSnapshot ? `[IMAGE_BASE64:${currentSnapshot}]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`;
     }
+    
+    finalLog += `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(recordingSeconds)}]\n\n`;
 
     if (finalLog.trim()) {
       const newSession = {
@@ -508,26 +525,112 @@ function App() {
   };
 
   const exportSession = (session: any) => {
-    const divider = "================================================================================";
-    const content = `${divider}
-                            ClueAI - INTERVIEW SESSION
-${divider}
-Session Name : ${session.name}
-Date         : ${session.date || new Date().toLocaleDateString()}
-Time         : ${session.time}
-${session.interviewTitle ? `Interview    : ${session.interviewTitle}` : ''}
-${divider}
+    let htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ClueAI Session - ${session.name}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #09090b; color: #ffffff; line-height: 1.6; margin: 0; padding: 0; }
+          .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+          .header { text-align: center; border-bottom: 2px solid rgba(6, 182, 212, 0.3); padding-bottom: 30px; margin-bottom: 40px; }
+          .header h1 { color: #22d3ee; margin: 0 0 10px 0; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 2px; }
+          .meta { color: #a1a1aa; font-size: 0.9rem; }
+          .meta b { color: #e4e4e7; }
+          .session-marker { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 15px; border-radius: 8px; margin: 30px 0; text-align: center; color: #a1a1aa; font-family: monospace; font-size: 0.85rem; letter-spacing: 1px; }
+          .block { background: rgba(24, 24, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+          .question { padding: 20px; border-left: 4px solid #22d3ee; }
+          .question-label { font-size: 0.75rem; font-weight: 900; color: #22d3ee; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+          .answer { padding: 20px; border-left: 4px solid #e879f9; background: rgba(232, 121, 249, 0.03); border-top: 1px solid rgba(255, 255, 255, 0.05); }
+          .answer-label { font-size: 0.75rem; font-weight: 900; color: #e879f9; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+          .text-content { white-space: pre-wrap; font-size: 0.95rem; }
+          .snapshot { max-width: 100%; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
+          .footer { text-align: center; margin-top: 50px; color: #52525b; font-size: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>ClueAI Session</h1>
+            <div class="meta">
+              <p><b>Name:</b> ${session.name}</p>
+              <p><b>Date:</b> ${session.date || new Date().toLocaleDateString()} | <b>Time:</b> ${session.time}</p>
+              ${session.interviewTitle ? `<p><b>Interview:</b> ${session.interviewTitle}</p>` : ''}
+            </div>
+          </div>
+          <div class="transcript">
+    `;
 
-${session.transcript}
+    // Parse transcript
+    const lines = session.transcript.split('\n');
+    let currentBlockType = ''; // 'question', 'answer'
+    let currentBlockContent = '';
+    let currentImage = '';
 
-${divider}
-                       END OF SESSION - GENERATED BY ClueAI
-${divider}`;
-    const blob = new Blob([content], { type: 'text/plain' });
+    const closeBlock = () => {
+      if (currentBlockType === 'question') {
+        htmlContent += `<div class="block"><div class="question"><div class="question-label">Question context</div>`;
+        if (currentImage) htmlContent += `<img src="${currentImage}" class="snapshot" />`;
+        htmlContent += `<div class="text-content">${currentBlockContent.trim()}</div></div>`;
+      } else if (currentBlockType === 'answer') {
+        htmlContent += `<div class="answer"><div class="answer-label">AI Output</div><div class="text-content">${currentBlockContent.trim()}</div></div></div>`;
+      }
+      currentBlockContent = '';
+      currentImage = '';
+      currentBlockType = '';
+    };
+
+    for (let line of lines) {
+      if (line.includes('[SESSION_START:')) {
+        closeBlock();
+        const time = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
+        htmlContent += `<div class="session-marker">▶ SESSION STARTED AT ${time}</div>`;
+      } else if (line.includes('[SESSION_END:')) {
+        closeBlock();
+        const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
+        const time = match?.[1] || '';
+        const dur = match?.[2] || '';
+        htmlContent += `<div class="session-marker">■ SESSION ENDED AT ${time} (DURATION: ${dur})</div>`;
+      } else if (line.includes('--- QUESTION ---')) {
+        closeBlock();
+        currentBlockType = 'question';
+      } else if (line.includes('--- AI ANSWER ---')) {
+        if (currentBlockType === 'question') {
+           // We don't close block yet because answer goes in the same card
+           htmlContent += `<div class="block"><div class="question"><div class="question-label">Question context</div>`;
+           if (currentImage) htmlContent += `<img src="${currentImage}" class="snapshot" />`;
+           htmlContent += `<div class="text-content">${currentBlockContent.trim()}</div></div>`;
+           currentBlockContent = '';
+           currentImage = '';
+        }
+        currentBlockType = 'answer';
+      } else if (line.startsWith('[IMAGE_BASE64:')) {
+        currentImage = line.substring(14, line.length - 1);
+      } else {
+        if (currentBlockType) {
+          currentBlockContent += line + '\n';
+        }
+      }
+    }
+    closeBlock(); // Close any trailing blocks
+
+    htmlContent += `
+          </div>
+          <div class="footer">
+            Generated by ClueAI Desktop Client &copy; ${new Date().getFullYear()}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${session.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    a.download = `${session.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -539,7 +642,7 @@ ${divider}`;
 
   const resumeListening = () => {
     if (transcript.trim() || aiAnswer.trim() || currentSnapshot) {
-      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`);
+      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${currentSnapshot ? `[IMAGE_BASE64:${currentSnapshot}]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n${aiAnswer}\n\n`);
     }
     
     if (currentSnapshot) {
@@ -577,6 +680,7 @@ ${divider}`;
           </div>
           <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent">
             <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
+            {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner">{formatTimer(recordingSeconds)}</span>}
           </h1>
         </div>
         
