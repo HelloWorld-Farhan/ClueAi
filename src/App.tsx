@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -80,11 +80,18 @@ function App() {
   const [modelChangeMsg, setModelChangeMsg] = useState('');
 
   const saveApiKeys = () => {
-    localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
-    localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
-    initAIClient(provider, groqKeys, geminiKeys);
-    setSTTApiKey(groqKeys.filter(k => k.trim()));
-    setSaveMessage('Saved successfully!');
+    const invalidGroq = groqKeys.some(k => k.trim() !== '' && !(k.trim().startsWith('gsk_') && k.trim().length > 30));
+    const invalidGemini = geminiKeys.some(k => k.trim() !== '' && !((k.trim().startsWith('AIza') || k.trim().startsWith('AQ.')) && k.trim().length > 30));
+
+    if (invalidGroq || invalidGemini) {
+      setSaveMessage('Invalid API Key detected! Please correct or remove it.');
+    } else {
+      localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
+      localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
+      initAIClient(provider, groqKeys, geminiKeys);
+      setSTTApiKey(groqKeys.filter(k => k.trim()));
+      setSaveMessage('Saved successfully!');
+    }
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
@@ -337,7 +344,7 @@ function App() {
 
       intervalRef.current = setInterval(() => {
         processAudioRef.current();
-      }, 1200);
+      }, 100);
     } catch (e) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
@@ -359,7 +366,7 @@ function App() {
     }
     if (isProcessingRef.current) return;
 
-    if (audioDataRef.current.length < 16000 * 1.2) {
+    if (audioDataRef.current.length < 16000 * 0.1) {
       console.log('Buffering...');
       return; 
     }
@@ -681,7 +688,7 @@ ${divider}`;
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><Cpu size={16}/> API Keys</h3>
                 <div className="flex items-center gap-3">
-                  {saveMessage && <span className="text-green-400 text-xs font-bold animate-in fade-in">{saveMessage}</span>}
+                  {saveMessage && <span className={`${saveMessage.startsWith('Invalid') ? 'text-rose-500' : 'text-green-400'} text-xs font-bold animate-in fade-in`}>{saveMessage}</span>}
                   <button onClick={saveApiKeys} className="flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accentSec text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_0_10px_rgba(6,182,212,0.3)]">
                     <Save size={14} /> Save API Keys
                   </button>
@@ -716,6 +723,13 @@ ${divider}`;
                               placeholder={`gsk_...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                              {groqKeys[i].trim() !== '' && (
+                                groqKeys[i].trim().startsWith('gsk_') && groqKeys[i].trim().length > 30 ? (
+                                  <CheckCircle2 size={14} className="text-green-500" />
+                                ) : (
+                                  <XCircle size={14} className="text-rose-500" />
+                                )
+                              )}
                               <button onClick={() => {
                                 const newShow = [...showGroqKeys];
                                 newShow[i] = !newShow[i];
@@ -729,7 +743,7 @@ ${divider}`;
                                 setGroqKeys(newKeys);
                                 setDeleteMessage({ provider: 'groq', index: i });
                                 setTimeout(() => setDeleteMessage(null), 3000);
-                              }} className="text-brand-subtext hover:text-rose-400 transition-colors" title="Clear Key">
+                              }} className="text-rose-500 hover:text-rose-400 transition-colors" title="Clear Key">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -771,6 +785,13 @@ ${divider}`;
                               placeholder={`AIza... or AQ...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                              {geminiKeys[i].trim() !== '' && (
+                                (geminiKeys[i].trim().startsWith('AIza') || geminiKeys[i].trim().startsWith('AQ.')) && geminiKeys[i].trim().length > 30 ? (
+                                  <CheckCircle2 size={14} className="text-green-500" />
+                                ) : (
+                                  <XCircle size={14} className="text-rose-500" />
+                                )
+                              )}
                               <button onClick={() => {
                                 const newShow = [...showGeminiKeys];
                                 newShow[i] = !newShow[i];
@@ -784,7 +805,7 @@ ${divider}`;
                                 setGeminiKeys(newKeys);
                                 setDeleteMessage({ provider: 'gemini', index: i });
                                 setTimeout(() => setDeleteMessage(null), 3000);
-                              }} className="text-brand-subtext hover:text-rose-400 transition-colors" title="Clear Key">
+                              }} className="text-rose-500 hover:text-rose-400 transition-colors" title="Clear Key">
                                 <Trash2 size={14} />
                               </button>
                             </div>
