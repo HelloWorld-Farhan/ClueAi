@@ -1607,11 +1607,11 @@ function App() {
               borderColor: `rgba(255, 255, 255, ${opacity * 0.05})`
             }}
           >
-            <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md">
+            <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md relative">
               <Mic size={14} className={!isPaused ? "animate-pulse text-cyan-400 drop-shadow-md" : "text-white/50"} />
               Transcript
               {showNoInputError && (
-                <span className="ml-2 text-[9px] text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 animate-pulse font-black uppercase tracking-wider">
+                <span className="absolute left-full ml-3 whitespace-nowrap text-[9px] text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 animate-pulse font-black uppercase tracking-wider">
                   No text is here!
                 </span>
               )}
