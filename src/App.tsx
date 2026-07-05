@@ -130,6 +130,7 @@ function App() {
   });
   const [showSessionPrompt, setShowSessionPrompt] = useState(false);
   const [showStartStealthWarning, setShowStartStealthWarning] = useState(false);
+  const [showNoInputError, setShowNoInputError] = useState(false);
   const [sessionNameInput, setSessionNameInput] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState('');
   
@@ -717,7 +718,10 @@ function App() {
   processAudioRef.current = processAudio;
 
   const manualTriggerAI = async () => {
-    if (!transcript && !currentSnapshot) return alert('No speech or snapshot detected yet!');
+    if (!transcript && !currentSnapshot) {
+      setShowNoInputError(true);
+      return;
+    }
     
     setIsPaused(true);
     isPausedRef.current = true;
@@ -1035,9 +1039,15 @@ function App() {
           <div className="flex flex-col justify-center">
             {isRecording && (
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none ${stealthMode ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
-                  Stealth: {stealthMode ? 'ON' : 'OFF'}
-                </span>
+                {stealthMode ? (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
+                    Stealth: ON
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
+                    <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
+                  </span>
+                )}
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
                   Opacity: {Math.round(opacity * 100)}%
                 </span>
@@ -1798,6 +1808,28 @@ function App() {
               })()}
             </div>
           )}
+        </div>
+      )}
+      
+      {/* No Input Error Modal */}
+      {showNoInputError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200">
+            <div className="relative bg-brand-bg border border-brand-border rounded-2xl w-full p-6 shadow-2xl">
+              <h3 className="font-black text-lg text-white mb-3 flex items-center gap-2">
+                <AlertTriangle className="text-yellow-500" size={20} /> Nothing to Answer!
+              </h3>
+              <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
+                No speech or snapshot detected yet. Please wait for the interviewer to speak or take a snip before generating an AI response.
+              </p>
+              <button 
+                onClick={() => setShowNoInputError(false)} 
+                className="w-full bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl font-bold transition-all border border-white/10"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
         </div>
       )}
       
