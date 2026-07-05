@@ -1080,6 +1080,18 @@ function App() {
       } else if (key === 'a' || key === '4') {
         e.preventDefault();
         handleSnipClick();
+      } else if (key === '7') {
+        e.preventDefault();
+        if (isRecording) ipcRenderer.send('resize-window', { width: -50, height: 0 });
+      } else if (key === '8') {
+        e.preventDefault();
+        if (isRecording) ipcRenderer.send('resize-window', { width: 50, height: 0 });
+      } else if (key === '0') {
+        e.preventDefault();
+        if (isRecording) ipcRenderer.send('resize-window', { width: 0, height: -50 });
+      } else if (key === '9') {
+        e.preventDefault();
+        if (isRecording) ipcRenderer.send('resize-window', { width: 0, height: 50 });
       }
     };
 
@@ -1581,6 +1593,43 @@ function App() {
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-3">Layout Style</label>
                   <button onClick={() => setLayout(layout === 'vertical' ? 'horizontal' : 'vertical')} className="w-full bg-brand-secondary border border-brand-border hover:bg-white/10 py-2.5 rounded-lg text-xs font-bold text-brand-text transition-all">Toggle Vertical / Horizontal</button>
+                </div>
+              </div>
+            </section>
+
+            {/* Keyboard Shortcuts */}
+            <section className="pb-10">
+              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Cpu size={16}/> All Shortcut Keys</h3>
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Change AI Model</span>
+                    <span className="bg-brand-accent/20 text-brand-accent px-2 py-1 rounded text-xs font-bold border border-brand-accent/30">S or 5</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Stop Generation</span>
+                    <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs font-bold border border-red-500/30">D or 6</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Snipping Tool</span>
+                    <span className="bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded text-xs font-bold border border-cyan-500/30">A or 4</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Decrease Width</span>
+                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">7</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Increase Width</span>
+                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">8</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Decrease Height</span>
+                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">0</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Increase Height</span>
+                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">9</span>
+                  </div>
                 </div>
               </div>
             </section>
