@@ -413,7 +413,32 @@ function App() {
     if (!hasActiveKey) return alert(`Please enter your ${provider === 'groq' ? 'Groq' : 'Gemini'} API Key first (at least Key 1).`);
     if (!hasGroqKey) return alert('Groq API Key is ALWAYS required for Speech-to-Text transcription. Please enter it.');
     if (!selectedSource) return alert('Please select a screen to capture.');
+    if (!stealthMode) {
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 300);
+      } catch(e) {}
+      
+      setShowStealthWarning(true);
+      return;
+    }
     
+    setSessionNameInput('');
+    setCurrentSessionId('');
+    setSessionError('');
+    setShowSessionPrompt(true);
+  };
+
+  const proceedWithInterview = () => {
+    setShowStealthWarning(false);
     setSessionNameInput('');
     setCurrentSessionId('');
     setSessionError('');
@@ -1708,6 +1733,45 @@ function App() {
         </div>
       )}
       
+      {/* Stealth Mode Warning Modal */}
+      {showStealthWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 rounded-[2rem] blur opacity-40"></div>
+            
+            <div className="relative bg-[#09090b]/90 border border-red-500/30 rounded-[2rem] w-full overflow-hidden shadow-[0_0_80px_rgba(225,29,72,0.3)]">
+              <div className="px-8 py-6 border-b border-red-500/20 flex justify-between items-center bg-red-500/10">
+                <h3 className="font-black text-xl text-rose-500 tracking-wide flex items-center gap-2"><AlertTriangle size={20} /> Warning</h3>
+                <button onClick={() => setShowStealthWarning(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
+              </div>
+              
+              <div className="p-8 space-y-6">
+                <div className="text-sm text-white/80 leading-relaxed">
+                  <p className="mb-4">You are about to start the interview with <strong className="text-white">Stealth Mode OFF</strong>.</p>
+                  <p className="mb-4 text-rose-400"><strong>Impact:</strong> Without Stealth Mode enabled, anti-cheat software (like MS Teams or Zoom screen sharing) may detect this application running in the background.</p>
+                  <p><strong>How to fix:</strong> Click Cancel, go to <span className="bg-white/10 px-2 py-0.5 rounded text-white text-xs font-bold inline-flex items-center gap-1">Settings <Settings size={12}/></span>, and turn on <strong>Stealth Mode</strong> to hide the app securely.</p>
+                </div>
+                
+                <div className="flex gap-3 pt-4 border-t border-white/5">
+                  <button 
+                    onClick={() => setShowStealthWarning(false)} 
+                    className="flex-1 bg-[#18181b] hover:bg-white/10 text-white py-3.5 rounded-xl font-bold transition-all border border-white/10"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={proceedWithInterview} 
+                    className="flex-1 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-400 hover:to-red-400 text-white py-3.5 rounded-xl font-black shadow-[0_0_20px_rgba(225,29,72,0.4)] transition-all"
+                  >
+                    Start Anyway
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Session Name Prompt Modal Redesign */}
       {showSessionPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
