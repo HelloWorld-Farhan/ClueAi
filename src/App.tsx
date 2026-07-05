@@ -1032,20 +1032,22 @@ function App() {
           <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-move" title="Drag to move window">
             <Move size={16} />
           </div>
-          <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent">
-            <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
+          <div className="flex flex-col justify-center">
             {isRecording && (
-              <div className="flex items-center gap-2 ml-2">
-                <span className="text-white font-mono font-bold text-sm px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner">{formatTimer(recordingSeconds)}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider flex items-center gap-1 ${stealthMode ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none ${stealthMode ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
                   Stealth: {stealthMode ? 'ON' : 'OFF'}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider">
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
                   Opacity: {Math.round(opacity * 100)}%
                 </span>
               </div>
             )}
-          </h1>
+            <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
+              <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
+              {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>}
+            </h1>
+          </div>
         </div>
         
         <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
