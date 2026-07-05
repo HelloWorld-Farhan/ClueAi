@@ -107,7 +107,14 @@ function App() {
   const [personalContextFileName, setPersonalContextFileName] = useState(localStorage.getItem('personal_context_file_name') || '');
   const [isUploadingPersonalContext, setIsUploadingPersonalContext] = useState(false);
 
-  const [opacity, setOpacity] = useState(1.0);
+  const [opacity, setOpacity] = useState(() => {
+    try {
+      const saved = localStorage.getItem('appOpacity');
+      return saved ? parseFloat(saved) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
   const [layout, setLayout] = useState('horizontal');
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
@@ -321,6 +328,10 @@ function App() {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Float32Array>(new Float32Array(0));
   const intervalRef = useRef<any>(null);
+
+  useEffect(() => {
+    localStorage.setItem('appOpacity', opacity.toString());
+  }, [opacity]);
 
   useEffect(() => {
     ipcRenderer.invoke('get-desktop-sources').then((s: any) => {
@@ -1023,7 +1034,17 @@ function App() {
           </div>
           <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent">
             <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
-            {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner">{formatTimer(recordingSeconds)}</span>}
+            {isRecording && (
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-white font-mono font-bold text-sm px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner">{formatTimer(recordingSeconds)}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider flex items-center gap-1 ${stealthMode ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+                  Stealth: {stealthMode ? 'ON' : 'OFF'}
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider">
+                  Opacity: {Math.round(opacity * 100)}%
+                </span>
+              </div>
+            )}
           </h1>
         </div>
         
