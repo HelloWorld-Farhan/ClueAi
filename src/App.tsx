@@ -1603,6 +1603,18 @@ function App() {
               <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Pause / Resume</span>
+                    <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs font-bold border border-yellow-500/30">Z or 1</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Ask AI (Trigger)</span>
+                    <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs font-bold border border-purple-500/30">X or 2</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
+                    <span className="text-xs text-white/80 font-semibold">Clear Transcript</span>
+                    <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs font-bold border border-orange-500/30">C or 3</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
                     <span className="text-xs text-white/80 font-semibold">Change AI Model</span>
                     <span className="bg-brand-accent/20 text-brand-accent px-2 py-1 rounded text-xs font-bold border border-brand-accent/30">S or 5</span>
                   </div>
