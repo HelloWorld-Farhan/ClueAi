@@ -1058,19 +1058,28 @@ function App() {
               </div>
               
               {isPaused ? (
-                <button onClick={handlePauseToggle} className="flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-md font-black text-[11px] transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] tracking-wide group">
-                  <Play size={14} fill="currentColor" /> NEXT Q. <span className="opacity-60 font-medium text-[9px] ml-1 bg-black/10 px-1 rounded">Z / 1</span>
+                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-green-500 hover:bg-green-400 text-black px-3 py-1 rounded-md transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] group">
+                  <div className="flex items-center gap-1.5 font-black text-[11px] tracking-wide mb-0.5">
+                    <Play size={12} fill="currentColor" /> NEXT Q.
+                  </div>
+                  <span className="text-[8px] font-bold text-white drop-shadow-md">Press Z or 1</span>
                 </button>
               ) : (
-                <button onClick={handlePauseToggle} className="flex items-center justify-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all group">
-                  <Pause size={14} fill="currentColor" /> Pause <span className="opacity-60 font-medium text-[9px] ml-1 bg-yellow-500/10 px-1 rounded">Z / 1</span>
+                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-md transition-all group">
+                  <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
+                    <Pause size={12} fill="currentColor" /> Pause
+                  </div>
+                  <span className="text-[8px] font-medium text-white/70">Press Z or 1</span>
                 </button>
               )}
               <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Crop size={14} /> Snip & Ask AI
               </button>
-              <button onClick={handleClearAll} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all group">
-                <Trash2 size={14} fill="currentColor" /> Clear <span className="opacity-60 font-medium text-[9px] ml-1 bg-slate-500/20 px-1 rounded">C / 3</span>
+              <button onClick={handleClearAll} className="flex flex-col items-center justify-center bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1 rounded-md transition-all group">
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
+                  <Trash2 size={12} fill="currentColor" /> Clear
+                </div>
+                <span className="text-[8px] font-medium text-white/70">Press C or 3</span>
               </button>
               <button onClick={stopRecording} className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Square size={14} fill="currentColor" /> Stop
@@ -1630,10 +1639,13 @@ function App() {
              <button 
                 onClick={manualTriggerAI}
                 disabled={isGenerating}
-                className="w-full py-2.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2 transform active:scale-95 text-xs"
+                className="w-full py-1.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none transition-all flex flex-col items-center justify-center transform active:scale-95"
              >
-                {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
-                Generate AI Response <span className="opacity-70 font-medium text-[10px] ml-1 bg-white/20 px-1.5 py-0.5 rounded-md">X / 2</span>
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
+                  Generate AI Response
+                </div>
+                <span className="text-[9px] font-medium text-white/90 mt-0.5">Press X or 2</span>
              </button>
           </div>
         </div>
