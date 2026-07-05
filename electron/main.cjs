@@ -42,10 +42,9 @@ function createWindow() {
     }
   });
 
-  ipcMain.on('move-window-by', (event, { dx, dy }) => {
-    if (mainWindow) {
-      const [x, y] = mainWindow.getPosition();
-      mainWindow.setPosition(Math.round(x + dx), Math.round(y + dy));
+  ipcMain.on('set-window-pos', (event, { x, y }) => {
+    if (mainWindow && typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)) {
+      mainWindow.setPosition(Math.round(x), Math.round(y));
     }
   });
 

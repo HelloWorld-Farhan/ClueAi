@@ -374,8 +374,9 @@ function App() {
   }, [interviewTitle]);
   
   
+  
   const [isDraggingWindow, setIsDraggingWindow] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
+  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, winX: 0, winY: 0 });
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -1086,10 +1087,9 @@ function App() {
 
     const handleGlobalPointerMove = (e: PointerEvent) => {
       if (isDraggingWindow) {
-        const dx = e.screenX - dragStartRef.current.x;
-        const dy = e.screenY - dragStartRef.current.y;
-        dragStartRef.current = { x: e.screenX, y: e.screenY };
-        ipcRenderer.send('move-window-by', { dx, dy });
+        const newX = dragStartRef.current.winX + (e.screenX - dragStartRef.current.mouseX);
+        const newY = dragStartRef.current.winY + (e.screenY - dragStartRef.current.mouseY);
+        ipcRenderer.send('set-window-pos', { x: newX, y: newY });
       }
     };
 
@@ -1127,7 +1127,7 @@ function App() {
           const target = e.target as HTMLElement;
           if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
             setIsDraggingWindow(true);
-            dragStartRef.current = { x: e.screenX, y: e.screenY };
+            dragStartRef.current = { mouseX: e.screenX, mouseY: e.screenY, winX: window.screenLeft || window.screenX, winY: window.screenTop || window.screenY };
             target.setPointerCapture(e.pointerId);
           }
         }}
