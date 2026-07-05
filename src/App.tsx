@@ -951,6 +951,58 @@ function App() {
     isPausedRef.current = false;
   };
 
+  const handlePauseToggle = () => {
+    if (isPaused) {
+      resumeListening();
+    } else {
+      setIsPaused(true);
+      isPausedRef.current = true;
+      setTranscript('');
+      finalizedTranscriptRef.current = '';
+      interimTranscriptRef.current = '';
+      audioDataRef.current = new Float32Array(0);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (currentSnapshot) {
+      setSnapshotHistory(prev => {
+        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+        return newHistory.length > 4 ? newHistory.slice(newHistory.length - 4) : newHistory;
+      });
+    }
+    setTranscript(''); 
+    finalizedTranscriptRef.current = '';
+    interimTranscriptRef.current = '';
+    audioDataRef.current = new Float32Array(0); 
+    setCurrentSnapshot(null);
+    setAiAnswer('');
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input or textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (!isRecording) return;
+      
+      const key = e.key.toLowerCase();
+      
+      if (key === 'x' || key === '2') {
+        e.preventDefault();
+        if (!isGenerating) manualTriggerAI();
+      } else if (key === 'z' || key === '1') {
+        e.preventDefault();
+        handlePauseToggle();
+      } else if (key === 'c' || key === '3') {
+        e.preventDefault();
+        handleClearAll();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript]);
+
   const closeApp = () => window.close();
   const minimizeApp = () => {
      ipcRenderer.invoke('minimize-window');
@@ -1006,39 +1058,19 @@ function App() {
               </div>
               
               {isPaused ? (
-                <button onClick={resumeListening} className="flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-black w-[130px] py-1.5 rounded-md font-black text-[11px] transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] tracking-wide">
-                  <Play size={14} fill="currentColor" /> NEXT Q.
+                <button onClick={handlePauseToggle} className="flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-md font-black text-[11px] transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] tracking-wide group">
+                  <Play size={14} fill="currentColor" /> NEXT Q. <span className="opacity-60 font-medium text-[9px] ml-1 bg-black/10 px-1 rounded">Z / 1</span>
                 </button>
               ) : (
-                <button onClick={() => {
-                  setIsPaused(true);
-                  isPausedRef.current = true;
-                  setTranscript('');
-                  finalizedTranscriptRef.current = '';
-                  interimTranscriptRef.current = '';
-                  audioDataRef.current = new Float32Array(0);
-                }} className="flex items-center justify-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 w-[130px] py-1.5 rounded-md font-bold text-xs transition-all">
-                  <Pause size={14} fill="currentColor" /> Pause
+                <button onClick={handlePauseToggle} className="flex items-center justify-center gap-1.5 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all group">
+                  <Pause size={14} fill="currentColor" /> Pause <span className="opacity-60 font-medium text-[9px] ml-1 bg-yellow-500/10 px-1 rounded">Z / 1</span>
                 </button>
               )}
               <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Crop size={14} /> Snip & Ask AI
               </button>
-              <button onClick={() => { 
-                if (currentSnapshot) {
-                  setSnapshotHistory(prev => {
-                    const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
-                    return newHistory.length > 4 ? newHistory.slice(newHistory.length - 4) : newHistory;
-                  });
-                }
-                setTranscript(''); 
-                finalizedTranscriptRef.current = '';
-                interimTranscriptRef.current = '';
-                audioDataRef.current = new Float32Array(0); 
-                setCurrentSnapshot(null);
-                setAiAnswer('');
-              }} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
-                <Trash2 size={14} fill="currentColor" /> Clear
+              <button onClick={handleClearAll} className="flex items-center gap-1.5 bg-slate-500/10 text-brand-subtext hover:bg-slate-500/20 border border-slate-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all group">
+                <Trash2 size={14} fill="currentColor" /> Clear <span className="opacity-60 font-medium text-[9px] ml-1 bg-slate-500/20 px-1 rounded">C / 3</span>
               </button>
               <button onClick={stopRecording} className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
                 <Square size={14} fill="currentColor" /> Stop
@@ -1601,7 +1633,7 @@ function App() {
                 className="w-full py-2.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2 transform active:scale-95 text-xs"
              >
                 {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
-                Generate AI Response
+                Generate AI Response <span className="opacity-70 font-medium text-[10px] ml-1 bg-white/20 px-1.5 py-0.5 rounded-md">X / 2</span>
              </button>
           </div>
         </div>
