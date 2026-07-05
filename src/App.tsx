@@ -1099,7 +1099,7 @@ function App() {
         style={{ WebkitAppRegion: 'drag' } as any}
       >
         <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-move" title="Drag to move window">
+          <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-move">
             <Move size={16} />
           </div>
           <div className="flex flex-col justify-center">
@@ -1194,7 +1194,7 @@ function App() {
             </>
           ) : (
             <>
-              <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`} title="Settings">
+              <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
                 <Settings size={16} />
               </button>
               <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/30">
@@ -1205,7 +1205,7 @@ function App() {
 
           {/* Minimize / Maximize / Close */}
           <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border">
-            <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Toggle Size">
+            <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
               <Maximize size={16} />
             </button>
             <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
@@ -1343,15 +1343,15 @@ function App() {
                               placeholder={`gsk_...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                              {groqKeyStatus[i] === 'validating' && <div title="Validating API Key..."><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                              {groqKeyStatus[i] === 'valid' && <div title="Valid API Key"><CheckCircle2 size={16} className="text-green-500" /></div>}
-                              {groqKeyStatus[i] === 'invalid' && <div title="Invalid API Key"><XCircle size={16} className="text-rose-500" /></div>}
-                              {groqKeyStatus[i] === 'duplicate' && <div title="Duplicate Key"><AlertTriangle size={16} className="text-yellow-500" /></div>}
+                              {groqKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                              {groqKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                              {groqKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                              {groqKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
                               <button onClick={() => {
                                 const newShow = [...showGroqKeys];
                                 newShow[i] = !newShow[i];
                                 setShowGroqKeys(newShow);
-                              }} className="text-brand-subtext hover:text-white transition-colors" title={showGroqKeys[i] ? "Hide Key" : "Show Key"}>
+                              }} className="text-brand-subtext hover:text-white transition-colors">
                                 {showGroqKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                               </button>
                               <button onClick={() => {
@@ -1360,7 +1360,7 @@ function App() {
                                 setGroqKeys(newKeys);
                                 setDeleteMessage({ provider: 'groq', index: i });
                                 setTimeout(() => setDeleteMessage(null), 3000);
-                              }} className="text-rose-500 hover:text-rose-400 transition-colors" title="Clear Key">
+                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -1402,15 +1402,15 @@ function App() {
                               placeholder={`AIza... or AQ...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                              {geminiKeyStatus[i] === 'validating' && <div title="Validating API Key..."><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                              {geminiKeyStatus[i] === 'valid' && <div title="Valid API Key"><CheckCircle2 size={16} className="text-green-500" /></div>}
-                              {geminiKeyStatus[i] === 'invalid' && <div title="Invalid API Key"><XCircle size={16} className="text-rose-500" /></div>}
-                              {geminiKeyStatus[i] === 'duplicate' && <div title="Duplicate Key"><AlertTriangle size={16} className="text-yellow-500" /></div>}
+                              {geminiKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                              {geminiKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                              {geminiKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                              {geminiKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
                               <button onClick={() => {
                                 const newShow = [...showGeminiKeys];
                                 newShow[i] = !newShow[i];
                                 setShowGeminiKeys(newShow);
-                              }} className="text-brand-subtext hover:text-white transition-colors" title={showGeminiKeys[i] ? "Hide Key" : "Show Key"}>
+                              }} className="text-brand-subtext hover:text-white transition-colors">
                                 {showGeminiKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                               </button>
                               <button onClick={() => {
@@ -1419,7 +1419,7 @@ function App() {
                                 setGeminiKeys(newKeys);
                                 setDeleteMessage({ provider: 'gemini', index: i });
                                 setTimeout(() => setDeleteMessage(null), 3000);
-                              }} className="text-rose-500 hover:text-rose-400 transition-colors" title="Clear Key">
+                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -1466,10 +1466,10 @@ function App() {
                       </label>
                       {resumeFileName && !isUploadingResume && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
+                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
                             <FileText size={14} className="flex-shrink-0" /> {resumeFileName}
                           </span>
-                          <button onClick={() => handleDeleteFile('resume1')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20" title="Delete">
+                          <button onClick={() => handleDeleteFile('resume1')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1502,10 +1502,10 @@ function App() {
                       </label>
                       {resumeFileName2 && !isUploadingResume2 && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
+                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
                             <FileText size={14} className="flex-shrink-0" /> {resumeFileName2}
                           </span>
-                          <button onClick={() => handleDeleteFile('resume2')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20" title="Delete">
+                          <button onClick={() => handleDeleteFile('resume2')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1533,10 +1533,10 @@ function App() {
                       </label>
                       {personalContextFileName && !isUploadingPersonalContext && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20" title="Parsed successfully">
+                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
                             <FileText size={14} className="flex-shrink-0" /> {personalContextFileName}
                           </span>
-                          <button onClick={() => handleDeleteFile('personal')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20" title="Delete">
+                          <button onClick={() => handleDeleteFile('personal')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1717,7 +1717,7 @@ function App() {
                   setTimeout(() => setCopiedTranscript(false), 2000);
                 }}
                 className="text-white/40 hover:text-white transition-colors flex items-center gap-1.5"
-                title="Copy Transcript"
+               
               >
                 {copiedTranscript && <span className="text-xs text-green-400 font-bold animate-in fade-in">Copied!</span>}
                 <Copy size={14} className={copiedTranscript ? "text-green-400" : ""} />
@@ -1814,7 +1814,7 @@ function App() {
                   setTimeout(() => setCopiedAnswer(false), 2000);
                 }}
                 className="text-white/40 hover:text-white transition-colors flex items-center gap-1.5"
-                title="Copy Answer"
+               
               >
                 {copiedAnswer && <span className="text-xs text-green-400 font-bold animate-in fade-in">Copied!</span>}
                 <Copy size={14} className={copiedAnswer ? "text-green-400" : ""} />

@@ -21,9 +21,11 @@ function createWindow() {
   });
 
   // Stealth Mode: Hide window from screen sharing software
+  let isStealthMode = true;
   mainWindow.setContentProtection(true);
 
   ipcMain.handle('set-stealth', (event, enable) => {
+    isStealthMode = enable;
     if (mainWindow) {
       mainWindow.setContentProtection(enable);
     }
@@ -162,6 +164,7 @@ function createWindow() {
         }
       });
       
+      snipWindow.setContentProtection(isStealthMode);
       snipWindow.setFullScreen(true);
       snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
       
