@@ -575,12 +575,7 @@ function App() {
     setIsPaused(false);
     audioDataRef.current = new Float32Array(0);
 
-    try {
-      if (stealthMode) {
-        await ipcRenderer.invoke('set-stealth', false);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
+    try {      
       const freshSources = await ipcRenderer.invoke('get-desktop-sources');
       let activeSourceId = selectedSource;
       if (freshSources && freshSources.length > 0) {
@@ -602,10 +597,6 @@ function App() {
           }
         } as any
       });
-      
-      if (stealthMode) {
-        await ipcRenderer.invoke('set-stealth', true);
-      }
 
       const micStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -1073,12 +1064,25 @@ function App() {
       } else if (key === 'c' || key === '3') {
         e.preventDefault();
         handleClearAll();
+      } else if (key === 's' || key === '5') {
+        e.preventDefault();
+        const newProvider = provider === 'groq' ? 'gemini' : 'groq';
+        setProvider(newProvider);
+        switchProvider(newProvider);
+        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}`);
+        setTimeout(() => setModelChangeMsg(''), 3000);
+      } else if (key === 'd' || key === '6') {
+        e.preventDefault();
+        stopRecording();
+      } else if (key === 'a' || key === '4') {
+        e.preventDefault();
+        handleSnipClick();
       }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript]);
+  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript, provider]);
 
   const closeApp = () => window.close();
   const minimizeApp = () => {
@@ -1127,21 +1131,24 @@ function App() {
             <>
               <div className="flex items-center gap-3 mr-2 relative">
                 <div className="relative group">
-                  <CustomSelect 
-                    value={provider} 
-                    onChange={(val: 'groq' | 'gemini') => {
-                      setProvider(val);
-                      switchProvider(val);
-                      setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini'}`);
-                      setTimeout(() => setModelChangeMsg(''), 3000);
-                    }} 
-                    options={[
-                      { value: 'groq', label: '⚡ Groq API' },
-                      { value: 'gemini', label: '🧠 Gemini Flash' }
-                    ]}
-                    className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
-                    icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
-                  />
+                  <div className="flex flex-col items-center group">
+                    <CustomSelect 
+                      value={provider} 
+                      onChange={(val: 'groq' | 'gemini') => {
+                        setProvider(val);
+                        switchProvider(val);
+                        setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini'}`);
+                        setTimeout(() => setModelChangeMsg(''), 3000);
+                      }} 
+                      options={[
+                        { value: 'groq', label: '⚡ Groq API' },
+                        { value: 'gemini', label: '🧠 Gemini Flash' }
+                      ]}
+                      className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
+                      icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
+                    />
+                    <span className="text-[8px] font-medium text-white/50 mt-0.5 absolute -bottom-3.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Press S or 5</span>
+                  </div>
                   
                   {modelChangeMsg && (
                     <div className="fixed top-16 right-6 z-[100] bg-green-500/15 backdrop-blur-xl border border-green-500/30 text-green-400 text-[10px] uppercase tracking-widest font-black px-4 py-2 rounded-xl animate-in slide-in-from-top-4 fade-in duration-300 whitespace-nowrap shadow-[0_0_30px_rgba(34,197,94,0.3)] pointer-events-none flex items-center gap-2">
@@ -1166,8 +1173,11 @@ function App() {
                   <span className="text-[8px] font-medium text-white/70">Press Z or 1</span>
                 </button>
               )}
-              <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
-                <Crop size={14} /> Snip & Ask AI
+              <button onClick={handleSnipClick} className="flex flex-col items-center justify-center bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1 rounded-md transition-all group">
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
+                  <Crop size={12} /> Snip UI
+                </div>
+                <span className="text-[8px] font-medium text-white/70">Press A or 4</span>
               </button>
               <button onClick={handleClearAll} className="flex flex-col items-center justify-center bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1 rounded-md transition-all group">
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
@@ -1175,8 +1185,11 @@ function App() {
                 </div>
                 <span className="text-[8px] font-medium text-white/70">Press C or 3</span>
               </button>
-              <button onClick={stopRecording} className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all">
-                <Square size={14} fill="currentColor" /> Stop
+              <button onClick={stopRecording} className="flex flex-col items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-md transition-all group">
+                <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
+                  <Square size={12} fill="currentColor" /> Stop
+                </div>
+                <span className="text-[8px] font-medium text-white/70">Press D or 6</span>
               </button>
             </>
           ) : (
