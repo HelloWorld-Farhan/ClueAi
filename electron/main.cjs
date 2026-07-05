@@ -13,6 +13,7 @@ function createWindow() {
     hasShadow: false,
     thickFrame: false,
     roundedCorners: false,
+    resizable: false,
     backgroundColor: '#00000000',
     skipTaskbar: true,
     webPreferences: {
