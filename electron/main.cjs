@@ -42,6 +42,13 @@ function createWindow() {
     }
   });
 
+  ipcMain.on('move-window-by', (event, { dx, dy }) => {
+    if (mainWindow) {
+      const [x, y] = mainWindow.getPosition();
+      mainWindow.setPosition(x + dx, y + dy);
+    }
+  });
+
   // Handle get-desktop-sources IPC
   ipcMain.handle('get-desktop-sources', async () => {
     const sources = await desktopCapturer.getSources({ types: ['screen'] });
