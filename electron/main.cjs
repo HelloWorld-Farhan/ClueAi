@@ -42,10 +42,33 @@ function createWindow() {
     }
   });
 
-  ipcMain.on('set-window-pos', (event, { x, y }) => {
-    if (mainWindow && typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)) {
-      mainWindow.setPosition(Math.round(x), Math.round(y));
-    }
+  let dragInterval;
+  let dragOffset = { x: 0, y: 0 };
+  let dragSize = { width: 0, height: 0 };
+
+  ipcMain.on('start-drag', () => {
+    if (!mainWindow) return;
+    const cursorPos = screen.getCursorScreenPoint();
+    const bounds = mainWindow.getBounds();
+    dragOffset = { x: cursorPos.x - bounds.x, y: cursorPos.y - bounds.y };
+    dragSize = { width: bounds.width, height: bounds.height };
+    
+    if (dragInterval) clearInterval(dragInterval);
+    dragInterval = setInterval(() => {
+      if (mainWindow) {
+        const currentCursor = screen.getCursorScreenPoint();
+        mainWindow.setBounds({
+          x: currentCursor.x - dragOffset.x,
+          y: currentCursor.y - dragOffset.y,
+          width: dragSize.width,
+          height: dragSize.height
+        });
+      }
+    }, 10);
+  });
+
+  ipcMain.on('stop-drag', () => {
+    if (dragInterval) clearInterval(dragInterval);
   });
 
   // Handle get-desktop-sources IPC

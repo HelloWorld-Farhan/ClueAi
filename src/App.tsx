@@ -1101,7 +1101,17 @@ function App() {
     >
       <div 
         className="flex items-center justify-between mb-4 pb-2 border-b border-indigo-500/20"
-        style={{ WebkitAppRegion: 'drag' } as any}
+        onPointerDown={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
+            ipcRenderer.send('start-drag');
+            target.setPointerCapture(e.pointerId);
+          }
+        }}
+        onPointerUp={(e) => {
+          ipcRenderer.send('stop-drag');
+          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        }}
       >
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
@@ -1131,7 +1141,7 @@ function App() {
           </div>
         </div>
         
-        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        <div className="flex items-center gap-2">
           {isRecording ? (
             <>
               <div className="flex items-center gap-3 mr-2 relative">
