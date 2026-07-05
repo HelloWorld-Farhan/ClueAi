@@ -10,6 +10,8 @@ function createWindow() {
     center: true,
     transparent: true,
     frame: false,
+    hasShadow: false,
+    thickFrame: false,
     backgroundColor: '#00000000',
     skipTaskbar: true,
     webPreferences: {

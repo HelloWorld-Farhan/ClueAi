@@ -51,6 +51,45 @@ const validateGeminiKey = async (key: string): Promise<boolean> => {
 
 type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
 
+const CustomSelect = ({ value, onChange, options, className, icon, listClassName }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = options.find((o: any) => o.value === value) || options[0];
+  
+  return (
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+      )}
+      <div className={`relative ${className || ''}`} onClick={() => setIsOpen(!isOpen)}>
+        <div className="flex items-center justify-between h-full cursor-pointer select-none">
+          <div className="flex items-center gap-2">
+            {icon && icon}
+            <span className="truncate">{selectedOption?.label || value}</span>
+          </div>
+          <ChevronDown size={14} className={`text-brand-subtext transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+        {isOpen && (
+          <div className={`absolute z-[110] left-0 right-0 top-full mt-1.5 bg-[#18181b] border border-white/10 rounded-xl overflow-hidden shadow-2xl max-h-60 overflow-y-auto ${listClassName || ''}`}>
+            {options.map((opt: any) => (
+              <div 
+                key={opt.value} 
+                className={`px-4 py-3 hover:bg-white/10 cursor-pointer text-sm transition-colors ${opt.value === value ? 'bg-brand-accent/20 text-white font-bold' : 'text-brand-subtext hover:text-white'}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
 function App() {
   const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
@@ -1088,22 +1127,21 @@ function App() {
             <>
               <div className="flex items-center gap-3 mr-2 relative">
                 <div className="relative group">
-                  <select 
+                  <CustomSelect 
                     value={provider} 
-                    onChange={e => {
-                      const newProvider = e.target.value as 'groq' | 'gemini';
-                      setProvider(newProvider);
-                      switchProvider(newProvider);
-                      setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}`);
+                    onChange={(val: 'groq' | 'gemini') => {
+                      setProvider(val);
+                      switchProvider(val);
+                      setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini'}`);
                       setTimeout(() => setModelChangeMsg(''), 3000);
                     }} 
-                    className="appearance-none bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-7 py-1.5 text-xs font-semibold outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/30 text-white transition-all cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.2)]"
-                  >
-                    <option value="groq" className="bg-brand-card">⚡ Groq API</option>
-                    <option value="gemini" className="bg-brand-card">🧠 Gemini Flash</option>
-                  </select>
-                  <Cpu size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-accent pointer-events-none" />
-                  <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-subtext pointer-events-none group-hover:text-white transition-colors" />
+                    options={[
+                      { value: 'groq', label: '⚡ Groq API' },
+                      { value: 'gemini', label: '🧠 Gemini Flash' }
+                    ]}
+                    className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
+                    icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
+                  />
                   
                   {modelChangeMsg && (
                     <div className="fixed top-16 right-6 z-[100] bg-green-500/15 backdrop-blur-xl border border-green-500/30 text-green-400 text-[10px] uppercase tracking-widest font-black px-4 py-2 rounded-xl animate-in slide-in-from-top-4 fade-in duration-300 whitespace-nowrap shadow-[0_0_30px_rgba(34,197,94,0.3)] pointer-events-none flex items-center gap-2">
@@ -1190,16 +1228,24 @@ function App() {
               <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Default AI Provider</label>
-                  <select value={provider} onChange={e => setProvider(e.target.value as any)} className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-accentSec text-white transition-all">
-                    <option value="groq">Groq (Llama 3 - Default)</option>
-                    <option value="gemini">Google Gemini (1.5 Flash)</option>
-                  </select>
+                  <CustomSelect 
+                    value={provider} 
+                    onChange={(val: any) => setProvider(val)} 
+                    options={[
+                      { value: 'groq', label: 'Groq (Llama 3 - Default)' },
+                      { value: 'gemini', label: 'Google Gemini (1.5 Flash)' }
+                    ]}
+                    className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Capture Screen</label>
-                  <select value={selectedSource} onChange={e => setSelectedSource(e.target.value)} className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-accentSec text-white transition-all">
-                    {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                  <CustomSelect 
+                    value={selectedSource} 
+                    onChange={(val: any) => setSelectedSource(val)} 
+                    options={sources.map(s => ({ value: s.id, label: s.name }))}
+                    className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-brand-subtext mb-2">Stealth Mode (Hide from Screen Share)</label>
@@ -1926,30 +1972,24 @@ function App() {
                 <div>
                   <label className="block text-[10px] font-black text-brand-subtext uppercase tracking-[0.2em] mb-3">Resume Existing Session</label>
                   <div className="relative">
-                    <select
-                      className="w-full bg-[#18181b] border border-white/10 rounded-xl px-5 py-3.5 text-sm text-white outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all appearance-none cursor-pointer"
+                    <CustomSelect
                       value={currentSessionId}
-                      onChange={e => {
-                        setCurrentSessionId(e.target.value);
-                        if (e.target.value) {
-                           const s = sessions.find(x => x.id === e.target.value);
+                      onChange={(val: string) => {
+                        setCurrentSessionId(val);
+                        if (val) {
+                           const s = sessions.find(x => x.id === val);
                            if (s) setSessionNameInput(s.name);
                            setSessionError('');
                         } else {
                            setSessionNameInput('');
                         }
                       }}
-                    >
-                      <option value="" className="bg-[#09090b] text-white/50">-- Create a New Session Instead --</option>
-                      {sessions.map(s => (
-                        <option key={s.id} value={s.id} className="bg-[#09090b] text-white">
-                          {s.name} ({s.date || 'Old Session'})
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </div>
+                      options={[
+                        { value: '', label: '-- Create a New Session Instead --' },
+                        ...sessions.map(s => ({ value: s.id, label: `${s.name} (${s.date || 'Old Session'})` }))
+                      ]}
+                      className="w-full bg-[#18181b] border border-white/10 rounded-xl px-5 py-3 text-sm text-white transition-all"
+                    />
                   </div>
                 </div>
 
