@@ -45,7 +45,7 @@ function createWindow() {
   ipcMain.on('move-window-by', (event, { dx, dy }) => {
     if (mainWindow) {
       const [x, y] = mainWindow.getPosition();
-      mainWindow.setPosition(x + dx, y + dy);
+      mainWindow.setPosition(Math.round(x + dx), Math.round(y + dy));
     }
   });
 
