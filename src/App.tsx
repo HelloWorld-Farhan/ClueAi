@@ -720,7 +720,6 @@ function App() {
   const manualTriggerAI = async () => {
     if (!transcript && !currentSnapshot) {
       setShowNoInputError(true);
-      setTimeout(() => setShowNoInputError(false), 3500);
       return;
     }
     
@@ -964,6 +963,7 @@ function App() {
     setAiAnswer('');
     setCurrentSnapshot(null);
     setIsPaused(false);
+    setShowNoInputError(false);
     isPausedRef.current = false;
   };
 
