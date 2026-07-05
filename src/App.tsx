@@ -720,6 +720,7 @@ function App() {
   const manualTriggerAI = async () => {
     if (!transcript && !currentSnapshot) {
       setShowNoInputError(true);
+      setTimeout(() => setShowNoInputError(false), 2000);
       return;
     }
     
@@ -1609,6 +1610,11 @@ function App() {
             <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md">
               <Mic size={14} className={!isPaused ? "animate-pulse text-cyan-400 drop-shadow-md" : "text-white/50"} />
               Transcript
+              {showNoInputError && (
+                <span className="ml-2 text-[9px] text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 animate-pulse font-black uppercase tracking-wider">
+                  No text is here!
+                </span>
+              )}
             </span>
             <div className="flex items-center gap-3">
               <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm">
@@ -1808,28 +1814,6 @@ function App() {
               })()}
             </div>
           )}
-        </div>
-      )}
-      
-      {/* No Input Error Modal */}
-      {showNoInputError && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200">
-            <div className="relative bg-brand-bg border border-brand-border rounded-2xl w-full p-6 shadow-2xl">
-              <h3 className="font-black text-lg text-white mb-3 flex items-center gap-2">
-                <AlertTriangle className="text-yellow-500" size={20} /> Nothing to Answer!
-              </h3>
-              <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
-                No speech or snapshot detected yet. Please wait for the interviewer to speak or take a snip before generating an AI response.
-              </p>
-              <button 
-                onClick={() => setShowNoInputError(false)} 
-                className="w-full bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl font-bold transition-all border border-white/10"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
         </div>
       )}
       
