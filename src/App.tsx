@@ -81,7 +81,14 @@ function App() {
   const [aiAnswer, setAiAnswer] = useState('');
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
-  const [stealthMode, setStealthMode] = useState(true);
+  const [stealthMode, setStealthMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('appStealthMode');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [showStealthWarning, setShowStealthWarning] = useState(false);
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -336,6 +343,11 @@ function App() {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Float32Array>(new Float32Array(0));
   const intervalRef = useRef<any>(null);
+
+  useEffect(() => {
+    localStorage.setItem('appStealthMode', stealthMode.toString());
+    ipcRenderer.invoke('set-stealth', stealthMode);
+  }, [stealthMode]);
 
   useEffect(() => {
     localStorage.setItem('appOpacity', opacity.toString());
