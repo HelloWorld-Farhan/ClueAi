@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -130,6 +130,7 @@ function App() {
   });
   const [showSessionPrompt, setShowSessionPrompt] = useState(false);
   const [showStartStealthWarning, setShowStartStealthWarning] = useState(false);
+  const [showApiKeyMissingError, setShowApiKeyMissingError] = useState(false);
   const [showNoInputError, setShowNoInputError] = useState(false);
   const [sessionNameInput, setSessionNameInput] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState('');
@@ -158,6 +159,12 @@ function App() {
     if (dupGem.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates.` });
     if (invGroq.length > 0) msgs.push({ type: 'invalid', text: `Error: Groq Key ${invGroq.join(' and ')} are invalid.` });
     if (invGem.length > 0) msgs.push({ type: 'invalid', text: `Error: Gemini Key ${invGem.join(' and ')} are invalid.` });
+
+    if (invGroq.length > 0 || invGem.length > 0) {
+      setSaveMessages(msgs);
+      setTimeout(() => setSaveMessages([]), 8000);
+      return;
+    }
 
     localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
     localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
@@ -423,8 +430,11 @@ function App() {
     const hasActiveKey = activeKeys.some(k => k.trim() !== '');
     const hasGroqKey = groqKeys.some(k => k.trim() !== '');
 
-    if (!hasActiveKey) return alert(`Please enter your ${provider === 'groq' ? 'Groq' : 'Gemini'} API Key first (at least Key 1).`);
-    if (!hasGroqKey) return alert('Groq API Key is ALWAYS required for Speech-to-Text transcription. Please enter it.');
+    if (!hasActiveKey || !hasGroqKey) {
+      setShowApiKeyMissingError(true);
+      return;
+    }
+    
     if (!selectedSource) return alert('Please select a screen to capture.');
     if (!stealthMode) {
       try {
@@ -1224,6 +1234,15 @@ function App() {
                   </button>
                 </div>
               </div>
+              <div className="bg-brand-accent/10 border border-brand-accent/30 rounded-xl p-4 mb-4 flex items-start gap-3 shadow-sm">
+                <Info className="text-brand-accent mt-0.5 shrink-0" size={18} />
+                <div className="text-sm text-brand-subtext leading-relaxed">
+                  <strong className="text-white block mb-1">Why 15 API Keys?</strong>
+                  To bypass rate limits and keep your usage completely free, ClueAI distributes requests across multiple API keys. 
+                  If you provide 6 keys, ClueAI will intelligently rotate through all 6 to keep you safely within free limits. 
+                  The more keys you provide, the more seamless and free your interview experience will be!
+                </div>
+              </div>
               <div className="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
                 {/* Groq Accordion */}
                 <div className="border-b border-brand-border last:border-b-0">
@@ -1817,6 +1836,28 @@ function App() {
         </div>
       )}
       
+      {/* API Key Missing Error Modal */}
+      {showApiKeyMissingError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200">
+            <div className="relative bg-brand-bg border border-brand-border rounded-2xl w-full p-6 shadow-2xl">
+              <h3 className="font-black text-lg text-white mb-3 flex items-center gap-2">
+                <AlertTriangle className="text-rose-500" size={20} /> Missing API Keys
+              </h3>
+              <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
+                You must provide a valid API key (at least Groq Key 1) before starting the interview. Go to Settings and add your API keys to continue.
+              </p>
+              <button 
+                onClick={() => setShowApiKeyMissingError(false)} 
+                className="w-full bg-brand-accent hover:bg-brand-accentSec text-white py-2.5 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stealth Mode Warning Modal (For Starting Interview) */}
       {showStartStealthWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
