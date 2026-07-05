@@ -374,9 +374,7 @@ function App() {
   }, [interviewTitle]);
   
   
-  
-  const [isDraggingWindow, setIsDraggingWindow] = useState(false);
-  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, winX: 0, winY: 0 });
+    
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -1085,30 +1083,11 @@ function App() {
       }
     };
 
-    const handleGlobalPointerMove = (e: PointerEvent) => {
-      if (isDraggingWindow) {
-        const newX = dragStartRef.current.winX + (e.screenX - dragStartRef.current.mouseX);
-        const newY = dragStartRef.current.winY + (e.screenY - dragStartRef.current.mouseY);
-        ipcRenderer.send('set-window-pos', { x: newX, y: newY });
-      }
-    };
-
-    const handleGlobalPointerUp = () => {
-      setIsDraggingWindow(false);
-    };
-
     window.addEventListener('keydown', handleGlobalKeyDown);
-    if (isDraggingWindow) {
-      window.addEventListener('pointermove', handleGlobalPointerMove);
-      window.addEventListener('pointerup', handleGlobalPointerUp);
-    }
-    
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
-      window.removeEventListener('pointermove', handleGlobalPointerMove);
-      window.removeEventListener('pointerup', handleGlobalPointerUp);
     };
-  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript, provider, isDraggingWindow]);
+  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript, provider]);
 
   const closeApp = () => window.close();
   const minimizeApp = () => {
@@ -1122,22 +1101,10 @@ function App() {
     >
       <div 
         className="flex items-center justify-between mb-4 pb-2 border-b border-indigo-500/20"
-        onPointerDown={(e) => {
-          // Only start dragging if the target is NOT a button or input or select
-          const target = e.target as HTMLElement;
-          if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
-            setIsDraggingWindow(true);
-            dragStartRef.current = { mouseX: e.screenX, mouseY: e.screenY, winX: window.screenLeft || window.screenX, winY: window.screenTop || window.screenY };
-            target.setPointerCapture(e.pointerId);
-          }
-        }}
-        onPointerUp={(e) => {
-          setIsDraggingWindow(false);
-          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-        }}
+        style={{ WebkitAppRegion: 'drag' } as any}
       >
         <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-move">
+          <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
             <Move size={16} />
           </div>
           <div className="flex flex-col justify-center">
@@ -1164,7 +1131,7 @@ function App() {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
           {isRecording ? (
             <>
               <div className="flex items-center gap-3 mr-2 relative">
