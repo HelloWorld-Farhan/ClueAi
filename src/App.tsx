@@ -720,7 +720,7 @@ function App() {
   const manualTriggerAI = async () => {
     if (!transcript && !currentSnapshot) {
       setShowNoInputError(true);
-      setTimeout(() => setShowNoInputError(false), 2000);
+      setTimeout(() => setShowNoInputError(false), 3500);
       return;
     }
     
@@ -1612,7 +1612,7 @@ function App() {
               Transcript
               {showNoInputError && (
                 <span className="absolute left-full ml-3 whitespace-nowrap text-[9px] text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 animate-pulse font-black uppercase tracking-wider">
-                  No text is here! Press key Z or 1 to start transcribe
+                  No text is here! Press key Z or 1
                 </span>
               )}
             </span>
