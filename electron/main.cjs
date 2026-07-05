@@ -12,6 +12,7 @@ function createWindow() {
     frame: false,
     hasShadow: false,
     thickFrame: false,
+    roundedCorners: false,
     backgroundColor: '#00000000',
     skipTaskbar: true,
     webPreferences: {
@@ -158,6 +159,9 @@ function createWindow() {
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
+        roundedCorners: false,
+        hasShadow: false,
+        thickFrame: false,
         webPreferences: {
           nodeIntegration: true,
           contextIsolation: false

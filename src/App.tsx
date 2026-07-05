@@ -1091,7 +1091,7 @@ function App() {
 
   return (
     <div 
-      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-hidden rounded-xl border border-white/10"
+      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-hidden rounded-xl"
       style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
     >
       <div 
