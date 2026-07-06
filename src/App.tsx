@@ -853,6 +853,8 @@ function App() {
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     streamRef.current = null;
     audioDataRef.current = new Float32Array(0);
+    setSnapshotHistory([]);
+    setCurrentSnapshot(null);
     console.log('Idle');
 
     const finalLog = sessionLog + `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(recordingSeconds)}]\n\n`;
@@ -1626,42 +1628,42 @@ function App() {
                 <div className="space-y-2 mb-6">
                   <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3">Interview Controls</h4>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Pause / Resume</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Pause / Resume <span className="text-xs text-white/40 font-normal">(Use 1 or Z)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold border border-yellow-500/30">Z</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">1</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Ask AI (Trigger)</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Ask AI (Trigger) <span className="text-xs text-white/40 font-normal">(Use 2 or X)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg text-xs font-bold border border-purple-500/30">X</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">2</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Clear Transcript</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Clear Transcript <span className="text-xs text-white/40 font-normal">(Use 3 or C)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-lg text-xs font-bold border border-orange-500/30">C</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">3</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Snipping Tool</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Snipping Tool <span className="text-xs text-white/40 font-normal">(Use 4 or A)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-lg text-xs font-bold border border-cyan-500/30">A</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">4</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Change AI Model</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Change AI Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-brand-accent/20 text-brand-accent px-3 py-1 rounded-lg text-xs font-bold border border-brand-accent/30">S</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">5</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Stop Generation</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Stop Generation <span className="text-xs text-white/40 font-normal">(Use 6 or D)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-lg text-xs font-bold border border-red-500/30">D</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">6</span>
@@ -1673,11 +1675,11 @@ function App() {
                 <div className="space-y-2 mb-6">
                   <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Increase Size</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Ctrl)</span></span>
                     <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Ctrl + +</span>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Decrease Size</span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Ctrl)</span></span>
                     <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Ctrl + -</span>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
