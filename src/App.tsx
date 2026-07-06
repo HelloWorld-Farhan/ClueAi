@@ -526,7 +526,8 @@ function App() {
 
   const activeAITimeoutRef = useRef<any>(null);
 
-  const startRecording = async () => {
+  const startRecording = async (isSilentRestart: boolean | any = false) => {
+    const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
     if (!selectedSource) {
       alert('Screen capture source is missing. Trying to fetch it again... Please wait a moment and try again.');
       ipcRenderer.invoke('get-desktop-sources').then((s: any) => {
@@ -536,7 +537,8 @@ function App() {
       return;
     }
 
-    if (showSessionPrompt) {
+    if (!silent) {
+      if (showSessionPrompt) {
       if (!currentSessionId) {
         const name = sessionNameInput.trim();
         if (!name) {
@@ -547,23 +549,31 @@ function App() {
           setSessionError('Session name already exists. Please choose a different name.');
           return;
         }
-      }
-      
-      if (currentSessionId) {
-         const existing = sessions.find(s => s.id === currentSessionId);
-         if (existing) {
-             setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-         }
-      } else {
-         setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-         setCurrentSessionId(Date.now().toString());
+        
+        if (currentSessionId) {
+           const existing = sessions.find(s => s.id === currentSessionId);
+           if (existing) {
+               setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+           }
+        } else {
+           setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+           setCurrentSessionId(Date.now().toString());
+        }
+
+        setShowSessionPrompt(false);
+        setSessionError('');
+      } else if (!currentSessionId) {
+        setCurrentSessionId(Date.now().toString());
+        setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
       }
 
-      setShowSessionPrompt(false);
-      setSessionError('');
-    } else if (!currentSessionId) {
-      setCurrentSessionId(Date.now().toString());
-      setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+      }
+
+      setTranscript('');
+      finalizedTranscriptRef.current = '';
+      interimTranscriptRef.current = '';
+      setIsRecording(true);
+      setIsPaused(false);
     }
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
@@ -571,13 +581,7 @@ function App() {
     initAIClient(provider, groqKeys, geminiKeys);
     setSTTApiKey(validGroqKeys);
 
-    setTranscript('');
-    finalizedTranscriptRef.current = '';
-    interimTranscriptRef.current = '';
-    
     await initSTT(() => {}); 
-    setIsRecording(true);
-    setIsPaused(false);
     audioDataRef.current = new Float32Array(0);
 
     try {      
@@ -613,9 +617,9 @@ function App() {
       const handleDeviceBreak = () => {
         if (!isRecordingRef.current) return;
         console.log("Audio device changed/disconnected. Auto-recovering...");
-        stopRecording();
+        stopRecording(true);
         setTimeout(() => {
-          startRecording();
+          startRecording(true);
         }, 1500); // Wait for Windows to switch default devices
       };
 
@@ -843,32 +847,39 @@ function App() {
     setCurrentSnapshot(base64Img);
   };
 
-  const stopRecording = () => {
-    setIsRecording(false);
-    setIsPaused(false);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+  const stopRecording = (isSilentRestart: boolean | any = false) => {
+    const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
+    
+    if (!silent) {
+      setIsRecording(false);
+      setIsPaused(false);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      setSnapshotHistory([]);
+      setCurrentSnapshot(null);
+    }
+    
     if (processorRef.current) processorRef.current.disconnect();
     if (audioContextRef.current) audioContextRef.current.close();
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     streamRef.current = null;
     audioDataRef.current = new Float32Array(0);
-    setSnapshotHistory([]);
-    setCurrentSnapshot(null);
-    console.log('Idle');
+    
+    if (!silent) {
+      console.log('Idle');
+      const finalLog = sessionLog + `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(recordingSeconds)}]\n\n`;
 
-    const finalLog = sessionLog + `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(recordingSeconds)}]\n\n`;
-
-    if (finalLog.trim()) {
-      const newSession = {
-        id: currentSessionId || Date.now().toString(),
-        name: sessionNameInput || 'Untitled Session',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString(),
-        transcript: finalLog.trim(),
-        aiAnswer: '' 
-      };
-      setSessions(prev => [newSession, ...prev.filter(s => s.id !== newSession.id)]);
+      if (finalLog.trim()) {
+        const newSession = {
+          id: currentSessionId || Date.now().toString(),
+          name: sessionNameInput || 'Untitled Session',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: new Date().toLocaleDateString(),
+          transcript: finalLog.trim(),
+          aiAnswer: '' 
+        };
+        setSessions(prev => [newSession, ...prev.filter(s => s.id !== newSession.id)]);
+      }
     }
   };
 
@@ -1524,14 +1535,12 @@ function App() {
                         </div>
                       )}
                     </div>
-                    {resumeText && (
                       <textarea 
                         value={resumeText} 
                         onChange={(e) => setResumeText(e.target.value)} 
                         className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap"
-                        placeholder="Parsed resume text..."
+                        placeholder="Paste your resume text here or upload a file..."
                       />
-                    )}
                   </div>
                 </div>
                 <div>
@@ -1560,14 +1569,12 @@ function App() {
                         </div>
                       )}
                     </div>
-                    {resumeText2 && (
                       <textarea 
                         value={resumeText2} 
                         onChange={(e) => setResumeText2(e.target.value)} 
                         className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap"
-                        placeholder="Parsed resume text 2..."
+                        placeholder="Paste your second resume text here or upload a file..."
                       />
-                    )}
                   </div>
                 </div>
                 <div>
@@ -1591,14 +1598,12 @@ function App() {
                         </div>
                       )}
                     </div>
-                    {personalContextText && (
-                      <textarea 
-                        value={personalContextText} 
-                        onChange={(e) => setPersonalContextText(e.target.value)} 
-                        className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap"
-                        placeholder="Parsed personal context text..."
-                      />
-                    )}
+                    <textarea 
+                      value={personalContextText} 
+                      onChange={(e) => setPersonalContextText(e.target.value)} 
+                      className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap mt-2"
+                      placeholder="Paste your personal context here (strengths, weaknesses, background) or upload a file..."
+                    />
                   </div>
                 </div>
               </div>
@@ -1965,7 +1970,7 @@ function App() {
           </div>
           <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">
             {aiAnswer ? (
-              <div className="text-[15px] leading-relaxed text-white whitespace-pre-wrap font-semibold drop-shadow-md">
+              <div className="text-[18px] leading-relaxed text-white whitespace-pre-wrap font-semibold drop-shadow-md">
                 {aiAnswer}
               </div>
             ) : (
