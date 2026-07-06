@@ -113,6 +113,7 @@ function App() {
   const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
   const [isRecording, setIsRecording] = useState(false);
   const isRecordingRef = useRef(false);
+  const isRecoveringRef = useRef(false);
   isRecordingRef.current = isRecording;
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -539,34 +540,30 @@ function App() {
 
     if (!silent) {
       if (showSessionPrompt) {
-      if (!currentSessionId) {
-        const name = sessionNameInput.trim();
-        if (!name) {
-          setSessionError('Please enter a session name.');
-          return;
+        if (!currentSessionId) {
+          const name = sessionNameInput.trim();
+          if (!name) {
+            setSessionError('Please enter a session name.');
+            return;
+          }
+          if (sessions.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+            setSessionError('Session name already exists. Please choose a different name.');
+            return;
+          }
+          
+          if (currentSessionId) {
+             const existing = sessions.find(s => s.id === currentSessionId);
+             if (existing) {
+                 setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+             }
+          } else {
+             setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+             setCurrentSessionId(Date.now().toString());
+          }
         }
-        if (sessions.some(s => s.name.toLowerCase() === name.toLowerCase())) {
-          setSessionError('Session name already exists. Please choose a different name.');
-          return;
-        }
-        
-        if (currentSessionId) {
-           const existing = sessions.find(s => s.id === currentSessionId);
-           if (existing) {
-               setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-           }
-        } else {
-           setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-           setCurrentSessionId(Date.now().toString());
-        }
-
-        setShowSessionPrompt(false);
-        setSessionError('');
       } else if (!currentSessionId) {
         setCurrentSessionId(Date.now().toString());
         setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-      }
-
       }
 
       setTranscript('');
@@ -575,13 +572,16 @@ function App() {
       setIsRecording(true);
       setIsPaused(false);
     }
+    
+    setSessionError('');
+    setShowSessionPrompt(false);
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
     
     initAIClient(provider, groqKeys, geminiKeys);
     setSTTApiKey(validGroqKeys);
 
-    await initSTT(() => {}); 
+    await initSTT(() => {});
     audioDataRef.current = new Float32Array(0);
 
     try {      
@@ -615,11 +615,14 @@ function App() {
       streamRef.current = new MediaStream([...desktopStream.getTracks(), ...micStream.getTracks()]);
 
       const handleDeviceBreak = () => {
-        if (!isRecordingRef.current) return;
+        if (!isRecordingRef.current || isRecoveringRef.current) return;
+        isRecoveringRef.current = true;
         console.log("Audio device changed/disconnected. Auto-recovering...");
         stopRecording(true);
         setTimeout(() => {
-          startRecording(true);
+          startRecording(true).finally(() => {
+            isRecoveringRef.current = false;
+          });
         }, 1500); // Wait for Windows to switch default devices
       };
 
@@ -665,8 +668,13 @@ function App() {
     } catch (e) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
+      if (silent) {
+        setTimeout(() => startRecording(true).finally(() => { isRecoveringRef.current = false; }), 2000);
+        return;
+      }
       alert('Failed to capture audio.');
       setIsRecording(false);
+      setShowSessionPrompt(false);
     }
   };
 
@@ -1081,9 +1089,37 @@ function App() {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input or textarea
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (!isRecording) return;
       
       const key = e.key.toLowerCase();
+      
+      // Global window movement/resizing (always works)
+      if (e.ctrlKey && (key === '=' || key === '+')) {
+        e.preventDefault();
+        ipcRenderer.send('resize-window', { width: 50, height: 50 });
+        return;
+      } else if (e.ctrlKey && key === '-') {
+        e.preventDefault();
+        ipcRenderer.send('resize-window', { width: -50, height: -50 });
+        return;
+      } else if (key === 'arrowup') {
+        e.preventDefault();
+        ipcRenderer.send('move-window-by', { x: 0, y: -50 });
+        return;
+      } else if (key === 'arrowdown') {
+        e.preventDefault();
+        ipcRenderer.send('move-window-by', { x: 0, y: 50 });
+        return;
+      } else if (key === 'arrowleft') {
+        e.preventDefault();
+        ipcRenderer.send('move-window-by', { x: -50, y: 0 });
+        return;
+      } else if (key === 'arrowright') {
+        e.preventDefault();
+        ipcRenderer.send('move-window-by', { x: 50, y: 0 });
+        return;
+      }
+
+      if (!isRecording) return;
       
       if (key === 'x' || key === '2') {
         e.preventDefault();
@@ -1107,24 +1143,6 @@ function App() {
       } else if (key === 'a' || key === '4') {
         e.preventDefault();
         handleSnipClick();
-      } else if (e.ctrlKey && (key === '=' || key === '+')) {
-        e.preventDefault();
-        if (isRecording) ipcRenderer.send('resize-window', { width: 50, height: 50 });
-      } else if (e.ctrlKey && key === '-') {
-        e.preventDefault();
-        if (isRecording) ipcRenderer.send('resize-window', { width: -50, height: -50 });
-      } else if (key === 'arrowup') {
-        e.preventDefault();
-        if (isRecording) ipcRenderer.send('move-window-by', { x: 0, y: -50 });
-      } else if (key === 'arrowdown') {
-        e.preventDefault();
-        if (isRecording) ipcRenderer.send('move-window-by', { x: 0, y: 50 });
-      } else if (key === 'arrowleft') {
-        e.preventDefault();
-        if (isRecording) ipcRenderer.send('move-window-by', { x: -50, y: 0 });
-      } else if (key === 'arrowright') {
-        e.preventDefault();
-        if (isRecording) ipcRenderer.send('move-window-by', { x: 50, y: 0 });
       }
     };
 
