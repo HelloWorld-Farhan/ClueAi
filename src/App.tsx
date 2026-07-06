@@ -623,11 +623,12 @@ function App() {
           startRecording(true).finally(() => {
             isRecoveringRef.current = false;
           });
-        }, 1500); // Wait for Windows to switch default devices
+        }, 3000); // Wait 3s for Windows to fully route Bluetooth audio
       };
 
       micStream.getTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
       desktopStream.getTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
+      navigator.mediaDevices.ondevicechange = handleDeviceBreak;
 
       const audioCtx = new window.AudioContext({ sampleRate: 16000 });
       audioContextRef.current = audioCtx;
@@ -870,6 +871,7 @@ function App() {
     if (processorRef.current) processorRef.current.disconnect();
     if (audioContextRef.current) audioContextRef.current.close();
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    navigator.mediaDevices.ondevicechange = null;
     streamRef.current = null;
     audioDataRef.current = new Float32Array(0);
     
@@ -1027,14 +1029,7 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handleTranscriptEdit = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setIsPaused(true);
-    const val = e.target.value;
-    setTranscript(val);
-    finalizedTranscriptRef.current = val;
-    interimTranscriptRef.current = '';
-    audioDataRef.current = new Float32Array(0);
-  };
+
 
   const resumeListening = () => {
     if (currentSnapshot) {
@@ -1890,12 +1885,11 @@ function App() {
             </div>
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
-            <textarea 
-              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold text-white outline-none resize-none leading-relaxed placeholder-white/30 drop-shadow-md ${currentSnapshot ? 'min-h-[120px] flex-none' : 'flex-1 h-full'}`}
-              value={transcript}
-              onChange={handleTranscriptEdit}
-              placeholder="Listening to interviewer..."
-            />
+            <div 
+              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold text-white whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshot ? 'min-h-[120px] flex-none' : 'flex-1 h-full'}`}
+            >
+              {transcript || <span className="text-white/30">Listening to interviewer...</span>}
+            </div>
             {currentSnapshot && (
               <div className="px-5 pb-4 flex-1 min-h-[150px] flex flex-col items-center justify-center relative">
                 <div className="relative h-full w-full max-h-[250px] rounded-xl overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.2)] border border-cyan-500/30 bg-black/50 group">
@@ -1988,7 +1982,7 @@ function App() {
           </div>
           <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">
             {aiAnswer ? (
-              <div className="text-[18px] leading-relaxed text-white whitespace-pre-wrap font-semibold drop-shadow-md">
+              <div className="text-[18px] leading-relaxed text-white whitespace-pre-wrap font-semibold drop-shadow-md cursor-default select-none">
                 {aiAnswer}
               </div>
             ) : (
