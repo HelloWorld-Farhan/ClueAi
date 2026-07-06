@@ -112,6 +112,8 @@ function App() {
 
   const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
   const [isRecording, setIsRecording] = useState(false);
+  const isRecordingRef = useRef(false);
+  isRecordingRef.current = isRecording;
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -608,6 +610,18 @@ function App() {
 
       streamRef.current = new MediaStream([...desktopStream.getTracks(), ...micStream.getTracks()]);
 
+      const handleDeviceBreak = () => {
+        if (!isRecordingRef.current) return;
+        console.log("Audio device changed/disconnected. Auto-recovering...");
+        stopRecording();
+        setTimeout(() => {
+          startRecording();
+        }, 1500); // Wait for Windows to switch default devices
+      };
+
+      micStream.getTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
+      desktopStream.getTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
+
       const audioCtx = new window.AudioContext({ sampleRate: 16000 });
       audioContextRef.current = audioCtx;
 
@@ -1080,18 +1094,24 @@ function App() {
       } else if (key === 'a' || key === '4') {
         e.preventDefault();
         handleSnipClick();
-      } else if (key === '7') {
+      } else if (e.ctrlKey && (key === '=' || key === '+')) {
         e.preventDefault();
-        if (isRecording) ipcRenderer.send('resize-window', { width: -50, height: 0 });
-      } else if (key === '8') {
+        if (isRecording) ipcRenderer.send('resize-window', { width: 50, height: 50 });
+      } else if (e.ctrlKey && key === '-') {
         e.preventDefault();
-        if (isRecording) ipcRenderer.send('resize-window', { width: 50, height: 0 });
-      } else if (key === '0') {
+        if (isRecording) ipcRenderer.send('resize-window', { width: -50, height: -50 });
+      } else if (key === 'arrowup') {
         e.preventDefault();
-        if (isRecording) ipcRenderer.send('resize-window', { width: 0, height: -50 });
-      } else if (key === '9') {
+        if (isRecording) ipcRenderer.send('move-window-by', { x: 0, y: -50 });
+      } else if (key === 'arrowdown') {
         e.preventDefault();
-        if (isRecording) ipcRenderer.send('resize-window', { width: 0, height: 50 });
+        if (isRecording) ipcRenderer.send('move-window-by', { x: 0, y: 50 });
+      } else if (key === 'arrowleft') {
+        e.preventDefault();
+        if (isRecording) ipcRenderer.send('move-window-by', { x: -50, y: 0 });
+      } else if (key === 'arrowright') {
+        e.preventDefault();
+        if (isRecording) ipcRenderer.send('move-window-by', { x: 50, y: 0 });
       }
     };
 
@@ -1600,48 +1620,92 @@ function App() {
             {/* Keyboard Shortcuts */}
             <section className="pb-10">
               <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Cpu size={16}/> All Shortcut Keys</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Pause / Resume</span>
-                    <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs font-bold border border-yellow-500/30">Z or 1</span>
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-3">
+                
+                {/* Interview Controls */}
+                <div className="space-y-2 mb-6">
+                  <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3">Interview Controls</h4>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Pause / Resume</span>
+                    <div className="flex gap-2">
+                      <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold border border-yellow-500/30">Z</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">1</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Ask AI (Trigger)</span>
-                    <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs font-bold border border-purple-500/30">X or 2</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Ask AI (Trigger)</span>
+                    <div className="flex gap-2">
+                      <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg text-xs font-bold border border-purple-500/30">X</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">2</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Clear Transcript</span>
-                    <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs font-bold border border-orange-500/30">C or 3</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Clear Transcript</span>
+                    <div className="flex gap-2">
+                      <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-lg text-xs font-bold border border-orange-500/30">C</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">3</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Change AI Model</span>
-                    <span className="bg-brand-accent/20 text-brand-accent px-2 py-1 rounded text-xs font-bold border border-brand-accent/30">S or 5</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Snipping Tool</span>
+                    <div className="flex gap-2">
+                      <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-lg text-xs font-bold border border-cyan-500/30">A</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">4</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Stop Generation</span>
-                    <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs font-bold border border-red-500/30">D or 6</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Change AI Model</span>
+                    <div className="flex gap-2">
+                      <span className="bg-brand-accent/20 text-brand-accent px-3 py-1 rounded-lg text-xs font-bold border border-brand-accent/30">S</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">5</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Snipping Tool</span>
-                    <span className="bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded text-xs font-bold border border-cyan-500/30">A or 4</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Stop Generation</span>
+                    <div className="flex gap-2">
+                      <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-lg text-xs font-bold border border-red-500/30">D</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">6</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Decrease Width</span>
-                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">7</span>
+                </div>
+
+                {/* Window Controls */}
+                <div className="space-y-2 mb-6">
+                  <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Increase Size</span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Ctrl + +</span>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Increase Width</span>
-                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">8</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Decrease Size</span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Ctrl + -</span>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Decrease Height</span>
-                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">0</span>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium">Move Window</span>
+                    <div className="flex gap-2">
+                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↑</span>
+                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↓</span>
+                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">←</span>
+                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">→</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/50 p-3 rounded-xl border border-brand-border/50">
-                    <span className="text-xs text-white/80 font-semibold">Increase Height</span>
-                    <span className="bg-white/10 text-white px-2 py-1 rounded text-xs font-bold border border-white/20">9</span>
-                  </div>
+                </div>
+
+                {/* Global Launch Shortcut */}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mt-6">
+                  <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
+                    <Cpu size={16} /> Global Launch Shortcut
+                  </h4>
+                  <p className="text-xs text-blue-200/70 leading-relaxed mb-3">
+                    You can open ClueAI instantly from anywhere using a custom Windows Shortcut Key!
+                  </p>
+                  <ol className="text-xs text-blue-200/60 list-decimal pl-4 space-y-1.5">
+                    <li>Search for <strong>ClueAI</strong> in your Windows Start Menu.</li>
+                    <li>Right-click the app and select <strong>Open file location</strong>.</li>
+                    <li>Right-click the ClueAI Shortcut file and select <strong>Properties</strong>.</li>
+                    <li>In the <strong>Shortcut</strong> tab, click inside the <strong>Shortcut key</strong> box.</li>
+                    <li>Press your desired keys (e.g. <code>Ctrl + Alt + L</code>) and click OK.</li>
+                  </ol>
                 </div>
               </div>
             </section>

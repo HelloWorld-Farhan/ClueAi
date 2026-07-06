@@ -84,6 +84,18 @@ function createWindow() {
     }
   });
 
+  ipcMain.on('move-window-by', (event, { x, y }) => {
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      mainWindow.setBounds({
+        x: bounds.x + x,
+        y: bounds.y + y,
+        width: bounds.width,
+        height: bounds.height
+      });
+    }
+  });
+
   // Handle get-desktop-sources IPC
   ipcMain.handle('get-desktop-sources', async () => {
     const sources = await desktopCapturer.getSources({ types: ['screen'] });
