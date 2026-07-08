@@ -86,7 +86,42 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
     }
 
     const data = await res.json();
-    return data.text || '';
+    let text = (data.text || '').trim();
+    
+    // Hallucination Filter
+    const lowerText = text.toLowerCase();
+    const hallucinations = [
+      "thanks for watching", 
+      "thank you for watching", 
+      "please subscribe",
+      "amira", 
+      "mbc",
+      "bbc",
+      "you can support the channel",
+      "transcribed by",
+      "subtitles by",
+      "captions by"
+    ];
+    
+    // Check if the entire string matches a known hallucination
+    if (hallucinations.some(h => lowerText.includes(h)) && text.length < 50) {
+      console.log(`[STT Filter] Blocked hallucination: "${text}"`);
+      return '';
+    }
+
+    // Check for purely non-alphanumeric or bracketed/asterisk hallucinations (e.g. *sigh*, [music])
+    if (/^[\*\(\[].*[\*\)\]]$/.test(text) || !/[a-zA-Z0-9]/.test(text)) {
+      console.log(`[STT Filter] Blocked noise/bracket: "${text}"`);
+      return '';
+    }
+    
+    // If it's a single word and very short, it's often a hallucination when surrounded by silence
+    if (text.split(/\s+/).length === 1 && text.length < 4 && !/^[A-Z]+$/.test(text)) {
+      console.log(`[STT Filter] Blocked short fragment: "${text}"`);
+      return '';
+    }
+
+    return text;
   } catch (error: any) {
     console.error('Transcription error:', error);
     return `ERR: ${error.message || error}`;

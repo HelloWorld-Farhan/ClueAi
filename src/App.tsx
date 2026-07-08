@@ -132,6 +132,7 @@ function App() {
     }
   });
   const [showStealthWarning, setShowStealthWarning] = useState(false);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -1083,7 +1084,13 @@ function App() {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input or textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowVirtualKeyboard(false);
+        }
+        return;
+      }
       
       const key = e.key.toLowerCase();
       
@@ -1116,7 +1123,15 @@ function App() {
 
       if (!isRecording) return;
       
-      if (key === 'x' || key === '2') {
+      if (key === '7' || key === 'q') {
+        e.preventDefault();
+        setShowVirtualKeyboard(true);
+      } else if (key === 'escape') {
+        if (showVirtualKeyboard) {
+          e.preventDefault();
+          setShowVirtualKeyboard(false);
+        }
+      } else if (key === 'x' || key === '2') {
         e.preventDefault();
         if (!isGenerating) manualTriggerAI();
       } else if (key === 'z' || key === '1') {
@@ -1158,7 +1173,7 @@ function App() {
       style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
     >
       <div 
-        className="flex items-center justify-between mb-4 pb-2 border-b border-indigo-500/20"
+        className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
         onPointerDown={(e) => {
           const target = e.target as HTMLElement;
           if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
@@ -1171,36 +1186,41 @@ function App() {
           (e.target as HTMLElement).releasePointerCapture(e.pointerId);
         }}
       >
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
-            <Move size={16} />
-          </div>
-          <div className="flex flex-col justify-center">
-            {isRecording && (
-              <div className="flex items-center gap-2 mb-1">
-                {stealthMode ? (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
-                    Stealth: ON
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
-                    <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
-                  </span>
-                )}
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
-                  Opacity: {Math.round(opacity * 100)}%
-                </span>
-              </div>
+        {isRecording && (
+          <div className="flex items-center gap-2 mb-3 w-full">
+            {stealthMode ? (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
+                Stealth: ON
+              </span>
+            ) : (
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
+                <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
+              </span>
             )}
-            <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
-              <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
-              {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>}
-            </h1>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
+              Opacity: {Math.round(opacity * 100)}%
+            </span>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
+              Press 7 or Q to edit Transcript
+            </span>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {isRecording ? (
+        )}
+
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
+              <Move size={16} />
+            </div>
+            <div className="flex flex-col justify-center">
+              <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
+                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
+                {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>}
+              </h1>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {isRecording ? (
             <>
               <div className="flex items-center gap-3 mr-2 relative">
                 <div className="relative group">
@@ -1289,6 +1309,7 @@ function App() {
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Full-Screen Settings Modal */}
@@ -1674,7 +1695,14 @@ function App() {
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Change AI Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Edit Transcript <span className="text-xs text-white/40 font-normal">(Use 7 or Q)</span></span>
+                    <div className="flex gap-2">
+                      <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/30">Q</span>
+                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">7</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Switch Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
                     <div className="flex gap-2">
                       <span className="bg-brand-accent/20 text-brand-accent px-3 py-1 rounded-lg text-xs font-bold border border-brand-accent/30">S</span>
                       <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">5</span>
@@ -2251,6 +2279,127 @@ function App() {
             className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300" 
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Virtual Keyboard Transcript Editor */}
+      {showVirtualKeyboard && (
+        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            
+            <div className="flex justify-between items-center bg-black/40 px-6 py-4 border-b border-brand-border">
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                <FileText size={20} className="text-brand-accent"/> Virtual Keyboard Editor
+              </h2>
+              <button 
+                onClick={() => setShowVirtualKeyboard(false)}
+                className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-rose-500 rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-bold"
+              >
+                <X size={16} /> Cut / Close (Esc)
+              </button>
+            </div>
+
+            <textarea 
+              className="w-full h-64 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20"
+              value={transcript}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTranscript(val);
+                finalizedTranscriptRef.current = val;
+                interimTranscriptRef.current = '';
+                audioDataRef.current = new Float32Array(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  setShowVirtualKeyboard(false);
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setShowVirtualKeyboard(false);
+                }
+              }}
+              placeholder="Start typing..."
+              autoFocus
+            />
+
+            <div className="bg-black/60 p-6 flex flex-col gap-2 items-center border-t border-brand-border/50 select-none">
+              {[
+                ['1','2','3','4','5','6','7','8','9','0','-','='],
+                ['q','w','e','r','t','y','u','i','o','p','[',']'],
+                ['a','s','d','f','g','h','j','k','l',';',"'"],
+                ['z','x','c','v','b','n','m',',','.','/']
+              ].map((row, i) => (
+                <div key={i} className="flex gap-2 w-full justify-center">
+                  {row.map(key => (
+                    <button 
+                      key={key} 
+                      onClick={() => {
+                        setTranscript(prev => {
+                          const val = prev + key;
+                          finalizedTranscriptRef.current = val;
+                          return val;
+                        });
+                        interimTranscriptRef.current = '';
+                      }}
+                      className="w-12 h-12 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-xl font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div className="flex gap-2 w-full max-w-4xl justify-center mt-2">
+                 <button 
+                   onClick={() => {
+                     setTranscript(prev => {
+                       const val = prev.slice(0, -1);
+                       finalizedTranscriptRef.current = val;
+                       return val;
+                     });
+                     interimTranscriptRef.current = '';
+                   }} 
+                   className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all"
+                 >
+                   Backspace
+                 </button>
+                 <button 
+                   onClick={() => {
+                     setTranscript(prev => {
+                       const val = prev + '\n';
+                       finalizedTranscriptRef.current = val;
+                       return val;
+                     });
+                     interimTranscriptRef.current = '';
+                   }} 
+                   className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
+                 >
+                   <span>Next Line</span>
+                   <span className="text-[10px] opacity-70 font-normal">(Shift)</span>
+                 </button>
+                 <button 
+                   onClick={() => {
+                     setTranscript(prev => {
+                       const val = prev + ' ';
+                       finalizedTranscriptRef.current = val;
+                       return val;
+                     });
+                     interimTranscriptRef.current = '';
+                   }} 
+                   className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/5 transition-all"
+                 >
+                   Space
+                 </button>
+                 <button 
+                   onClick={() => setShowVirtualKeyboard(false)} 
+                   className="px-6 py-3 bg-brand-accent/20 hover:bg-brand-accent/40 text-brand-accent rounded-xl font-bold flex-[1] border border-brand-accent/30 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
+                 >
+                   <span>Enter</span>
+                   <span className="text-[10px] opacity-70 font-normal">(Press Enter)</span>
+                 </button>
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
     </div>
