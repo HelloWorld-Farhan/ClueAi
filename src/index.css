@@ -5,6 +5,14 @@
 @layer base {
   body {
     @apply bg-transparent text-slate-100 font-sans;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    cursor: default !important;
+  }
+  input, textarea {
+    user-select: auto !important;
+    -webkit-user-select: auto !important;
+    cursor: text !important;
   }
 }
 

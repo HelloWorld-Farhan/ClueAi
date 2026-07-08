@@ -1,9 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2 } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
 const { ipcRenderer, shell } = window.require('electron');
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec';
 
 const formatTimer = (totalSeconds: number) => {
   const h = Math.floor(totalSeconds / 3600);
@@ -138,11 +143,26 @@ function App() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
 
-  // Reminders
-  const [reminders, setReminders] = useState<{id: string, text: string, time: string}[]>(() => {
-    try { return JSON.parse(localStorage.getItem('reminders') || '[]'); } catch { return []; }
+  const [username, setUsername] = useState(() => {
+    try { return localStorage.getItem('clueai_username') || ''; } catch { return ''; }
   });
-  const [reminderInput, setReminderInput] = useState('');
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(() => {
+    try { return !localStorage.getItem('clueai_username'); } catch { return true; }
+  });
+  const [tempUsername, setTempUsername] = useState(username);
+
+  // Reminders
+  // The old reminders state is completely removed in favor of reminderProfiles
+  const [showReminderPopup, setShowReminderPopup] = useState(false);
+  const [showReminderErrors, setShowReminderErrors] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{title: string, message: string, type: 'error' | 'success' | 'warning'} | null>(null);
+  const [reminderProfiles, setReminderProfiles] = useState<{id: string, name: string, jobTitle: string, email: string, phone: string, date: string, time: string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem('reminder_profiles') || '[]'); } catch { return []; }
+  });
+  const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
+  const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
+  
+  const [transcriptTextColor, setTranscriptTextColor] = useState<'white' | 'black'>('white');
   
   const [resumeText, setResumeText] = useState(localStorage.getItem('resume_text') || '');
   const [resumeFileName, setResumeFileName] = useState(localStorage.getItem('resume_file_name') || '');
@@ -361,9 +381,10 @@ function App() {
     localStorage.setItem('personal_context_file_name', personalContextFileName);
   }, [personalContextFileName]);
 
+
   useEffect(() => {
-    localStorage.setItem('reminders', JSON.stringify(reminders));
-  }, [reminders]);
+    localStorage.setItem('reminder_profiles', JSON.stringify(reminderProfiles));
+  }, [reminderProfiles]);
 
   useEffect(() => {
     ipcRenderer.invoke('set-layout', layout);
@@ -447,7 +468,7 @@ function App() {
         
         if (result && typeof result === 'object') {
            if (result.isScanned) {
-              alert("Warning: This PDF appears to be a scanned document (images only) without selectable text. CrackIt cannot read text from images. Please upload a text-based PDF or convert this file using an OCR tool first.");
+              setAlertMessage({ title: 'Image-Only PDF', message: 'Warning: This PDF appears to be a scanned document (images only) without selectable text. CrackIt cannot read text from images. Please upload a text-based PDF or convert this file using an OCR tool first.', type: 'warning' });
            }
            parsedText = result.text || '';
         } else if (typeof result === 'string') {
@@ -466,13 +487,20 @@ function App() {
         else if (type === 'resume2') setResumeText2(parsedText);
         else setPersonalContextText(parsedText);
       } else {
-        alert('Failed to parse file.');
+        setAlertMessage({ title: 'Parse Error', message: 'Failed to parse file.', type: 'error' });
         if (type === 'resume1') setResumeFileName('');
         else if (type === 'resume2') setResumeFileName2('');
         else setPersonalContextFileName('');
       }
     } catch (err: any) {
-      alert(`Error parsing file: ${err.message}`);
+      if (type === 'resume1') {
+        setIsUploadingResume(false);
+      } else if (type === 'resume2') {
+        setIsUploadingResume2(false);
+      } else {
+        setIsUploadingPersonalContext(false);
+      }
+      setAlertMessage({ title: 'Error', message: `Error parsing file: ${err.message}`, type: 'error' });
       if (type === 'resume1') setResumeFileName('');
       else if (type === 'resume2') setResumeFileName2('');
       else setPersonalContextFileName('');
@@ -493,7 +521,10 @@ function App() {
       return;
     }
     
-    if (!selectedSource) return alert('Please select a screen to capture.');
+    if (!selectedSource) {
+      setAlertMessage({ title: 'Source Missing', message: 'Please select a screen to capture.', type: 'warning' });
+      return;
+    }
     if (!stealthMode) {
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -531,7 +562,7 @@ function App() {
   const startRecording = async (isSilentRestart: boolean | any = false) => {
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
     if (!selectedSource) {
-      alert('Screen capture source is missing. Trying to fetch it again... Please wait a moment and try again.');
+      setAlertMessage({ title: 'Source Missing', message: 'Screen capture source is missing. Trying to fetch it again... Please wait a moment and try again.', type: 'warning' });
       ipcRenderer.invoke('get-desktop-sources').then((s: any) => {
         setSources(s);
         if (s.length > 0) setSelectedSource(s[0].id);
@@ -663,7 +694,9 @@ function App() {
         processAudioRef.current();
       }, 500);
 
-      setRecordingSeconds(0);
+      if (!silent) {
+        setRecordingSeconds(0);
+      }
       timerIntervalRef.current = setInterval(() => {
         setRecordingSeconds(prev => prev + 1);
       }, 1000);
@@ -674,7 +707,7 @@ function App() {
         setTimeout(() => startRecording(true).finally(() => { isRecoveringRef.current = false; }), 2000);
         return;
       }
-      alert('Failed to capture audio.');
+      setAlertMessage({ title: 'Capture Failed', message: 'Failed to capture audio.', type: 'error' });
       setIsRecording(false);
       setShowSessionPrompt(false);
     }
@@ -860,11 +893,12 @@ function App() {
   const stopRecording = (isSilentRestart: boolean | any = false) => {
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
     
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
     if (!silent) {
       setIsRecording(false);
       setIsPaused(false);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       setSnapshotHistory([]);
       setCurrentSnapshot(null);
     }
@@ -1131,6 +1165,9 @@ function App() {
           e.preventDefault();
           setShowVirtualKeyboard(false);
         }
+      } else if (key === '0') {
+        e.preventDefault();
+        setTranscriptTextColor(prev => prev === 'white' ? 'black' : 'white');
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
         if (!isGenerating) manualTriggerAI();
@@ -1200,8 +1237,11 @@ function App() {
             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
               Opacity: {Math.round(opacity * 100)}%
             </span>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
+            <span className="text-[9px] font-bold px-2 py-1 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
               Press 7 or Q to edit Transcript
+            </span>
+            <span className="text-[9px] font-bold px-2 py-1 rounded border bg-white text-black border-white uppercase tracking-wider leading-none">
+              Press 0 to change text color
             </span>
           </div>
         )}
@@ -1213,7 +1253,20 @@ function App() {
             </div>
             <div className="flex flex-col justify-center">
               <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
-                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> ClueAI
+                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
+                <span>ClueAI</span>
+                {!isRecording && username && (
+                  <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
+                    <span className="mx-2 text-white/30">|</span> {username}
+                    <button 
+                      onClick={() => { setTempUsername(username); setShowUsernamePrompt(true); }}
+                      className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-md transition-colors shadow-sm ml-1"
+                      title="Rename"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                  </span>
+                )}
                 {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>}
               </h1>
             </div>
@@ -1695,12 +1748,18 @@ function App() {
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Edit Transcript <span className="text-xs text-white/40 font-normal">(Use 7 or Q)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/30">Q</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">7</span>
+                      <span className="text-sm text-white/90 font-medium flex items-center gap-2">Edit Transcript <span className="text-xs text-white/40 font-normal">(Use 7 or Q)</span></span>
+                      <div className="flex gap-2">
+                        <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/30">Q</span>
+                        <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">7</span>
+                      </div>
                     </div>
-                  </div>
+                    <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                      <span className="text-sm text-white/90 font-medium flex items-center gap-2">Toggle Text Color <span className="text-xs text-white/40 font-normal">(Use 0)</span></span>
+                      <div className="flex gap-2">
+                        <span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30">0</span>
+                      </div>
+                    </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
                     <span className="text-sm text-white/90 font-medium flex items-center gap-2">Switch Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
                     <div className="flex gap-2">
@@ -1772,40 +1831,43 @@ function App() {
             </div>
             
             <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-300/30 flex flex-col justify-center items-center text-center">
-              <h2 className="text-xl font-bold text-white mb-4 tracking-tight">Local Event Reminders</h2>
-              <div className="flex w-full gap-2 mb-4">
-                <input 
-                  type="text" 
-                  value={reminderInput}
-                  onChange={e => setReminderInput(e.target.value)}
-                  placeholder="e.g. Meta Interview Tomorrow..."
-                  className="flex-1 bg-[#090909] text-white px-3 py-2 rounded-lg text-sm border border-blue-500/50 outline-none focus:border-white"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && reminderInput.trim()) {
-                      setReminders(prev => [{id: Date.now().toString(), text: reminderInput.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ...prev]);
-                      setReminderInput('');
-                    }
-                  }}
-                />
-                <button 
-                  onClick={() => {
-                    if (reminderInput.trim()) {
-                      setReminders(prev => [{id: Date.now().toString(), text: reminderInput.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ...prev]);
-                      setReminderInput('');
-                    }
-                  }}
-                  className="bg-white text-blue-600 px-3 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors"
-                ><Plus size={16}/></button>
-              </div>
-              <div className="w-full space-y-2 max-h-[100px] overflow-y-auto pr-2">
-                {reminders.length === 0 ? (
-                  <p className="text-blue-100/50 text-sm italic">No reminders set.</p>
-                ) : reminders.map(rem => (
-                  <div key={rem.id} className="bg-blue-900/40 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group">
-                    <span className="font-bold text-sm text-white truncate max-w-[200px] text-left">{rem.text}</span>
+              <h2 className="text-xl font-bold text-white mb-4 tracking-tight">Interview Reminders</h2>
+              <button 
+                onClick={() => {
+                  setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
+                  setShowReminderPopup(true);
+                }} 
+                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 mb-4 shadow-sm w-full justify-center"
+              >
+                <Plus size={16}/> Create Reminder
+              </button>
+              <div className="w-full space-y-2 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+                {reminderProfiles.length === 0 ? (
+                  <p className="text-blue-100/50 text-sm italic py-2">No reminder profiles set.</p>
+                ) : reminderProfiles.map(prof => (
+                  <div 
+                    key={prof.id} 
+                    className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left"
+                    onClick={() => {
+                      setReminderForm(prof);
+                      setShowReminderPopup(true);
+                    }}
+                  >
+                    <div className="flex flex-col flex-1 min-w-0 pr-3">
+                      <span className="font-bold text-sm text-white truncate">{prof.name}</span>
+                      <span className="text-[10px] text-blue-200 truncate">{prof.jobTitle}</span>
+                    </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs text-blue-200 font-medium">{rem.time}</span>
-                      <button onClick={() => setReminders(prev => prev.filter(r => r.id !== rem.id))} className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+                      <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
+                        }} 
+                        className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                      >
+                        <X size={14}/>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1914,9 +1976,9 @@ function App() {
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
             <div 
-              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold text-white whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshot ? 'min-h-[120px] flex-none' : 'flex-1 h-full'}`}
+              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshot ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
             >
-              {transcript || <span className="text-white/30">Listening to interviewer...</span>}
+              {transcript || <span className={transcriptTextColor === 'black' ? "text-black/50" : "text-white/30"}>Listening to interviewer...</span>}
             </div>
             {currentSnapshot && (
               <div className="px-5 pb-4 flex-1 min-h-[150px] flex flex-col items-center justify-center relative">
@@ -2010,8 +2072,30 @@ function App() {
           </div>
           <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">
             {aiAnswer ? (
-              <div className="text-[18px] leading-relaxed text-white whitespace-pre-wrap font-semibold drop-shadow-md cursor-default select-none">
-                {aiAnswer}
+              <div className={`text-[18px] leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-md cursor-default select-none ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}>
+                <ReactMarkdown
+                  components={{
+                    code({node, inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          {...props}
+                          children={String(children).replace(/\n$/, '')}
+                          style={vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          className="rounded-xl border border-white/10 !bg-[#1e1e1e]/90 backdrop-blur-md !my-4 !p-4 !shadow-xl text-[14px]"
+                        />
+                      ) : (
+                        <code {...props} className={`${className} bg-black/20 rounded px-1.5 py-0.5 text-[15px]`}>
+                          {children}
+                        </code>
+                      )
+                    }
+                  }}
+                >
+                  {aiAnswer}
+                </ReactMarkdown>
               </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 text-xs font-bold tracking-wide text-center px-6 drop-shadow-sm">
@@ -2282,6 +2366,140 @@ function App() {
         </div>
       )}
 
+      {/* Reminder Popup Editor */}
+      {showReminderPopup && (
+        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
+              <button onClick={() => setShowReminderPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Company Name</label>
+                <input type="text" placeholder="e.g. Amazon" className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.name ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.name} onChange={e => setReminderForm({...reminderForm, name: e.target.value})} />
+                {showReminderErrors && !reminderForm.name && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Job Title</label>
+                <input type="text" placeholder="e.g. Software Engineer" className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.jobTitle ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.jobTitle} onChange={e => setReminderForm({...reminderForm, jobTitle: e.target.value})} />
+                {showReminderErrors && !reminderForm.jobTitle && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
+                <input type="email" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.email} onChange={e => setReminderForm({...reminderForm, email: e.target.value})} />
+                {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                {showReminderErrors && reminderForm.email && !/^\S+@\S+\.\S+$/.test(reminderForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
+                <input type="text" placeholder="example - DD-MM-YYYY" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => setReminderForm({...reminderForm, date: e.target.value})} />
+                {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                {showReminderErrors && reminderForm.date && !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please follow the example - DD-MM-YYYY format.</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
+                <input type="text" placeholder="Hour:minute in 24 format" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.time} onChange={e => setReminderForm({...reminderForm, time: e.target.value})} />
+                {showReminderErrors && !reminderForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                {showReminderErrors && reminderForm.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please follow the Hour:minute in 24 format.</p>}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
+              {emailSendStatus === 'sending' && (
+                <div className="px-5 py-2.5 flex items-center justify-center h-[44px]">
+                  <Loader2 size={24} className="text-blue-500 animate-spin" />
+                </div>
+              )}
+              {emailSendStatus === 'success' && (
+                <div className="px-5 py-2.5 flex items-center justify-center h-[44px] gap-2 text-green-500 font-bold">
+                  <CheckCircle2 size={24} /> Scheduled
+                </div>
+              )}
+              {emailSendStatus === 'idle' && (
+              <button 
+                onClick={() => {
+                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date);
+                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time);
+                  const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
+                  
+                  if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
+                    setShowReminderErrors(true);
+                    return;
+                  }
+                  setShowReminderErrors(false);
+
+                  const templateParams = {
+                    to_email: reminderForm.email,
+                    job_title: reminderForm.jobTitle,
+                    company_name: reminderForm.name,
+                    to_name: username,
+                    date: reminderForm.date,
+                    time: reminderForm.time,
+                  };
+
+                  // Send to Google Apps Script
+                  setEmailSendStatus('sending');
+                  fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Essential for Google Apps Script Web Apps
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(templateParams)
+                  })
+                  .then(() => {
+                    setEmailSendStatus('success');
+                    // Save Profile
+                    if (reminderForm.id) {
+                      setReminderProfiles(prev => prev.map(p => p.id === reminderForm.id ? reminderForm : p));
+                    } else {
+                      setReminderProfiles(prev => [{...reminderForm, id: Date.now().toString()}, ...prev]);
+                    }
+                    
+                    setTimeout(() => {
+                      setShowReminderPopup(false);
+                      setEmailSendStatus('idle');
+                    }, 1500);
+                  })
+                  .catch(err => {
+                    setEmailSendStatus('idle');
+                    console.error('Google Script Error:', err);
+                    setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Check URL. Error: ${err.message}`, type: 'error' });
+                  });
+                }}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+              >
+                Send Reminder via Email
+              </button>
+              )}
+              <button 
+                onClick={() => {
+                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date);
+                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time);
+                  const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
+                  
+                  if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
+                    setShowReminderErrors(true);
+                    return;
+                  }
+                  setShowReminderErrors(false);
+                  
+                  if (reminderForm.id) {
+                    setReminderProfiles(prev => prev.map(p => p.id === reminderForm.id ? reminderForm : p));
+                  } else {
+                    setReminderProfiles(prev => [{...reminderForm, id: Date.now().toString()}, ...prev]);
+                  }
+                  setShowReminderPopup(false);
+                }}
+                className="px-5 py-2.5 bg-brand-accent hover:bg-brand-accent/80 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+              >
+                <Save size={16} /> Save Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Virtual Keyboard Transcript Editor */}
       {showVirtualKeyboard && (
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
@@ -2399,6 +2617,75 @@ function App() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+      {/* Alert Message Modal */}
+      {alertMessage && (
+        <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+          <div className={`w-full max-w-md bg-brand-secondary border ${alertMessage.type === 'error' ? 'border-rose-500/50' : alertMessage.type === 'success' ? 'border-green-500/50' : 'border-brand-accent/50'} rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
+            <div className="px-6 py-4 flex flex-col gap-3 mt-2">
+              <h3 className={`font-black text-xl tracking-wide flex items-center gap-2 ${alertMessage.type === 'error' ? 'text-rose-500' : alertMessage.type === 'success' ? 'text-green-400' : 'text-brand-accent'}`}>
+                {alertMessage.type === 'error' ? <XCircle size={20} /> : alertMessage.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+                {alertMessage.title}
+              </h3>
+              <p className="text-sm font-medium leading-relaxed text-white/80 pb-2">
+                {alertMessage.message}
+              </p>
+            </div>
+            <div className="bg-black/40 px-6 py-4 border-t border-brand-border/50 flex justify-end">
+              <button 
+                onClick={() => setAlertMessage(null)}
+                className={`px-6 py-2 ${alertMessage.type === 'error' ? 'bg-rose-500 hover:bg-rose-400' : alertMessage.type === 'success' ? 'bg-green-600 hover:bg-green-500' : 'bg-brand-accent hover:bg-brand-accentSec'} text-white rounded-lg font-bold text-sm transition-colors shadow-lg`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showUsernamePrompt && (
+        <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
+          <div className="w-full max-w-sm bg-brand-secondary border border-brand-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-6 flex flex-col gap-4">
+              <div>
+                <h2 className="text-lg font-bold tracking-tight text-white mb-1">Your Name</h2>
+                <p className="text-xs font-medium text-brand-subtext leading-relaxed">
+                  Enter your name to personalize your session exports.
+                </p>
+              </div>
+              <div className="w-full">
+                <input 
+                  type="text" 
+                  value={tempUsername}
+                  onChange={(e) => setTempUsername(e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="w-full bg-black/50 border border-brand-border rounded-lg px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-brand-accent transition-colors"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tempUsername.trim()) {
+                      setUsername(tempUsername.trim());
+                      localStorage.setItem('clueai_username', tempUsername.trim());
+                      setShowUsernamePrompt(false);
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button 
+                  disabled={!tempUsername.trim()}
+                  onClick={() => {
+                    setUsername(tempUsername.trim());
+                    localStorage.setItem('clueai_username', tempUsername.trim());
+                    setShowUsernamePrompt(false);
+                  }}
+                  className="px-6 py-2 bg-brand-accent hover:bg-brand-accentSec disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-all shadow-sm"
+                >
+                  Save Name
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
