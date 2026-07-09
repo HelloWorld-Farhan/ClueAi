@@ -925,6 +925,15 @@ function App() {
         };
         setSessions(prev => [newSession, ...prev.filter(s => s.id !== newSession.id)]);
       }
+      
+      // Clear everything from the screen so it's perfectly fresh
+      setTranscript('');
+      setAiAnswer('');
+      setDisplayedAnswer('');
+      setSessionLog('');
+      setRecordingSeconds(0);
+      finalizedTranscriptRef.current = '';
+      interimTranscriptRef.current = '';
     }
   };
 
