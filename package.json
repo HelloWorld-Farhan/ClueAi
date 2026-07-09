@@ -48,7 +48,8 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",
-    "react-syntax-highlighter": "^16.1.1"
+    "react-syntax-highlighter": "^16.1.1",
+    "win-audio": "^3.0.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",

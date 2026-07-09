@@ -115,8 +115,26 @@ function App() {
   const [showGroqKeys, setShowGroqKeys] = useState<boolean[]>(Array(15).fill(false));
   const [showGeminiKeys, setShowGeminiKeys] = useState<boolean[]>(Array(15).fill(false));
 
+  const [sysMicVolume, setSysMicVolume] = useState(100);
+  const [sysMicMuted, setSysMicMuted] = useState(false);
+  const [showAudioErrorModal, setShowAudioErrorModal] = useState(false);
+
+  const handleMicVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value);
+    setSysMicVolume(val);
+    ipcRenderer.invoke('set-mic-volume', val);
+  };
+
+  const handleMicMuteToggle = () => {
+    const newState = !sysMicMuted;
+    setSysMicMuted(newState);
+    ipcRenderer.invoke('toggle-mic-mute', newState);
+  };
+
   const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
+
   const [isRecording, setIsRecording] = useState(false);
+
   const isRecordingRef = useRef(false);
   const isRecoveringRef = useRef(false);
   isRecordingRef.current = isRecording;
@@ -354,6 +372,17 @@ function App() {
   }, [geminiKeys]);
 
   useEffect(() => {
+    const audioSyncInterval = setInterval(async () => {
+      try {
+        const state = await ipcRenderer.invoke('get-mic-state');
+        setSysMicVolume(state.volume);
+        setSysMicMuted(state.muted);
+      } catch (e) {}
+    }, 500);
+    return () => clearInterval(audioSyncInterval);
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('resume_text', resumeText);
   }, [resumeText]);
 
@@ -511,7 +540,7 @@ function App() {
     }
   };
 
-  const handleStartCaptureClick = () => {
+  const handleStartCaptureClick = async () => {
     const activeKeys = provider === 'groq' ? groqKeys : geminiKeys;
     const hasActiveKey = activeKeys.some(k => k.trim() !== '');
     const hasGroqKey = groqKeys.some(k => k.trim() !== '');
@@ -525,6 +554,16 @@ function App() {
       setAlertMessage({ title: 'Source Missing', message: 'Please select a screen to capture.', type: 'warning' });
       return;
     }
+
+    // PRE-FLIGHT AUDIO CHECK
+    try {
+      const state = await ipcRenderer.invoke('get-mic-state');
+      if (state.muted || state.volume < 80) {
+        setShowAudioErrorModal(true);
+        return;
+      }
+    } catch(e) {}
+
     if (!stealthMode) {
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -929,7 +968,6 @@ function App() {
       // Clear everything from the screen so it's perfectly fresh
       setTranscript('');
       setAiAnswer('');
-      setDisplayedAnswer('');
       setSessionLog('');
       setRecordingSeconds(0);
       finalizedTranscriptRef.current = '';
@@ -1713,6 +1751,43 @@ function App() {
               </div>
             </section>
 
+            {/* Sound Settings */}
+            <section>
+              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Mic size={16}/> System Sound Settings</h3>
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Microphone Volume</h4>
+                    <p className="text-xs text-brand-subtext">Automatically synced with Windows system settings</p>
+                  </div>
+                  <div className="flex items-center gap-3 w-1/2">
+                    <span className="text-xs font-mono text-brand-subtext w-8 text-right">{sysMicVolume}%</span>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={sysMicVolume} 
+                      onChange={handleMicVolumeChange} 
+                      className="w-full accent-brand-accent" 
+                      disabled={sysMicMuted}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t border-brand-border">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Microphone Mute</h4>
+                    <p className="text-xs text-brand-subtext">Toggle microphone on or off at the system level</p>
+                  </div>
+                  <button 
+                    onClick={handleMicMuteToggle}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${sysMicMuted ? 'bg-rose-500/20 text-rose-500 border border-rose-500/50' : 'bg-brand-secondary border border-brand-border text-white hover:bg-white/10'}`}
+                  >
+                    {sysMicMuted ? 'Unmute' : 'Mute'}
+                  </button>
+                </div>
+              </div>
+            </section>
+
             {/* Display */}
             <section>
               <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><LayoutPanelTop size={16}/> Display Settings</h3>
@@ -1833,6 +1908,40 @@ function App() {
                 </div>
               </div>
             </section>
+          </div>
+        </div>
+      )}
+
+      {/* Audio Error Modal */}
+      {showAudioErrorModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-brand-bg rounded-2xl w-full max-w-md shadow-2xl border border-rose-500/50 flex flex-col overflow-hidden relative">
+            <div className="bg-rose-500/10 p-6 flex flex-col items-center text-center border-b border-rose-500/20">
+              <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle size={32} className="text-rose-500" />
+              </div>
+              <h2 className="text-xl font-black text-rose-500 uppercase tracking-wide mb-2">Critical Audio Error</h2>
+              <p className="text-brand-subtext text-sm mb-4 leading-relaxed">
+                Your microphone is currently {sysMicMuted ? 'muted' : `too quiet (Volume: ${sysMicVolume}%)`}. 
+                <br/><br/>
+                The AI will not be able to hear you properly during the interview. Please adjust your system settings.
+              </p>
+              <button 
+                onClick={() => {
+                  setShowAudioErrorModal(false);
+                  setShowSettings(true);
+                }}
+                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-rose-500/20 transition-all uppercase tracking-widest text-sm"
+              >
+                Correct It Now
+              </button>
+            </div>
+            <button 
+              onClick={() => setShowAudioErrorModal(false)}
+              className="absolute top-3 right-3 p-1.5 bg-black/20 hover:bg-black/40 rounded-lg text-white/50 hover:text-white transition-colors"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}

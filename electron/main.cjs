@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, screen } = require('electron');
 const path = require('path');
+const audio = require('win-audio');
 
 let mainWindow;
 
@@ -21,6 +22,33 @@ function createWindow() {
       contextIsolation: false,
     },
   });
+
+  // --- AUDIO API IPC HANDLERS ---
+  ipcMain.handle('get-mic-state', () => {
+    try {
+      return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
+    } catch (e) {
+      return { volume: 100, muted: false };
+    }
+  });
+
+  ipcMain.handle('set-mic-volume', (event, volume) => {
+    try {
+      audio.mic.set(volume);
+    } catch (e) {}
+  });
+
+  ipcMain.handle('toggle-mic-mute', (event, muteState) => {
+    try {
+      if (muteState !== undefined) {
+         if (muteState) audio.mic.mute();
+         else audio.mic.unmute();
+      } else {
+         audio.mic.toggle();
+      }
+    } catch (e) {}
+  });
+
 
   // Stealth Mode: Hide window from screen sharing software
   let isStealthMode = true;
