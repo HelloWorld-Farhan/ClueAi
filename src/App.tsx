@@ -935,6 +935,14 @@ function App() {
       return; // User cancelled
     }
     
+    if (currentSnapshot) {
+      setSnapshotHistory(prev => {
+        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+        if (newHistory.length > 4) return newHistory.slice(newHistory.length - 4);
+        return newHistory;
+      });
+    }
+
     setTranscript('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
