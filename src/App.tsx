@@ -118,6 +118,7 @@ function App() {
   const [sysMicVolume, setSysMicVolume] = useState(100);
   const [sysMicMuted, setSysMicMuted] = useState(false);
   const [showAudioErrorModal, setShowAudioErrorModal] = useState(false);
+  const [activeMicName, setActiveMicName] = useState('Default Microphone');
 
   const handleMicVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
@@ -372,6 +373,18 @@ function App() {
   }, [geminiKeys]);
 
   useEffect(() => {
+    const fetchMicName = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === 'audioinput');
+        if (mics.length > 0) {
+           const defaultMic = mics.find(m => m.deviceId === 'default') || mics[0];
+           setActiveMicName(defaultMic.label || 'Default Microphone');
+        }
+      } catch (e) {}
+    };
+    fetchMicName();
+    
     const audioSyncInterval = setInterval(async () => {
       try {
         const state = await ipcRenderer.invoke('get-mic-state');
@@ -1755,6 +1768,18 @@ function App() {
             <section>
               <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Mic size={16}/> System Sound Settings</h3>
               <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-5">
+                <div className="flex items-center justify-between pb-4 border-b border-brand-border">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Active Microphone</h4>
+                    <p className="text-xs text-brand-accentSec font-mono truncate max-w-[250px]">{activeMicName}</p>
+                  </div>
+                  <button 
+                    onClick={() => shell.openExternal('ms-settings:sound')}
+                    className="px-4 py-2 bg-brand-secondary hover:bg-white/10 border border-brand-border text-brand-text rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Change in Windows Settings
+                  </button>
+                </div>
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-white mb-1">Microphone Volume</h4>
