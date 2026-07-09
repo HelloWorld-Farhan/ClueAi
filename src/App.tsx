@@ -1929,7 +1929,7 @@ function App() {
               <button 
                 onClick={() => {
                   setShowAudioErrorModal(false);
-                  setShowSettings(true);
+                  shell.openExternal('ms-settings:sound');
                 }}
                 className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-rose-500/20 transition-all uppercase tracking-widest text-sm"
               >
