@@ -1290,6 +1290,16 @@ function App() {
         handleClearAll();
       } else if (action === 'snapshot') {
         handleSnipClick();
+      } else if (action === 'switch-model') {
+        const newProvider = provider === 'groq' ? 'gemini' : 'groq';
+        setProvider(newProvider);
+        switchProvider(newProvider);
+        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}`);
+        setTimeout(() => setModelChangeMsg(''), 3000);
+      } else if (action === 'stop-generation') {
+        stopRecording();
+      } else if (action === 'edit-transcript') {
+        setShowVirtualKeyboard(true);
       }
     };
 

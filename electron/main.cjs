@@ -82,7 +82,7 @@ function createWindow() {
   });
 
   let hotkeysActive = false;
-  const rawKeys = ['0', '1', 'Z', '2', 'X', '3', 'C', '5', 'S', 'NUM0', 'NUM1', 'NUM2', 'NUM3', 'NUM5'];
+  const rawKeys = ['0', 'NUM0', '1', 'Z', 'NUM1', '2', 'X', 'NUM2', '3', 'C', 'NUM3', '4', 'A', 'NUM4', '5', 'S', 'NUM5', '6', 'D', 'NUM6', '7', 'Q', 'NUM7'];
   const windowKeys = ['=', 'Plus', '-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
 
   const unregisterAllHotkeys = () => {
@@ -97,7 +97,10 @@ function createWindow() {
       '1': 'toggle-pause', 'z': 'toggle-pause', 'NUM1': 'toggle-pause',
       '2': 'force-ai', 'x': 'force-ai', 'NUM2': 'force-ai',
       '3': 'clear-all', 'c': 'clear-all', 'NUM3': 'clear-all',
-      '5': 'snapshot', 's': 'snapshot', 'NUM5': 'snapshot'
+      '4': 'snapshot', 'a': 'snapshot', 'NUM4': 'snapshot',
+      '5': 'switch-model', 's': 'switch-model', 'NUM5': 'switch-model',
+      '6': 'stop-generation', 'd': 'stop-generation', 'NUM6': 'stop-generation',
+      '7': 'edit-transcript', 'q': 'edit-transcript', 'NUM7': 'edit-transcript'
     };
     
     for (const [key, action] of Object.entries(shortcuts)) {
