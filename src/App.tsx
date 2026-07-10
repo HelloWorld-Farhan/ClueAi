@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2 } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Lock, Unlock } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -233,6 +233,7 @@ function App() {
 
   const [activeAIInfo, setActiveAIInfo] = useState<{provider: string, index: number} | null>(null);
   const [modelChangeMsg, setModelChangeMsg] = useState('');
+  const [globalHotkeysEnabled, setGlobalHotkeysEnabled] = useState(true);
 
   const groqValidationCache = useRef<Record<string, boolean>>({});
   const geminiValidationCache = useRef<Record<string, boolean>>({});
@@ -1208,6 +1209,7 @@ function App() {
         if (e.key === 'Escape') {
           e.preventDefault();
           setShowVirtualKeyboard(false);
+          if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
         }
         return;
       }
@@ -1250,6 +1252,7 @@ function App() {
         if (showVirtualKeyboard) {
           e.preventDefault();
           setShowVirtualKeyboard(false);
+          if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
         }
       } else if (key === '0') {
         e.preventDefault();
@@ -1300,6 +1303,7 @@ function App() {
         stopRecording();
       } else if (action === 'edit-transcript') {
         setShowVirtualKeyboard(true);
+        ipcRenderer.invoke('toggle-global-hotkeys', false);
       }
     };
 
@@ -1453,6 +1457,18 @@ function App() {
             </>
           ) : (
             <>
+              <button 
+                onClick={() => {
+                  const newState = !globalHotkeysEnabled;
+                  setGlobalHotkeysEnabled(newState);
+                  ipcRenderer.invoke('toggle-global-hotkeys', newState);
+                }} 
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border mr-1 ${globalHotkeysEnabled ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'}`}
+                title="Toggle Global Hotkeys (so you can type in other apps)"
+              >
+                {globalHotkeysEnabled ? <Unlock size={14} /> : <Lock size={14} />} 
+                {globalHotkeysEnabled ? 'Hotkeys ON' : 'Hotkeys OFF'}
+              </button>
               <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
                 <Settings size={16} />
               </button>
@@ -2714,7 +2730,10 @@ function App() {
                 <FileText size={20} className="text-brand-accent"/> Virtual Keyboard Editor
               </h2>
               <button 
-                onClick={() => setShowVirtualKeyboard(false)}
+                onClick={() => {
+                  setShowVirtualKeyboard(false);
+                  if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                }}
                 className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-rose-500 rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-bold"
               >
                 <X size={16} /> Cut / Close (Esc)
@@ -2732,12 +2751,10 @@ function App() {
                 audioDataRef.current = new Float32Array(0);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Escape') {
                   e.preventDefault();
                   setShowVirtualKeyboard(false);
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setShowVirtualKeyboard(false);
+                  if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
                 }
               }}
               placeholder="Start typing..."
@@ -2812,11 +2829,14 @@ function App() {
                    Space
                  </button>
                  <button 
-                   onClick={() => setShowVirtualKeyboard(false)} 
+                   onClick={() => {
+                     setTranscript(prev => prev + '\n');
+                     finalizedTranscriptRef.current += '\n';
+                     interimTranscriptRef.current = '';
+                   }} 
                    className="px-6 py-3 bg-brand-accent/20 hover:bg-brand-accent/40 text-brand-accent rounded-xl font-bold flex-[1] border border-brand-accent/30 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
                  >
-                   <span>Enter</span>
-                   <span className="text-[10px] opacity-70 font-normal">(Press Enter)</span>
+                   <span>Enter (New Line)</span>
                  </button>
               </div>
             </div>
