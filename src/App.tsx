@@ -157,6 +157,7 @@ function App() {
   });
   const [showStealthWarning, setShowStealthWarning] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const virtualKeyboardTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [editTranscript, setEditTranscript] = useState('');
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -487,6 +488,13 @@ function App() {
   useEffect(() => {
     if (showVirtualKeyboard) {
       setEditTranscript(transcript);
+      setTimeout(() => {
+        if (virtualKeyboardTextareaRef.current) {
+          virtualKeyboardTextareaRef.current.focus();
+          virtualKeyboardTextareaRef.current.selectionStart = virtualKeyboardTextareaRef.current.value.length;
+          virtualKeyboardTextareaRef.current.selectionEnd = virtualKeyboardTextareaRef.current.value.length;
+        }
+      }, 150);
     }
   }, [showVirtualKeyboard]);
 
@@ -2836,6 +2844,7 @@ function App() {
             </div>
 
             <textarea 
+              ref={virtualKeyboardTextareaRef}
               className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20"
               value={editTranscript}
               onChange={(e) => setEditTranscript(e.target.value)}
