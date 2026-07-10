@@ -69,9 +69,9 @@ function createWindow() {
     }
   });
 
-  const rawKeys = ['0', '1', 'z', '2', 'x', '3', 'c', '5', 's'];
+  const rawKeys = ['0', '1', 'Z', '2', 'X', '3', 'C', '5', 'S'];
   const altKeys = ['Alt+0', 'Alt+1', 'Alt+Z', 'Alt+2', 'Alt+X', 'Alt+3', 'Alt+C', 'Alt+5', 'Alt+S'];
-  const windowKeys = ['CommandOrControl+=', 'CommandOrControl++', 'CommandOrControl+-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
+  const windowKeys = ['CommandOrControl+=', 'CommandOrControl+Plus', 'CommandOrControl+-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
 
   ipcMain.handle('toggle-global-hotkeys', (event, enable, useAlt = false) => {
     // Unregister everything first to be safe
@@ -89,7 +89,7 @@ function createWindow() {
       };
       
       for (const [key, action] of Object.entries(shortcuts)) {
-        const bindKey = useAlt ? `Alt+${key.toUpperCase()}` : key;
+        const bindKey = useAlt ? `Alt+${key.toUpperCase()}` : key.toUpperCase();
         try {
           globalShortcut.register(bindKey, () => {
             if (mainWindow) mainWindow.webContents.send('trigger-hotkey', action);
@@ -116,7 +116,7 @@ function createWindow() {
 
       const windowActions = {
         'CommandOrControl+=': () => resizeWindow(50, 50),
-        'CommandOrControl++': () => resizeWindow(50, 50),
+        'CommandOrControl+Plus': () => resizeWindow(50, 50),
         'CommandOrControl+-': () => resizeWindow(-50, -50),
         'Up': () => moveWindow(0, -50),
         'Down': () => moveWindow(0, 50),
