@@ -476,9 +476,9 @@ function App() {
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
   useEffect(() => {
-    const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt;
+    const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || (editingSessionId !== null);
     ipcRenderer.invoke('set-focusable', needsFocus);
-  }, [showSessionPrompt, showSettings, showUsernamePrompt]);
+  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, editingSessionId]);
 
   const [deleteMsg, setDeleteMsg] = useState('');
 
