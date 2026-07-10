@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2 } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, Command } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -205,8 +205,6 @@ function App() {
     }
   });
   const [layout, setLayout] = useState('horizontal');
-  const [copiedTranscript, setCopiedTranscript] = useState(false);
-  const [copiedAnswer, setCopiedAnswer] = useState(false);
   // Snapshot States
   const [currentSnapshots, setCurrentSnapshots] = useState<string[]>([]);
   const [snapshotHistory, setSnapshotHistory] = useState<{id: string, image: string, transcriptContext: string}[]>([]);
@@ -1503,41 +1501,61 @@ function App() {
       {/* Full-Screen Info Modal */}
       {!isRecording && showInfo && (
         <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col pt-12 p-6 animate-in fade-in duration-200 overflow-y-auto shadow-2xl">
-          <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
+          <div className="max-w-3xl w-full mx-auto space-y-10 pb-10 select-none cursor-default">
             <div className="flex justify-between items-end border-b border-brand-border pb-4">
               <div>
-                <h2 className="text-3xl font-black tracking-tight text-brand-accentSec">Information Guide</h2>
-                <p className="text-brand-subtext text-sm">Learn about ClueAI features and how everything works.</p>
+                <h2 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
+                  <div className="p-2 bg-brand-accent/20 rounded-xl">
+                    <Info size={28} className="text-brand-accent" />
+                  </div>
+                  Information Guide
+                </h2>
+                <p className="text-brand-subtext text-sm mt-2">Everything you need to know about ClueAI.</p>
               </div>
               <button onClick={() => setShowInfo(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
                 Close <X size={16}/>
               </button>
             </div>
             
-            <div className="space-y-6">
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <h3 className="text-lg font-bold text-white mb-2">Dashboard & Reminders</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">The main screen serves as your control center. The <strong>Interview Reminders</strong> section lets you schedule upcoming interviews. You can store details like Name, Job Title, Email, Phone, and Time. Clicking "Start Interview" from a reminder automatically injects that data as context into the AI, ensuring personalized assistance.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
+                  <Layout size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">Dashboard & Reminders</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">Schedule upcoming interviews with ease. Clicking "Start Interview" on a reminder instantly injects all user details into the AI context for perfectly personalized answers.</p>
               </div>
 
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <h3 className="text-lg font-bold text-white mb-2">Interview Section</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">When you click "Start Interview", ClueAI begins capturing your screen (or a specific window) and listens to system audio. It continuously transcribes the conversation and automatically requests AI assistance when silence is detected, providing you with real-time answers and hints on the screen.</p>
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-2">
+                  <Mic size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">Interview Section</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI captures your screen and system audio automatically. It detects when the interviewer stops speaking, then silently fetches AI assistance without you lifting a finger.</p>
               </div>
 
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <h3 className="text-lg font-bold text-white mb-2">Stealth Mode</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed"><strong>Stealth Mode</strong> is a core security feature that hides ClueAI from screen-sharing software (like Zoom, Teams, or browser-based tests). The app content becomes invisible to anyone watching your screen. Only you can see it physically on your monitor.</p>
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2">
+                  <EyeOff size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">Stealth Mode</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI completely hides itself from all screen-sharing software (Zoom, Teams, WebRTC). Viewers see your screen normally, while only you see the AI overlay.</p>
               </div>
 
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <h3 className="text-lg font-bold text-white mb-2">Hotkeys</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">Hotkeys provide immediate, stealthy control over ClueAI. They are registered globally, meaning they work even when ClueAI is not the focused window. Because global hotkeys intercept keys before other apps get them, we provided a <strong>Hotkeys Toggle</strong> in the interview header. Turn it OFF when you need to type messages to others, and back ON for stealth control.</p>
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-2">
+                  <Command size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">Hotkeys</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">Global hotkeys allow instant stealth control without clicking. Toggle them OFF in the top bar when you need to type naturally in other apps, then toggle them back ON.</p>
               </div>
 
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <h3 className="text-lg font-bold text-white mb-2">API & Providers</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI communicates directly with advanced language models via their APIs. We currently support <strong>Groq API</strong> for ultra-low latency inference (fastest responses) and <strong>Google Gemini Flash</strong> for highly accurate multimodal understanding. The system securely sends your transcript and screen snapshots to generate the best answers.</p>
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
+                  <Cpu size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">API & Providers</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">Communicate directly with raw AI APIs. <strong>Groq API</strong> offers ultra-low latency text inference, while <strong>Google Gemini Flash</strong> provides highly accurate vision and multimodal understanding.</p>
               </div>
             </div>
           </div>
@@ -2240,18 +2258,6 @@ function App() {
               <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm">
                 {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
               </span>
-              <button 
-                onClick={() => { 
-                  navigator.clipboard.writeText(transcript); 
-                  setCopiedTranscript(true);
-                  setTimeout(() => setCopiedTranscript(false), 2000);
-                }}
-                className="text-white/40 hover:text-white transition-colors flex items-center gap-1.5"
-               
-              >
-                {copiedTranscript && <span className="text-xs text-green-400 font-bold animate-in fade-in">Copied!</span>}
-                <Copy size={14} className={copiedTranscript ? "text-green-400" : ""} />
-              </button>
             </div>
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
@@ -2344,18 +2350,7 @@ function App() {
               )}
             </span>
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => { 
-                  navigator.clipboard.writeText(aiAnswer); 
-                  setCopiedAnswer(true);
-                  setTimeout(() => setCopiedAnswer(false), 2000);
-                }}
-                className="text-white/40 hover:text-white transition-colors flex items-center gap-1.5"
-               
-              >
-                {copiedAnswer && <span className="text-xs text-green-400 font-bold animate-in fade-in">Copied!</span>}
-                <Copy size={14} className={copiedAnswer ? "text-green-400" : ""} />
-              </button>
+              {/* Copy button intentionally removed for maximum stealth */}
             </div>
           </div>
           <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">

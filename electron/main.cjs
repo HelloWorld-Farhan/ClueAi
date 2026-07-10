@@ -138,7 +138,9 @@ function createWindow() {
     const windowActions = {
       'Alt+=': () => resizeWindow(50, 50),
       'Alt+Plus': () => resizeWindow(50, 50),
+      'Alt+numadd': () => resizeWindow(50, 50),
       'Alt+-': () => resizeWindow(-50, -50),
+      'Alt+numsub': () => resizeWindow(-50, -50),
       'Alt+Up': () => moveWindow(0, -50),
       'Alt+Down': () => moveWindow(0, 50),
       'Alt+Left': () => moveWindow(-50, 0),
