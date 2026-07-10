@@ -69,6 +69,37 @@ function createWindow() {
     }
   });
 
+  const rawKeys = ['0', '1', 'z', '2', 'x', '3', 'c', '5', 's'];
+  const altKeys = ['Alt+0', 'Alt+1', 'Alt+Z', 'Alt+2', 'Alt+X', 'Alt+3', 'Alt+C', 'Alt+5', 'Alt+S'];
+
+  ipcMain.handle('toggle-global-hotkeys', (event, enable, useAlt = false) => {
+    // Unregister everything first to be safe
+    [...rawKeys, ...altKeys].forEach(k => {
+      try { globalShortcut.unregister(k); } catch(e){}
+    });
+
+    if (enable) {
+      const shortcuts = {
+        '0': 'toggle-color',
+        '1': 'toggle-pause', 'z': 'toggle-pause',
+        '2': 'force-ai', 'x': 'force-ai',
+        '3': 'clear-all', 'c': 'clear-all',
+        '5': 'snapshot', 's': 'snapshot'
+      };
+      
+      for (const [key, action] of Object.entries(shortcuts)) {
+        const bindKey = useAlt ? `Alt+${key.toUpperCase()}` : key;
+        try {
+          globalShortcut.register(bindKey, () => {
+            if (mainWindow) mainWindow.webContents.send('trigger-hotkey', action);
+          });
+        } catch(e) {
+          console.error('Failed to register global shortcut:', bindKey);
+        }
+      }
+    }
+  });
+
   ipcMain.on('toggle-fullscreen', () => {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize();

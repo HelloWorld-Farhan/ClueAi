@@ -478,6 +478,8 @@ function App() {
   useEffect(() => {
     const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || (editingSessionId !== null);
     ipcRenderer.invoke('set-focusable', needsFocus);
+    // When focusable, we use normal React key events. When in Ghost Mode, we must hijack them globally!
+    ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus, false);
   }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, editingSessionId]);
 
   const [deleteMsg, setDeleteMsg] = useState('');
@@ -1276,9 +1278,26 @@ function App() {
       }
     };
 
+    const handleIPCHotkey = (_event: any, action: string) => {
+      if (action === 'toggle-color') {
+        setTranscriptTextColor(prev => prev === 'white' ? 'black' : 'white');
+      } else if (action === 'toggle-pause') {
+        handlePauseToggle();
+      } else if (action === 'force-ai') {
+        if (!isGenerating) manualTriggerAI();
+      } else if (action === 'clear-all') {
+        handleClearAll();
+      } else if (action === 'snapshot') {
+        handleSnipClick();
+      }
+    };
+
     window.addEventListener('keydown', handleGlobalKeyDown);
+    ipcRenderer.on('trigger-hotkey', handleIPCHotkey);
+    
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
+      ipcRenderer.off('trigger-hotkey', handleIPCHotkey);
     };
   }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript, provider]);
 
