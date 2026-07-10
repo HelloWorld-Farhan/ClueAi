@@ -16,6 +16,8 @@ function createWindow() {
     roundedCorners: false,
     resizable: false,
     backgroundColor: '#00000000',
+    alwaysOnTop: true,
+    focusable: false,
     skipTaskbar: true,
     webPreferences: {
       nodeIntegration: true,
@@ -239,6 +241,7 @@ function createWindow() {
         frame: false,
         transparent: true,
         alwaysOnTop: true,
+        focusable: false,
         skipTaskbar: true,
         enableLargerThanScreen: true,
         roundedCorners: false,
@@ -312,8 +315,7 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
+      mainWindow.showInactive();
     }
   });
 });
