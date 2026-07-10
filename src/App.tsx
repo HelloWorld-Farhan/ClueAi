@@ -208,7 +208,7 @@ function App() {
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
   // Snapshot States
-  const [currentSnapshot, setCurrentSnapshot] = useState<string | null>(null);
+  const [currentSnapshots, setCurrentSnapshots] = useState<string[]>([]);
   const [snapshotHistory, setSnapshotHistory] = useState<{id: string, image: string, transcriptContext: string}[]>([]);
   const [previewSnapshot, setPreviewSnapshot] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{x: number, y: number, id: string | null}>({x: 0, y: 0, id: null});
@@ -896,7 +896,7 @@ function App() {
   processAudioRef.current = processAudio;
 
   const manualTriggerAI = async () => {
-    if (!transcript && !currentSnapshot) {
+    if (!transcript && currentSnapshots.length === 0) {
       setShowNoInputError(true);
       return;
     }
@@ -915,7 +915,7 @@ function App() {
       resumePriority,
       personalContextText,
       interviewTitle, 
-      currentSnapshot || '',
+      currentSnapshots,
       (chunk) => {
         finalAnswer += chunk;
         setAiAnswer(prev => prev + chunk);
@@ -929,7 +929,7 @@ function App() {
     );
     
     if (finalAnswer.trim()) {
-      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${currentSnapshot ? `[IMAGE_BASE64:${currentSnapshot}]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
+      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${currentSnapshots.length > 0 ? `[IMAGE_BASE64: MULTIPLE_IMAGES]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
     }
 
     setIsGenerating(false);
@@ -945,9 +945,9 @@ function App() {
       return; // User cancelled
     }
     
-    if (currentSnapshot) {
+    if (currentSnapshots.length > 0) {
       setSnapshotHistory(prev => {
-        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshots[currentSnapshots.length-1], transcriptContext: transcript }];
         if (newHistory.length > 4) return newHistory.slice(newHistory.length - 4);
         return newHistory;
       });
@@ -957,7 +957,7 @@ function App() {
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     setAiAnswer('');
-    setCurrentSnapshot(base64Img);
+    setCurrentSnapshots(prev => [...prev.slice(-2), base64Img]);
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
@@ -970,7 +970,7 @@ function App() {
       setIsRecording(false);
       setIsPaused(false);
       setSnapshotHistory([]);
-      setCurrentSnapshot(null);
+      setCurrentSnapshots([]);
     }
     
     if (processorRef.current) processorRef.current.disconnect();
@@ -1153,9 +1153,9 @@ function App() {
 
 
   const resumeListening = () => {
-    if (currentSnapshot) {
+    if (currentSnapshots.length > 0) {
       setSnapshotHistory(prev => {
-        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshots[currentSnapshots.length-1], transcriptContext: transcript }];
         if (newHistory.length > 4) return newHistory.slice(newHistory.length - 4);
         return newHistory;
       });
@@ -1167,7 +1167,7 @@ function App() {
     audioDataRef.current = new Float32Array(0);
     
     setAiAnswer('');
-    setCurrentSnapshot(null);
+    setCurrentSnapshots([]);
     setIsPaused(false);
     setShowNoInputError(false);
     isPausedRef.current = false;
@@ -1187,9 +1187,9 @@ function App() {
   };
 
   const handleClearAll = () => {
-    if (currentSnapshot) {
+    if (currentSnapshots.length > 0) {
       setSnapshotHistory(prev => {
-        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshot, transcriptContext: transcript }];
+        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshots[currentSnapshots.length-1], transcriptContext: transcript }];
         return newHistory.length > 4 ? newHistory.slice(newHistory.length - 4) : newHistory;
       });
     }
@@ -1197,7 +1197,7 @@ function App() {
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     audioDataRef.current = new Float32Array(0); 
-    setCurrentSnapshot(null);
+    setCurrentSnapshots([]);
     setAiAnswer('');
   };
 
@@ -1300,7 +1300,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown);
       ipcRenderer.off('trigger-hotkey', handleIPCHotkey);
     };
-  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshot, transcript, provider]);
+  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider]);
 
   const closeApp = () => window.close();
   const minimizeApp = () => {
@@ -2162,23 +2162,31 @@ function App() {
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
             <div 
-              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshot ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
+              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshots.length > 0 ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
             >
               {transcript || <span className={transcriptTextColor === 'black' ? "text-black/50" : "text-white/30"}>Listening to interviewer...</span>}
             </div>
-            {currentSnapshot && (
-              <div className="px-5 pb-4 flex-1 min-h-[150px] flex flex-col items-center justify-center relative">
-                <div className="relative h-full w-full max-h-[250px] rounded-xl overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.2)] border border-cyan-500/30 bg-black/50 group">
-                  <img src={currentSnapshot} alt="Snapshot" className="w-full h-full object-contain" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                    <button onClick={() => setPreviewSnapshot(currentSnapshot)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-sm">
-                      <Eye size={16} /> Preview
-                    </button>
-                    <button onClick={() => setCurrentSnapshot(null)} className="px-4 py-2 bg-rose-500/80 hover:bg-rose-500 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-sm">
-                      <Trash2 size={16} /> Delete
-                    </button>
+            {currentSnapshots.length > 0 && (
+              <div className="px-5 pb-4 flex-none min-h-[120px] max-h-[180px] flex gap-3 overflow-x-auto custom-scrollbar relative items-center">
+                {currentSnapshots.map((snap, idx) => (
+                  <div key={idx} className="relative h-[90%] aspect-video rounded-xl overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.2)] border border-cyan-500/30 bg-black/50 group shrink-0">
+                    <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                      <button onClick={() => setPreviewSnapshot(snap)} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="px-3 py-1.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ))}
+                {currentSnapshots.length > 1 && (
+                  <button onClick={() => setCurrentSnapshots([])} className="h-[90%] aspect-square rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex flex-col items-center justify-center gap-2 shrink-0">
+                    <Trash2 size={24} />
+                    <span className="text-xs font-bold">Clear All</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -2344,7 +2352,7 @@ function App() {
                       </button>
                       <button onClick={() => { 
                         setTranscript(snap.transcriptContext || ''); 
-                        setCurrentSnapshot(snap.image); 
+                        setCurrentSnapshots([snap.image]); 
                         setMenuPos({x: 0, y: 0, id: null}); 
                       }} className="w-full text-left px-4 py-3 text-xs text-cyan-400 hover:bg-brand-secondary flex items-center gap-3 transition-colors border-t border-brand-border">
                         <Play size={14} fill="currentColor" /> Ask AI Again

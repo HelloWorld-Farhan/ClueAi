@@ -25,6 +25,18 @@ function createWindow() {
     },
   });
 
+  mainWindow.on('minimize', () => {
+    if (hotkeysActive) {
+      unregisterAllHotkeys();
+    }
+  });
+
+  mainWindow.on('restore', () => {
+    if (hotkeysActive) {
+      registerAllHotkeys();
+    }
+  });
+
   // --- AUDIO API IPC HANDLERS ---
   ipcMain.handle('get-mic-state', () => {
     try {
@@ -69,69 +81,76 @@ function createWindow() {
     }
   });
 
-  const rawKeys = ['0', '1', 'Z', '2', 'X', '3', 'C', '5', 'S'];
+  let hotkeysActive = false;
+  const rawKeys = ['0', '1', 'Z', '2', 'X', '3', 'C', '5', 'S', 'NUM0', 'NUM1', 'NUM2', 'NUM3', 'NUM5'];
   const windowKeys = ['=', 'Plus', '-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
 
-  ipcMain.handle('toggle-global-hotkeys', (event, enable) => {
-    // Unregister everything first to be safe
+  const unregisterAllHotkeys = () => {
     [...rawKeys, ...windowKeys].forEach(k => {
       try { globalShortcut.unregister(k); } catch(e){}
     });
+  };
 
-    if (enable) {
-      const shortcuts = {
-        '0': 'toggle-color',
-        '1': 'toggle-pause', 'z': 'toggle-pause',
-        '2': 'force-ai', 'x': 'force-ai',
-        '3': 'clear-all', 'c': 'clear-all',
-        '5': 'snapshot', 's': 'snapshot'
-      };
-      
-      for (const [key, action] of Object.entries(shortcuts)) {
-        const bindKey = key.toUpperCase();
-        try {
-          globalShortcut.register(bindKey, () => {
-            if (mainWindow) mainWindow.webContents.send('trigger-hotkey', action);
-          });
-        } catch(e) {
-          console.error('Failed to register global shortcut:', bindKey);
-        }
+  const registerAllHotkeys = () => {
+    const shortcuts = {
+      '0': 'toggle-color', 'NUM0': 'toggle-color',
+      '1': 'toggle-pause', 'z': 'toggle-pause', 'NUM1': 'toggle-pause',
+      '2': 'force-ai', 'x': 'force-ai', 'NUM2': 'force-ai',
+      '3': 'clear-all', 'c': 'clear-all', 'NUM3': 'clear-all',
+      '5': 'snapshot', 's': 'snapshot', 'NUM5': 'snapshot'
+    };
+    
+    for (const [key, action] of Object.entries(shortcuts)) {
+      const bindKey = key.toUpperCase();
+      try {
+        globalShortcut.register(bindKey, () => {
+          if (mainWindow) mainWindow.webContents.send('trigger-hotkey', action);
+        });
+      } catch(e) {
+        console.error('Failed to register global shortcut:', bindKey);
       }
+    }
 
-      // Add window movement global hotkeys
-      const moveWindow = (dx, dy) => {
-        if (mainWindow) {
-          const [currX, currY] = mainWindow.getPosition();
-          mainWindow.setPosition(currX + dx, currY + dy);
-        }
-      };
-      
-      const resizeWindow = (dw, dh) => {
-        if (mainWindow) {
-          const [currW, currH] = mainWindow.getSize();
-          mainWindow.setSize(currW + dw, currH + dh);
-        }
-      };
-
-      const windowActions = {
-        '=': () => resizeWindow(50, 50),
-        'Plus': () => resizeWindow(50, 50),
-        '-': () => resizeWindow(-50, -50),
-        'Up': () => moveWindow(0, -50),
-        'Down': () => moveWindow(0, 50),
-        'Left': () => moveWindow(-50, 0),
-        'Right': () => moveWindow(50, 0),
-        'PageUp': () => moveWindow(0, -50),
-        'PageDown': () => moveWindow(0, 50)
-      };
-
-      for (const [key, action] of Object.entries(windowActions)) {
-        try {
-          globalShortcut.register(key, action);
-        } catch(e) {
-          console.error('Failed to register window shortcut:', key);
-        }
+    const moveWindow = (dx, dy) => {
+      if (mainWindow) {
+        const [currX, currY] = mainWindow.getPosition();
+        mainWindow.setPosition(currX + dx, currY + dy);
       }
+    };
+    
+    const resizeWindow = (dw, dh) => {
+      if (mainWindow) {
+        const [currW, currH] = mainWindow.getSize();
+        mainWindow.setSize(currW + dw, currH + dh);
+      }
+    };
+
+    const windowActions = {
+      '=': () => resizeWindow(50, 50),
+      'Plus': () => resizeWindow(50, 50),
+      '-': () => resizeWindow(-50, -50),
+      'Up': () => moveWindow(0, -50),
+      'Down': () => moveWindow(0, 50),
+      'Left': () => moveWindow(-50, 0),
+      'Right': () => moveWindow(50, 0),
+      'PageUp': () => moveWindow(0, -50),
+      'PageDown': () => moveWindow(0, 50)
+    };
+
+    for (const [key, action] of Object.entries(windowActions)) {
+      try {
+        globalShortcut.register(key, action);
+      } catch(e) {
+        console.error('Failed to register window shortcut:', key);
+      }
+    }
+  };
+
+  ipcMain.handle('toggle-global-hotkeys', (event, enable) => {
+    hotkeysActive = enable;
+    unregisterAllHotkeys();
+    if (enable && mainWindow && !mainWindow.isMinimized()) {
+      registerAllHotkeys();
     }
   });
 
@@ -333,19 +352,33 @@ function createWindow() {
         snipWindow.webContents.send('snip-image', base64Image);
       });
       
+      const unregisterEsc = () => {
+        try { globalShortcut.unregister('Escape'); } catch(e) {}
+      };
+      
+      try {
+        globalShortcut.register('Escape', () => {
+          if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          unregisterEsc();
+        });
+      } catch(e) {}
+      
       return new Promise((resolve) => {
         ipcMain.once('snip-complete', (e, croppedDataUrl) => {
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          unregisterEsc();
           resolve(croppedDataUrl);
         });
         
         ipcMain.once('snip-cancel', () => {
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          unregisterEsc();
           resolve(null);
         });
         
         snipWindow.on('closed', () => {
           snipWindow = null;
+          unregisterEsc();
           resolve(null);
         });
       });
@@ -353,6 +386,7 @@ function createWindow() {
     } catch (err) {
       console.error('Snipping error:', err);
       if (snipWindow) { snipWindow.close(); snipWindow = null; }
+      try { globalShortcut.unregister('Escape'); } catch(e) {}
       return null;
     }
   });

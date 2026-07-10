@@ -32,7 +32,7 @@ export async function getInterviewAnswer(
   resumePriority: number,
   personalContext: string,
   interviewTitle: string, 
-  imageBase64: string,
+  imageArray: string[],
   onChunk: (chunk: string) => void, 
   onStart: (info: {provider: string, index: number}) => void = () => {}
 ) {
@@ -95,14 +95,12 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         { role: 'system', content: systemPrompt },
       ];
       
-      if (imageBase64) {
-        messages.push({ 
-          role: 'user', 
-          content: [
-            { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: imageBase64 } }
-          ]
+      if (imageArray && imageArray.length > 0) {
+        const contentArr: any[] = [{ type: 'text', text: userPrompt }];
+        imageArray.forEach(img => {
+          contentArr.push({ type: 'image_url', image_url: { url: img } });
         });
+        messages.push({ role: 'user', content: contentArr });
       } else {
         messages.push({ role: 'user', content: userPrompt });
       }
@@ -117,7 +115,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       ];
       const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama3-70b-8192'];
       
-      const modelsToTry = imageBase64 ? groqVisionModels : groqTextModels;
+      const modelsToTry = (imageArray && imageArray.length > 0) ? groqVisionModels : groqTextModels;
       let stream: any = null;
       let lastGroqError: any = null;
 
@@ -155,11 +153,13 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
-      if (imageBase64) {
-        const mimeType = imageBase64.split(';')[0].split(':')[1] || 'image/png';
-        const base64Data = imageBase64.split(',')[1] || imageBase64;
-        geminiParts.push({
-          inlineData: { mimeType, data: base64Data }
+      if (imageArray && imageArray.length > 0) {
+        imageArray.forEach(img => {
+          const mimeType = img.split(';')[0].split(':')[1] || 'image/png';
+          const base64Data = img.split(',')[1] || img;
+          geminiParts.push({
+            inlineData: { mimeType, data: base64Data }
+          });
         });
       }
       geminiContents.push({ parts: geminiParts });
