@@ -63,6 +63,12 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('set-focusable', (event, focusable) => {
+    if (mainWindow) {
+      mainWindow.setFocusable(focusable);
+    }
+  });
+
   ipcMain.on('toggle-fullscreen', () => {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize();

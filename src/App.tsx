@@ -473,6 +473,13 @@ function App() {
     ipcRenderer.invoke('set-stealth', true);
   }, []);
 
+  // Dynamically allow focus ONLY when the user needs to type text.
+  // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
+  useEffect(() => {
+    const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt;
+    ipcRenderer.invoke('set-focusable', needsFocus);
+  }, [showSessionPrompt, showSettings, showUsernamePrompt]);
+
   const [deleteMsg, setDeleteMsg] = useState('');
 
   const handleDeleteFile = (type: 'resume1' | 'resume2' | 'personal') => {
