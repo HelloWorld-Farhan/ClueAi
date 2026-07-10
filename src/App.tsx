@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Lock, Unlock } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2 } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -234,6 +234,7 @@ function App() {
   const [activeAIInfo, setActiveAIInfo] = useState<{provider: string, index: number} | null>(null);
   const [modelChangeMsg, setModelChangeMsg] = useState('');
   const [globalHotkeysEnabled, setGlobalHotkeysEnabled] = useState(true);
+  const [showInfo, setShowInfo] = useState(false);
 
   const groqValidationCache = useRef<Record<string, boolean>>({});
   const geminiValidationCache = useRef<Record<string, boolean>>({});
@@ -1304,6 +1305,7 @@ function App() {
       } else if (action === 'edit-transcript') {
         setShowVirtualKeyboard(true);
         ipcRenderer.invoke('toggle-global-hotkeys', false);
+        ipcRenderer.invoke('focus-window');
       }
     };
 
@@ -1393,6 +1395,20 @@ function App() {
             {isRecording ? (
             <>
               <div className="flex items-center gap-3 mr-2 relative">
+                <div className="flex flex-col items-center justify-center mr-2">
+                  <button 
+                    onClick={() => {
+                      const newState = !globalHotkeysEnabled;
+                      setGlobalHotkeysEnabled(newState);
+                      ipcRenderer.invoke('toggle-global-hotkeys', newState);
+                    }} 
+                    className={`relative w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
+                    title="Toggle Global Hotkeys"
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                  <span className="text-[9px] font-black uppercase text-white/70 mt-1">Hotkeys</span>
+                </div>
                 <div className="relative group">
                   <div className="flex flex-col items-center group">
                     <CustomSelect 
@@ -1457,22 +1473,13 @@ function App() {
             </>
           ) : (
             <>
-              <button 
-                onClick={() => {
-                  const newState = !globalHotkeysEnabled;
-                  setGlobalHotkeysEnabled(newState);
-                  ipcRenderer.invoke('toggle-global-hotkeys', newState);
-                }} 
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border mr-1 ${globalHotkeysEnabled ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'}`}
-                title="Toggle Global Hotkeys (so you can type in other apps)"
-              >
-                {globalHotkeysEnabled ? <Unlock size={14} /> : <Lock size={14} />} 
-                {globalHotkeysEnabled ? 'Hotkeys ON' : 'Hotkeys OFF'}
+              <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+                <Info size={16} />
               </button>
               <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
                 <Settings size={16} />
               </button>
-              <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/30">
+              <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
                 <Play size={14} fill="currentColor" /> Start Interview
               </button>
             </>
@@ -2033,23 +2040,23 @@ function App() {
       )}
 
       {/* Dashboard Empty State */}
-      {!isRecording && !showSettings && (
+      {!isRecording && !showSettings && !showInfo && (
         <div className="flex-1 flex flex-col gap-6 overflow-hidden mt-2 px-2">
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center text-center">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center text-center cursor-default">
               <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
               <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br/><br/>Development driven by real users<br/>Faster iteration on features that matter</p>
-              <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 transition-colors">🚀 View Portfolio &rarr;</button>
+              <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-300/30 flex flex-col justify-center items-center text-center">
+            <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-300/30 flex flex-col justify-center items-center text-center cursor-default">
               <h2 className="text-xl font-bold text-white mb-4 tracking-tight">Interview Reminders</h2>
               <button 
                 onClick={() => {
                   setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
                   setShowReminderPopup(true);
                 }} 
-                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 mb-4 shadow-sm w-full justify-center"
+                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 mb-4 shadow-sm w-full justify-center"
               >
                 <Plus size={16}/> Create Reminder
               </button>

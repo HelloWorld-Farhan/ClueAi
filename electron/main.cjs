@@ -68,6 +68,13 @@ function createWindow() {
   let isStealthMode = true;
   mainWindow.setContentProtection(true);
 
+  ipcMain.handle('focus-window', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
   ipcMain.handle('set-stealth', (event, enable) => {
     isStealthMode = enable;
     if (mainWindow) {
