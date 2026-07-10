@@ -71,7 +71,7 @@ function createWindow() {
 
   const rawKeys = ['0', '1', 'Z', '2', 'X', '3', 'C', '5', 'S'];
   const altKeys = ['Alt+0', 'Alt+1', 'Alt+Z', 'Alt+2', 'Alt+X', 'Alt+3', 'Alt+C', 'Alt+5', 'Alt+S'];
-  const windowKeys = ['CommandOrControl+=', 'CommandOrControl+Plus', 'CommandOrControl+-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
+  const windowKeys = ['CommandOrControl+=', 'CommandOrControl+Plus', 'CommandOrControl+-', 'CommandOrControl+Up', 'CommandOrControl+Down', 'CommandOrControl+Left', 'CommandOrControl+Right', 'CommandOrControl+PageUp', 'CommandOrControl+PageDown'];
 
   ipcMain.handle('toggle-global-hotkeys', (event, enable, useAlt = false) => {
     // Unregister everything first to be safe
@@ -118,12 +118,12 @@ function createWindow() {
         'CommandOrControl+=': () => resizeWindow(50, 50),
         'CommandOrControl+Plus': () => resizeWindow(50, 50),
         'CommandOrControl+-': () => resizeWindow(-50, -50),
-        'Up': () => moveWindow(0, -50),
-        'Down': () => moveWindow(0, 50),
-        'Left': () => moveWindow(-50, 0),
-        'Right': () => moveWindow(50, 0),
-        'PageUp': () => moveWindow(0, -50),
-        'PageDown': () => moveWindow(0, 50)
+        'CommandOrControl+Up': () => moveWindow(0, -50),
+        'CommandOrControl+Down': () => moveWindow(0, 50),
+        'CommandOrControl+Left': () => moveWindow(-50, 0),
+        'CommandOrControl+Right': () => moveWindow(50, 0),
+        'CommandOrControl+PageUp': () => moveWindow(0, -50),
+        'CommandOrControl+PageDown': () => moveWindow(0, 50)
       };
 
       for (const [key, action] of Object.entries(windowActions)) {
