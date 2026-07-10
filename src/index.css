@@ -9,10 +9,15 @@
     -webkit-user-select: none !important;
     cursor: default !important;
   }
+  
+  /* Enforce stealth cursors everywhere */
+  * {
+    cursor: default !important;
+  }
+
   input, textarea {
     user-select: auto !important;
     -webkit-user-select: auto !important;
-    cursor: text !important;
   }
 }
 

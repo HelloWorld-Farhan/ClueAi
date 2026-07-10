@@ -1217,12 +1217,11 @@ function App() {
       
       const key = e.key.toLowerCase();
       
-      // Global window movement/resizing (always works)
-      if (e.ctrlKey && (key === '=' || key === '+')) {
+      // Resize window shortcuts
+      if (e.altKey && (key === '=' || key === '+')) {
         e.preventDefault();
         ipcRenderer.send('resize-window', { width: 50, height: 50 });
-        return;
-      } else if (e.ctrlKey && key === '-') {
+      } else if (e.altKey && key === '-') {
         e.preventDefault();
         ipcRenderer.send('resize-window', { width: -50, height: -50 });
         return;
@@ -1438,33 +1437,33 @@ function App() {
               </div>
               
               {isPaused ? (
-                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-green-500 hover:bg-green-400 text-black px-3 py-1 rounded-md transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] group">
+                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-green-500 hover:bg-green-400 text-black px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.4)] group">
                   <div className="flex items-center gap-1.5 font-black text-[11px] tracking-wide mb-0.5">
                     <Play size={12} fill="currentColor" /> NEXT Q.
                   </div>
                   <span className="text-[8px] font-bold text-white drop-shadow-md">Press Z or 1</span>
                 </button>
               ) : (
-                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-md transition-all group">
+                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
                   <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
                     <Pause size={12} fill="currentColor" /> Pause
                   </div>
                   <span className="text-[8px] font-medium text-white/70">Press Z or 1</span>
                 </button>
               )}
-              <button onClick={handleSnipClick} className="flex flex-col items-center justify-center bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1 rounded-md transition-all group">
+              <button onClick={handleSnipClick} className="flex flex-col items-center justify-center bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
                   <Crop size={12} /> Snip UI
                 </div>
                 <span className="text-[8px] font-medium text-white/70">Press A or 4</span>
               </button>
-              <button onClick={handleClearAll} className="flex flex-col items-center justify-center bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1 rounded-md transition-all group">
+              <button onClick={handleClearAll} className="flex flex-col items-center justify-center bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
                   <Trash2 size={12} fill="currentColor" /> Clear
                 </div>
                 <span className="text-[8px] font-medium text-white/70">Press C or 3</span>
               </button>
-              <button onClick={stopRecording} className="flex flex-col items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-md transition-all group">
+              <button onClick={stopRecording} className="flex flex-col items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
                 <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
                   <Square size={12} fill="currentColor" /> Stop
                 </div>
@@ -1473,10 +1472,10 @@ function App() {
             </>
           ) : (
             <>
-              <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+              <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
                 <Info size={16} />
               </button>
-              <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-colors ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+              <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
                 <Settings size={16} />
               </button>
               <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
@@ -1501,10 +1500,54 @@ function App() {
       </div>
       </div>
 
+      {/* Full-Screen Info Modal */}
+      {!isRecording && showInfo && (
+        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col pt-12 p-6 animate-in fade-in duration-200 overflow-y-auto shadow-2xl">
+          <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
+            <div className="flex justify-between items-end border-b border-brand-border pb-4">
+              <div>
+                <h2 className="text-3xl font-black tracking-tight text-brand-accentSec">Information Guide</h2>
+                <p className="text-brand-subtext text-sm">Learn about ClueAI features and how everything works.</p>
+              </div>
+              <button onClick={() => setShowInfo(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
+                Close <X size={16}/>
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
+                <h3 className="text-lg font-bold text-white mb-2">Dashboard & Reminders</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">The main screen serves as your control center. The <strong>Interview Reminders</strong> section lets you schedule upcoming interviews. You can store details like Name, Job Title, Email, Phone, and Time. Clicking "Start Interview" from a reminder automatically injects that data as context into the AI, ensuring personalized assistance.</p>
+              </div>
+
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
+                <h3 className="text-lg font-bold text-white mb-2">Interview Section</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">When you click "Start Interview", ClueAI begins capturing your screen (or a specific window) and listens to system audio. It continuously transcribes the conversation and automatically requests AI assistance when silence is detected, providing you with real-time answers and hints on the screen.</p>
+              </div>
+
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
+                <h3 className="text-lg font-bold text-white mb-2">Stealth Mode</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed"><strong>Stealth Mode</strong> is a core security feature that hides ClueAI from screen-sharing software (like Zoom, Teams, or browser-based tests). The app content becomes invisible to anyone watching your screen. Only you can see it physically on your monitor.</p>
+              </div>
+
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
+                <h3 className="text-lg font-bold text-white mb-2">Hotkeys</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">Hotkeys provide immediate, stealthy control over ClueAI. They are registered globally, meaning they work even when ClueAI is not the focused window. Because global hotkeys intercept keys before other apps get them, we provided a <strong>Hotkeys Toggle</strong> in the interview header. Turn it OFF when you need to type messages to others, and back ON for stealth control.</p>
+              </div>
+
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
+                <h3 className="text-lg font-bold text-white mb-2">API & Providers</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI communicates directly with advanced language models via their APIs. We currently support <strong>Groq API</strong> for ultra-low latency inference (fastest responses) and <strong>Google Gemini Flash</strong> for highly accurate multimodal understanding. The system securely sends your transcript and screen snapshots to generate the best answers.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Full-Screen Settings Modal */}
       {!isRecording && showSettings && (
         <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col pt-12 p-6 animate-in fade-in duration-200 overflow-y-auto shadow-2xl">
-          <div className="max-w-3xl w-full mx-auto space-y-8 pb-10">
+          <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
             <div className="flex justify-between items-end border-b border-brand-border pb-4">
               <div>
                 <h2 className="text-3xl font-black tracking-tight text-white">Settings</h2>
@@ -1512,13 +1555,31 @@ function App() {
               </div>
               <div className="flex items-center gap-3">
                 {deleteMsg && <span className="text-red-400 font-bold text-xs bg-red-500/10 px-3 py-1.5 rounded border border-red-500/20">{deleteMsg}</span>}
-                <button onClick={() => setShowSettings(false)} className="bg-brand-secondary hover:bg-brand-border text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+                <button onClick={() => setShowSettings(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
                   Done <X size={16}/>
                 </button>
               </div>
             </div>
 
             {/* AI Provider & Capture Screen */}
+            <section className="mt-8">
+              <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16}/> Hotkeys Control</h3>
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
+                <p className="text-brand-subtext text-sm mb-4 leading-relaxed">
+                  Hotkeys allow you to control ClueAI instantly without clicking. <strong>When active, these shortcuts will block you from typing those specific keys in other applications.</strong> You can toggle them ON and OFF in the Interview Screen (next to the timer) when you need to type normally.
+                </p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>0 or Num0</strong>: Toggle text color</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>1, Z, or Num1</strong>: Pause / Resume</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>2, X, or Num2</strong>: Ask AI (Force Trigger)</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>3, C, or Num3</strong>: Clear Transcript</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>4, A, or Num4</strong>: Snipping Tool</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>5, S, or Num5</strong>: Switch Model</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>6, D, or Num6</strong>: Stop Generation</div>
+                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>7, Q, or Num7</strong>: Edit Transcript</div>
+                </div>
+              </div>
+            </section>
             <section>
               <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16}/> Provider & Display</h3>
               <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
@@ -1964,13 +2025,13 @@ function App() {
                 {/* Window Controls */}
                 <div className="space-y-2 mb-6">
                   <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Ctrl)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Ctrl + +</span>
+                  <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + +</span>
                   </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Ctrl)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Ctrl + -</span>
+                  <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
+                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + -</span>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
                     <span className="text-sm text-white/90 font-medium">Move Window</span>

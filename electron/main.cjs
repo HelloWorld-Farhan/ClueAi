@@ -136,15 +136,15 @@ function createWindow() {
     };
 
     const windowActions = {
-      '=': () => resizeWindow(50, 50),
-      'Plus': () => resizeWindow(50, 50),
-      '-': () => resizeWindow(-50, -50),
-      'Up': () => moveWindow(0, -50),
-      'Down': () => moveWindow(0, 50),
-      'Left': () => moveWindow(-50, 0),
-      'Right': () => moveWindow(50, 0),
-      'PageUp': () => moveWindow(0, -50),
-      'PageDown': () => moveWindow(0, 50)
+      'Alt+=': () => resizeWindow(50, 50),
+      'Alt+Plus': () => resizeWindow(50, 50),
+      'Alt+-': () => resizeWindow(-50, -50),
+      'Alt+Up': () => moveWindow(0, -50),
+      'Alt+Down': () => moveWindow(0, 50),
+      'Alt+Left': () => moveWindow(-50, 0),
+      'Alt+Right': () => moveWindow(50, 0),
+      'Alt+PageUp': () => moveWindow(0, -50),
+      'Alt+PageDown': () => moveWindow(0, 50)
     };
 
     for (const [key, action] of Object.entries(windowActions)) {
