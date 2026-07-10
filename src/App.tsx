@@ -480,8 +480,7 @@ function App() {
     ipcRenderer.invoke('set-focusable', needsFocus);
     // When focusable, we use normal React key events. When in Ghost Mode, we must hijack them globally!
     // But ONLY hijack them globally if an interview is actually running (isRecording)!
-    // Passing true for useAlt to satisfy Windows OS global shortcut modifier requirements
-    ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording, true);
+    ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
   }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, editingSessionId, isRecording]);
 
   const [deleteMsg, setDeleteMsg] = useState('');
