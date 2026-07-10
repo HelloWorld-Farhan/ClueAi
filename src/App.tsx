@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, Command } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -1518,44 +1518,65 @@ function App() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Core Information */}
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2">
+                  <Info size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">What is ClueAI?</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI is an advanced, ultra-stealthy AI copilot designed to help you ace your interviews and tests. It secretly records system audio and captures screen snapshots, feeding them to state-of-the-art AI models (Groq and Gemini) to provide you with instant, perfectly accurate answers and hints on your screen—all completely invisible to screen sharing software.</p>
+              </div>
+
+              {/* Sessions */}
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center mb-2">
+                  <FileText size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">Sessions & Transcripts</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">Every time you start an interview, ClueAI creates a <strong>Session</strong>. Sessions automatically save your full transcript and all AI answers locally. You can review past sessions by clicking the <strong>History icon</strong> in the dashboard to review what questions were asked and how the AI answered them.</p>
+              </div>
+
+              {/* Reminders */}
               <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
                   <Layout size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">Dashboard & Reminders</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">Schedule upcoming interviews with ease. Clicking "Start Interview" on a reminder instantly injects all user details into the AI context for perfectly personalized answers.</p>
+                <h3 className="text-lg font-bold text-white">Dashboard Reminders</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">You can schedule upcoming interviews using Reminders. When you click <strong>"Start Interview"</strong> directly from a Reminder, ClueAI injects the candidate's name, role, and details into the AI prompt, making the answers highly personalized.</p>
               </div>
 
+              {/* Settings */}
               <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-2">
-                  <Mic size={20} />
+                <div className="w-10 h-10 rounded-xl bg-zinc-500/20 text-zinc-400 flex items-center justify-center mb-2">
+                  <Settings size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">Interview Section</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI captures your screen and system audio automatically. It detects when the interviewer stops speaking, then silently fetches AI assistance without you lifting a finger.</p>
+                <h3 className="text-lg font-bold text-white">Settings Configuration</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">In Settings, you can configure your <strong>API Keys</strong> (Groq/Gemini), choose which screen or window to record, and set up your personal resume context. The AI uses your resume to answer behavioral questions from your personal experience.</p>
               </div>
 
+              {/* Stealth Mode */}
               <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2">
                   <EyeOff size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">Stealth Mode</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI completely hides itself from all screen-sharing software (Zoom, Teams, WebRTC). Viewers see your screen normally, while only you see the AI overlay.</p>
+                <h3 className="text-lg font-bold text-white">Stealth Mode & Security</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI operates at the OS level to hide its window from Discord, Zoom, Teams, and browser screen-sharing. It also disables copying and standard mouse cursors (no hand pointers) to avoid giving away any hints on video streams.</p>
               </div>
 
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-2">
-                  <Command size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">Hotkeys</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">Global hotkeys allow instant stealth control without clicking. Toggle them OFF in the top bar when you need to type naturally in other apps, then toggle them back ON.</p>
-              </div>
-
+              {/* Interview Buttons */}
               <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
-                  <Cpu size={20} />
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-2">
+                  <Mic size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">API & Providers</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">Communicate directly with raw AI APIs. <strong>Groq API</strong> offers ultra-low latency text inference, while <strong>Google Gemini Flash</strong> provides highly accurate vision and multimodal understanding.</p>
+                <h3 className="text-lg font-bold text-white">Interview Section Controls</h3>
+                <ul className="text-brand-subtext text-sm leading-relaxed space-y-2 list-disc pl-4">
+                  <li><strong>Next Q. (Pause/Resume):</strong> Temporarily stops audio processing so you can talk to the interviewer without the AI analyzing your voice.</li>
+                  <li><strong>Snip UI:</strong> Takes a visual screenshot of your screen to send to Gemini Vision for coding or visual questions.</li>
+                  <li><strong>Clear:</strong> Wipes the transcript so the AI doesn't get confused by previous topics.</li>
+                  <li><strong>Stop:</strong> Ends the current session and saves the logs.</li>
+                  <li><strong>Model Selector:</strong> Switch between Groq (Fastest Text) and Gemini (Vision capabilities) instantly.</li>
+                  <li><strong>Hotkeys Toggle:</strong> Temporarily disables global shortcuts so you can type numbers or letters normally in other applications.</li>
+                </ul>
               </div>
             </div>
           </div>
