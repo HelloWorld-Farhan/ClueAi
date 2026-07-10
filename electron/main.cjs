@@ -71,10 +71,11 @@ function createWindow() {
 
   const rawKeys = ['0', '1', 'z', '2', 'x', '3', 'c', '5', 's'];
   const altKeys = ['Alt+0', 'Alt+1', 'Alt+Z', 'Alt+2', 'Alt+X', 'Alt+3', 'Alt+C', 'Alt+5', 'Alt+S'];
+  const windowKeys = ['CommandOrControl+=', 'CommandOrControl++', 'CommandOrControl+-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
 
   ipcMain.handle('toggle-global-hotkeys', (event, enable, useAlt = false) => {
     // Unregister everything first to be safe
-    [...rawKeys, ...altKeys].forEach(k => {
+    [...rawKeys, ...altKeys, ...windowKeys].forEach(k => {
       try { globalShortcut.unregister(k); } catch(e){}
     });
 
@@ -95,6 +96,41 @@ function createWindow() {
           });
         } catch(e) {
           console.error('Failed to register global shortcut:', bindKey);
+        }
+      }
+
+      // Add window movement global hotkeys
+      const moveWindow = (dx, dy) => {
+        if (mainWindow) {
+          const [currX, currY] = mainWindow.getPosition();
+          mainWindow.setPosition(currX + dx, currY + dy);
+        }
+      };
+      
+      const resizeWindow = (dw, dh) => {
+        if (mainWindow) {
+          const [currW, currH] = mainWindow.getSize();
+          mainWindow.setSize(currW + dw, currH + dh);
+        }
+      };
+
+      const windowActions = {
+        'CommandOrControl+=': () => resizeWindow(50, 50),
+        'CommandOrControl++': () => resizeWindow(50, 50),
+        'CommandOrControl+-': () => resizeWindow(-50, -50),
+        'Up': () => moveWindow(0, -50),
+        'Down': () => moveWindow(0, 50),
+        'Left': () => moveWindow(-50, 0),
+        'Right': () => moveWindow(50, 0),
+        'PageUp': () => moveWindow(0, -50),
+        'PageDown': () => moveWindow(0, 50)
+      };
+
+      for (const [key, action] of Object.entries(windowActions)) {
+        try {
+          globalShortcut.register(key, action);
+        } catch(e) {
+          console.error('Failed to register window shortcut:', key);
         }
       }
     }
