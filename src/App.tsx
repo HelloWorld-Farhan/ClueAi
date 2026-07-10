@@ -157,6 +157,7 @@ function App() {
   });
   const [showStealthWarning, setShowStealthWarning] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [editTranscript, setEditTranscript] = useState('');
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -482,6 +483,12 @@ function App() {
     // But ONLY hijack them globally if an interview is actually running (isRecording)!
     ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
   }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, editingSessionId, isRecording]);
+
+  useEffect(() => {
+    if (showVirtualKeyboard) {
+      setEditTranscript(transcript);
+    }
+  }, [showVirtualKeyboard]);
 
   const [deleteMsg, setDeleteMsg] = useState('');
 
@@ -2813,6 +2820,10 @@ function App() {
               <h2 className="text-lg font-black text-white flex items-center gap-2">
                 <FileText size={20} className="text-brand-accent"/> Virtual Keyboard Editor
               </h2>
+              <div className="flex gap-2 text-[10px] text-white/50 uppercase font-black tracking-wider">
+                <span className="bg-black/30 px-2 py-1 rounded">Enter: Save</span>
+                <span className="bg-black/30 px-2 py-1 rounded">Shift/Alt+Enter: New Line</span>
+              </div>
               <button 
                 onClick={() => {
                   setShowVirtualKeyboard(false);
@@ -2820,108 +2831,104 @@ function App() {
                 }}
                 className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-rose-500 rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-bold"
               >
-                <X size={16} /> Cut / Close (Esc)
+                <X size={16} /> Cancel (Esc)
               </button>
             </div>
 
             <textarea 
-              className="w-full h-64 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20"
-              value={transcript}
-              onChange={(e) => {
-                const val = e.target.value;
-                setTranscript(val);
-                finalizedTranscriptRef.current = val;
-                interimTranscriptRef.current = '';
-                audioDataRef.current = new Float32Array(0);
-              }}
+              className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20"
+              value={editTranscript}
+              onChange={(e) => setEditTranscript(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   e.preventDefault();
                   setShowVirtualKeyboard(false);
                   if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+                  e.preventDefault();
+                  setTranscript(editTranscript);
+                  finalizedTranscriptRef.current = editTranscript;
+                  interimTranscriptRef.current = '';
+                  audioDataRef.current = new Float32Array(0);
+                  setShowVirtualKeyboard(false);
+                  if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                } else if (e.key === 'Enter' && e.altKey) {
+                  e.preventDefault();
+                  setEditTranscript(prev => prev + '\n');
                 }
               }}
               placeholder="Start typing..."
               autoFocus
             />
 
-            <div className="bg-black/60 p-6 flex flex-col gap-2 items-center border-t border-brand-border/50 select-none">
-              {[
-                ['1','2','3','4','5','6','7','8','9','0','-','='],
-                ['q','w','e','r','t','y','u','i','o','p','[',']'],
-                ['a','s','d','f','g','h','j','k','l',';',"'"],
-                ['z','x','c','v','b','n','m',',','.','/']
-              ].map((row, i) => (
-                <div key={i} className="flex gap-2 w-full justify-center">
-                  {row.map(key => (
+            <div className="bg-black/60 p-4 flex flex-col gap-2 items-center border-t border-brand-border/50 select-none">
+              <div className="flex flex-col gap-1.5 w-full max-w-4xl">
+                {/* Special characters row */}
+                <div className="flex gap-1.5 w-full justify-center mb-1">
+                  {['@','#','$','%','&','*','(',')','{','}','[',']','<','>','_','+','-','=','/','\\','|'].map(key => (
                     <button 
                       key={key} 
-                      onClick={() => {
-                        setTranscript(prev => {
-                          const val = prev + key;
-                          finalizedTranscriptRef.current = val;
-                          return val;
-                        });
-                        interimTranscriptRef.current = '';
-                      }}
-                      className="w-12 h-12 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-xl font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
+                      onClick={() => setEditTranscript(prev => prev + key)}
+                      className="w-8 h-8 bg-brand-accent/10 hover:bg-brand-accent/30 text-brand-accent rounded-lg font-bold text-sm transition-all flex items-center justify-center border border-brand-accent/20"
                     >
                       {key}
                     </button>
                   ))}
                 </div>
-              ))}
-              <div className="flex gap-2 w-full max-w-4xl justify-center mt-2">
-                 <button 
-                   onClick={() => {
-                     setTranscript(prev => {
-                       const val = prev.slice(0, -1);
-                       finalizedTranscriptRef.current = val;
-                       return val;
-                     });
-                     interimTranscriptRef.current = '';
-                   }} 
-                   className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all"
-                 >
-                   Backspace
-                 </button>
-                 <button 
-                   onClick={() => {
-                     setTranscript(prev => {
-                       const val = prev + '\n';
-                       finalizedTranscriptRef.current = val;
-                       return val;
-                     });
-                     interimTranscriptRef.current = '';
-                   }} 
-                   className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
-                 >
-                   <span>Next Line</span>
-                   <span className="text-[10px] opacity-70 font-normal">(Shift)</span>
-                 </button>
-                 <button 
-                   onClick={() => {
-                     setTranscript(prev => {
-                       const val = prev + ' ';
-                       finalizedTranscriptRef.current = val;
-                       return val;
-                     });
-                     interimTranscriptRef.current = '';
-                   }} 
-                   className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/5 transition-all"
-                 >
-                   Space
-                 </button>
-                 <button 
-                   onClick={() => {
-                     setTranscript(prev => prev + '\n');
-                     finalizedTranscriptRef.current += '\n';
-                     interimTranscriptRef.current = '';
-                   }} 
-                   className="px-6 py-3 bg-brand-accent/20 hover:bg-brand-accent/40 text-brand-accent rounded-xl font-bold flex-[1] border border-brand-accent/30 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
-                 >
-                   <span>Enter (New Line)</span>
-                 </button>
+                {[
+                  ['1','2','3','4','5','6','7','8','9','0'],
+                  ['q','w','e','r','t','y','u','i','o','p'],
+                  ['a','s','d','f','g','h','j','k','l',';',"'"],
+                  ['z','x','c','v','b','n','m',',','.','?']
+                ].map((row, i) => (
+                  <div key={i} className="flex gap-1.5 w-full justify-center">
+                    {row.map(key => (
+                      <button 
+                        key={key} 
+                        onClick={() => setEditTranscript(prev => prev + key)}
+                        className="w-10 h-10 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-lg font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                
+                <div className="flex gap-2 w-full justify-center mt-2">
+                   <button 
+                     onClick={() => setEditTranscript(prev => prev.slice(0, -1))} 
+                     className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all"
+                   >
+                     Backspace
+                   </button>
+                   <button 
+                     onClick={() => setEditTranscript(prev => prev + '\n')} 
+                     className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
+                   >
+                     <span>Next Line</span>
+                     <span className="text-[10px] opacity-70 font-normal">(Alt+Enter)</span>
+                   </button>
+                   <button 
+                     onClick={() => setEditTranscript(prev => prev + ' ')} 
+                     className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/5 transition-all"
+                   >
+                     Space
+                   </button>
+                   <button 
+                     onClick={() => {
+                        setTranscript(editTranscript);
+                        finalizedTranscriptRef.current = editTranscript;
+                        interimTranscriptRef.current = '';
+                        audioDataRef.current = new Float32Array(0);
+                        setShowVirtualKeyboard(false);
+                        if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                     }} 
+                     className="px-6 py-3 bg-brand-accent hover:bg-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] rounded-xl font-bold flex-[1] border border-brand-accent/30 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
+                   >
+                     <span>Done / Save</span>
+                     <span className="text-[10px] opacity-90 font-normal">(Enter)</span>
+                   </button>
+                </div>
               </div>
             </div>
 
