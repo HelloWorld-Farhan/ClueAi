@@ -2336,23 +2336,39 @@ function App() {
               <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 w-full cursor-default">
-              {/* Reminders Panel */}
-              <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-[200px]">
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-sm font-bold text-white tracking-tight">Interview Reminders</h2>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-[200px] w-full cursor-default">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-white tracking-tight flex items-center gap-2 text-sm">
+                  <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
+                    <CheckCircle2 size={12} />
+                  </div>
+                  Interview Reminders & Notes
+                </h3>
+                <div className="flex gap-2">
                   <button 
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
                       setShowReminderPopup(true);
                     }} 
-                    className="bg-white/20 text-white hover:bg-white text-xs px-2 py-1 rounded font-bold hover:text-blue-600 transition-all flex items-center gap-1 shadow-sm"
+                    className="bg-white/20 text-white hover:bg-white px-2 py-1.5 rounded font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
                   >
-                    <Plus size={12}/> New
+                    <Plus size={14}/> Create Reminder
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
+                      setShowNotesPopup(true);
+                    }} 
+                    className="bg-teal-500/80 text-white hover:bg-teal-400 px-2 py-1.5 rounded font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                  >
+                    <Plus size={14}/> New Note
                   </button>
                 </div>
-                
-                <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+              </div>
+
+              <div className="flex gap-4 flex-1 h-full overflow-hidden">
+                {/* Reminders (70%) */}
+                <div className="w-[70%] space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                   {reminderProfiles.length === 0 ? (
                     <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders set.</p>
                   ) : (
@@ -2387,57 +2403,34 @@ function App() {
                     ))
                   )}
                 </div>
-              </div>
 
-              {/* Notes Panel */}
-              <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-teal-400/30 flex flex-col h-[200px]">
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-sm font-bold text-white tracking-tight">Interview Notes</h2>
-                  <button 
-                    onClick={() => {
-                      setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
-                      setShowNotesPopup(true);
-                    }} 
-                    className="bg-white/20 text-white hover:bg-white text-xs px-2 py-1 rounded font-bold hover:text-teal-600 transition-all flex items-center gap-1 shadow-sm"
-                  >
-                    <Plus size={12}/> New
-                  </button>
-                </div>
-                
-                <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                {/* Notes (30%) */}
+                <div className="w-[30%] space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                   {notesProfiles.length === 0 ? (
-                    <p className="text-teal-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No notes saved.</p>
-                  ) : (
-                    notesProfiles.map(prof => (
-                      <div 
-                        key={prof.id} 
-                        className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                        onClick={() => {
-                          setNotesForm(prof);
-                          setShowNotesPopup(true);
-                        }}
-                      >
-                        <div className="flex flex-col flex-1 min-w-0 pr-3">
-                          <span className="font-bold text-xs text-white truncate">Note: {prof.date}</span>
-                          <span className="text-[10px] text-teal-200 truncate">{prof.email}</span>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
-                            <button 
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
-                              }} 
-                              className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X size={14}/>
-                            </button>
-                          </div>
-                        </div>
+                    <p className="text-teal-100/50 text-[10px] italic py-2 text-center h-full flex items-center justify-center">No notes.</p>
+                  ) : notesProfiles.map(prof => (
+                    <div 
+                      key={prof.id} 
+                      className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                      onClick={() => {
+                        setNotesForm(prof);
+                        setShowNotesPopup(true);
+                      }}
+                    >
+                      <div className="flex flex-col flex-1 min-w-0 pr-1">
+                        <span className="font-bold text-[10px] text-teal-100 truncate">{prof.date}</span>
                       </div>
-                    ))
-                  )}
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
+                        }} 
+                        className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
+                      >
+                        <X size={12}/>
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
