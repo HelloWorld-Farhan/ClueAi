@@ -135,6 +135,15 @@ function createWindow() {
         const bounds = mainWindow.getBounds();
         let newW = bounds.width + dw;
         let newH = bounds.height + dh;
+        
+        // Horizontal layout is roughly w: 1000, h: 300
+        // Vertical layout is roughly w: 400, h: 700
+        // We'll enforce a generic safe minimum here, but rely on the frontend for specific layout warnings
+        if (newW < 400 || newH < 300) {
+          mainWindow.webContents.send('show-size-warning');
+          return;
+        }
+
         if (newW < 200) newW = 200;
         if (newH < 200) newH = 200;
         mainWindow.setBounds({ width: newW, height: newH });

@@ -229,7 +229,8 @@ function App() {
       return 1.0;
     }
   });
-  const [layout, setLayout] = useState('horizontal');
+  const [showMinSizeWarning, setShowMinSizeWarning] = useState(false);
+  const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
   // Snapshot States
   const [currentSnapshots, setCurrentSnapshots] = useState<string[]>([]);
   const [snapshotHistory, setSnapshotHistory] = useState<{id: string, image: string, transcriptContext: string}[]>([]);
@@ -1276,7 +1277,7 @@ function App() {
         return;
       } else if (e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract' || key === '-' || key === '_' || e.code === 'BracketLeft' || key === '[')) {
         e.preventDefault();
-        ipcRenderer.invoke('resize-window', -50, -50);
+        handleShrinkWindow();
         return;
       } else if (key === 'arrowup') {
         e.preventDefault();
@@ -1344,6 +1345,8 @@ function App() {
         if (!isGenerating) manualTriggerAI();
       } else if (action === 'clear-all') {
         handleClearAll();
+      } else if (action === 'show-size-warning') {
+        setShowMinSizeWarning(true);
       } else if (action === 'snapshot') {
         handleSnipClick();
       } else if (action === 'switch-model') {
@@ -1375,9 +1378,20 @@ function App() {
      ipcRenderer.invoke('minimize-window');
   };
 
+  const handleShrinkWindow = () => {
+    const MIN_WIDTH = layout === 'horizontal' ? 800 : 400;
+    const MIN_HEIGHT = layout === 'horizontal' ? 300 : 700;
+    
+    if (window.innerWidth - 50 < MIN_WIDTH || window.innerHeight - 50 < MIN_HEIGHT) {
+      setShowMinSizeWarning(true);
+    } else {
+      ipcRenderer.invoke('resize-window', -50, -50);
+    }
+  };
+
   return (
     <div 
-      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl"
+      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none"
       style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
     >
       <div 
@@ -1417,8 +1431,8 @@ function App() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between w-full gap-2">
-          <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
             <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
               <Move size={16} />
             </div>
@@ -1443,10 +1457,10 @@ function App() {
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {isRecording ? (
             <>
-              <div className="flex flex-wrap items-center gap-3 mr-2 relative">
+              <div className="flex items-center gap-3 mr-2 relative">
                 <div className="flex flex-col items-center justify-center mr-2">
                   <button 
                     onClick={() => {
@@ -1538,8 +1552,8 @@ function App() {
           )}
 
           {/* Minimize / Maximize / Close */}
-          <div className="flex flex-wrap items-center gap-1 sm:ml-4 sm:pl-4 sm:border-l border-brand-border shrink-0">
-            <button onClick={() => ipcRenderer.invoke('resize-window', -50, -50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
+          <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border shrink-0">
+            <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
               <ZoomOut size={16} />
             </button>
             <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
@@ -2575,6 +2589,28 @@ function App() {
                 className="w-full bg-brand-accent hover:bg-brand-accentSec text-white py-2.5 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
               >
                 Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Minimum Size Warning Modal */}
+      {showMinSizeWarning && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 select-none">
+          <div className="bg-[#09090b]/90 border border-brand-border rounded-[2rem] w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-300">
+            <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+              <h3 className="font-black text-lg text-white flex items-center gap-2"><ZoomOut size={18} className="text-brand-accent"/> Size Limit Reached</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-brand-subtext text-sm mb-6 text-center">
+                The window cannot be decreased further without hiding essential buttons and breaking the layout.
+              </p>
+              <button 
+                onClick={() => setShowMinSizeWarning(false)} 
+                className="w-full bg-brand-accent hover:bg-brand-accent/90 text-white py-2.5 rounded-xl font-bold transition-colors"
+              >
+                Okay
               </button>
             </div>
           </div>
