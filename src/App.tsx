@@ -10,6 +10,29 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec';
 
+const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  return (
+    <div className="flex items-center gap-2">
+      {copied && <span className="text-green-400 text-[10px] font-bold animate-pulse">Copied!</span>}
+      <button 
+        onClick={handleCopy}
+        className={className}
+        title={tooltip}
+      >
+        <FileText size={size} />
+      </button>
+    </div>
+  );
+};
+
 const formatTimer = (totalSeconds: number) => {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -2310,13 +2333,11 @@ function App() {
               <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm">
                 {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
               </span>
-              <button 
-                onClick={() => navigator.clipboard.writeText(transcript)} 
+              <CopyButton 
+                text={transcript}
                 className="text-white/30 hover:text-white transition-colors ml-2"
-                title="Copy Transcript"
-              >
-                <FileText size={14} />
-              </button>
+                tooltip="Copy Transcript"
+              />
             </div>
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
@@ -2409,13 +2430,11 @@ function App() {
               )}
             </span>
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => navigator.clipboard.writeText(aiAnswer)} 
+              <CopyButton 
+                text={aiAnswer}
                 className="text-white/30 hover:text-white transition-colors"
-                title="Copy Answer"
-              >
-                <FileText size={14} />
-              </button>
+                tooltip="Copy Answer"
+              />
             </div>
           </div>
           <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">
@@ -2427,13 +2446,11 @@ function App() {
                       const match = /language-(\w+)/.exec(className || '')
                       return !inline && match ? (
                         <div className="relative group/code">
-                          <button 
-                            onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
+                          <CopyButton 
+                            text={String(children).replace(/\n$/, '')}
                             className="absolute top-2 right-2 p-1.5 bg-white/10 hover:bg-white/20 text-white rounded opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                            title="Copy code"
-                          >
-                            <FileText size={14} />
-                          </button>
+                            tooltip="Copy code"
+                          />
                           <SyntaxHighlighter
                             {...props}
                             children={String(children).replace(/\n$/, '')}
