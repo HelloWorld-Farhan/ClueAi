@@ -1270,11 +1270,11 @@ function App() {
       const key = e.key.toLowerCase();
       
       // Resize window shortcuts (Robust using physical key codes)
-      if (e.altKey && (e.code === 'Digit9' || e.code === 'Numpad9' || key === '9')) {
+      if (e.altKey && (e.code === 'Equal' || e.code === 'NumpadAdd' || key === '=' || key === '+' || e.code === 'BracketRight' || key === ']')) {
         e.preventDefault();
         ipcRenderer.invoke('resize-window', 50, 50);
         return;
-      } else if (e.altKey && (e.code === 'Digit8' || e.code === 'Numpad8' || key === '8')) {
+      } else if (e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract' || key === '-' || key === '_' || e.code === 'BracketLeft' || key === '[')) {
         e.preventDefault();
         ipcRenderer.invoke('resize-window', -50, -50);
         return;
@@ -1377,7 +1377,7 @@ function App() {
 
   return (
     <div 
-      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-hidden rounded-xl"
+      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl"
       style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
     >
       <div 
@@ -1417,12 +1417,12 @@ function App() {
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
+        <div className="flex flex-wrap items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
               <Move size={16} />
             </div>
-            <div className="flex flex-col justify-center">
+            <div className="flex flex-col justify-center shrink-0">
               <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
                 <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
                 <span>ClueAI</span>
@@ -1443,10 +1443,10 @@ function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isRecording ? (
             <>
-              <div className="flex items-center gap-3 mr-2 relative">
+              <div className="flex flex-wrap items-center gap-3 mr-2 relative">
                 <div className="flex flex-col items-center justify-center mr-2">
                   <button 
                     onClick={() => {
@@ -1538,11 +1538,11 @@ function App() {
           )}
 
           {/* Minimize / Maximize / Close */}
-          <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border">
-            <button onClick={() => ipcRenderer.invoke('resize-window', -50, -50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt + 8)">
+          <div className="flex flex-wrap items-center gap-1 sm:ml-4 sm:pl-4 sm:border-l border-brand-border shrink-0">
+            <button onClick={() => ipcRenderer.invoke('resize-window', -50, -50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
               <ZoomOut size={16} />
             </button>
-            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt + 9)">
+            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
               <ZoomIn size={16} />
             </button>
             <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
@@ -2127,11 +2127,11 @@ function App() {
                   <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
                   <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
                     <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + 9</span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + +</span>
                   </div>
                   <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
                     <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + 8</span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + -</span>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
                     <span className="text-sm text-white/90 font-medium">Move Window</span>
