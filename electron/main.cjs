@@ -138,8 +138,8 @@ function createWindow() {
         
         // Horizontal layout is roughly w: 1000, h: 300
         // Vertical layout is roughly w: 400, h: 700
-        // We'll enforce a generic safe minimum here, but rely on the frontend for specific layout warnings
-        if (newW < 400 || newH < 300) {
+        // We'll enforce a generic safe minimum here based on aspect ratio approximation
+        if (newW < 380 || newH < 300) {
           mainWindow.webContents.send('show-size-warning');
           return;
         }
@@ -316,10 +316,17 @@ function createWindow() {
   ipcMain.handle('set-layout', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 600);
+        mainWindow.setSize(1000, 350); // Sleek horizontal interview layout
       } else {
-        mainWindow.setSize(450, 850);
+        mainWindow.setSize(450, 850); // Vertical interview layout
       }
+    }
+  });
+
+  ipcMain.handle('set-window-size', (event, width, height) => {
+    if (mainWindow) {
+      mainWindow.setSize(width, height);
+      mainWindow.center(); // Re-center after resetting size
     }
   });
 

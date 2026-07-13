@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -206,10 +206,27 @@ function App() {
   // The old reminders state is completely removed in favor of reminderProfiles
   const [showReminderPopup, setShowReminderPopup] = useState(false);
   const [showReminderErrors, setShowReminderErrors] = useState(false);
+  
+  const [showNotesPopup, setShowNotesPopup] = useState(false);
+  const [showNotesErrors, setShowNotesErrors] = useState(false);
+  const [notesForm, setNotesForm] = useState({ id: '', notes: '', email: '', date: '', time: '' });
+  const [notesProfiles, setNotesProfiles] = useState<{id: string, notes: string, email: string, date: string, time: string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem('notes_profiles') || '[]'); } catch { return []; }
+  });
+
   const [alertMessage, setAlertMessage] = useState<{title: string, message: string, type: 'error' | 'success' | 'warning'} | null>(null);
   const [reminderProfiles, setReminderProfiles] = useState<{id: string, name: string, jobTitle: string, email: string, phone: string, date: string, time: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('reminder_profiles') || '[]'); } catch { return []; }
   });
+
+  useEffect(() => {
+    localStorage.setItem('reminder_profiles', JSON.stringify(reminderProfiles));
+  }, [reminderProfiles]);
+
+  useEffect(() => {
+    localStorage.setItem('notes_profiles', JSON.stringify(notesProfiles));
+  }, [notesProfiles]);
+  
   const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
   const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
   
@@ -631,10 +648,15 @@ function App() {
     const hasGroqKey = groqKeys.some(k => k.trim() !== '');
 
     if (!hasActiveKey || !hasGroqKey) {
-      setShowApiKeyMissingError(true);
+      if (!hasActiveKey) setAlertMessage({ title: 'API Key Missing', message: 'Please add at least one valid Gemini or Groq API key.', type: 'warning' });
+      else if (!hasGroqKey) setAlertMessage({ title: 'Groq Key Missing', message: 'Please add at least one valid Groq API key for Transcription.', type: 'warning' });
+      setShowSettings(true);
       return;
     }
     
+    // Reset to current interview layout dimensions
+    ipcRenderer.invoke('set-layout', layout);
+
     if (!selectedSource) {
       setAlertMessage({ title: 'Source Missing', message: 'Please select a screen to capture.', type: 'warning' });
       return;
@@ -1028,6 +1050,9 @@ function App() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
+    // Reset to default main menu size
+    ipcRenderer.invoke('set-window-size', 1000, 600);
+
     if (!silent) {
       setIsRecording(false);
       setIsPaused(false);
@@ -1386,7 +1411,7 @@ function App() {
   };
 
   const handleShrinkWindow = () => {
-    const MIN_WIDTH = layout === 'horizontal' ? 800 : 400;
+    const MIN_WIDTH = layout === 'horizontal' ? 800 : 380;
     const MIN_HEIGHT = layout === 'horizontal' ? 300 : 700;
     
     if (window.innerWidth - 50 < MIN_WIDTH || window.innerHeight - 50 < MIN_HEIGHT) {
@@ -1640,10 +1665,40 @@ function App() {
                   <li><strong>Next Q. (Pause/Resume):</strong> Temporarily stops audio processing so you can talk to the interviewer without the AI analyzing your voice.</li>
                   <li><strong>Snip UI:</strong> Takes a visual screenshot of your screen to send to Gemini Vision for coding or visual questions.</li>
                   <li><strong>Clear:</strong> Wipes the transcript so the AI doesn't get confused by previous topics.</li>
-                  <li><strong>Stop:</strong> Ends the current session and saves the logs.</li>
+                  <li><strong>Stop:</strong> Ends the session entirely, saving it to history, and returns you to the Main Dashboard.</li>
                   <li><strong>Model Selector:</strong> Switch between Groq (Fastest Text) and Gemini (Vision capabilities) instantly.</li>
                   <li><strong>Hotkeys Toggle:</strong> Temporarily disables global shortcuts so you can type numbers or letters normally in other applications.</li>
                 </ul>
+              </div>
+
+              {/* API Keys Guide */}
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center mb-2">
+                  <Key size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">How to get API Keys (Free)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                  <div className="space-y-2">
+                    <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Groq Keys (For Audio & Fast Text)</h4>
+                    <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                      <li>Go to <a href="https://console.groq.com/keys" target="_blank" className="text-blue-400 hover:underline">console.groq.com/keys</a> and log in.</li>
+                      <li>Click on <strong>Create API Key</strong> in the top right.</li>
+                      <li>Copy the key (it starts with `gsk_`).</li>
+                      <li>Paste it into the Groq API Key field in ClueAI Settings.</li>
+                      <li><em>Note: Groq is free but rate-limited. Add multiple keys to avoid interruptions!</em></li>
+                    </ol>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Gemini Keys (For Snapshots)</h4>
+                    <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                      <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-400 hover:underline">aistudio.google.com/app/apikey</a> and log in.</li>
+                      <li>Click <strong>Create API Key</strong> and select an existing project or create a new one.</li>
+                      <li>Copy the generated key (it starts with `AIzaSy`).</li>
+                      <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
+                      <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
+                    </ol>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2216,47 +2271,91 @@ function App() {
               <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-300/30 flex flex-col justify-center items-center text-center cursor-default">
-              <h2 className="text-xl font-bold text-white mb-4 tracking-tight">Interview Reminders</h2>
-              <button 
-                onClick={() => {
-                  setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
-                  setShowReminderPopup(true);
-                }} 
-                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 mb-4 shadow-sm w-full justify-center"
-              >
-                <Plus size={16}/> Create Reminder
-              </button>
-              <div className="w-full space-y-2 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
-                {reminderProfiles.length === 0 ? (
-                  <p className="text-blue-100/50 text-sm italic py-2">No reminder profiles set.</p>
-                ) : reminderProfiles.map(prof => (
-                  <div 
-                    key={prof.id} 
-                    className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left"
-                    onClick={() => {
-                      setReminderForm(prof);
-                      setShowReminderPopup(true);
-                    }}
-                  >
-                    <div className="flex flex-col flex-1 min-w-0 pr-3">
-                      <span className="font-bold text-sm text-white truncate">{prof.name}</span>
-                      <span className="text-[10px] text-blue-200 truncate">{prof.jobTitle}</span>
+            <div className="flex gap-4">
+              {/* Reminders 70% */}
+              <div className="w-[70%] bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-300/30 flex flex-col justify-center items-center text-center cursor-default">
+                <h2 className="text-lg font-bold text-white mb-3 tracking-tight">Interview Reminders</h2>
+                <button 
+                  onClick={() => {
+                    setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
+                    setShowReminderPopup(true);
+                  }} 
+                  className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 mb-3 shadow-sm w-full justify-center"
+                >
+                  <Plus size={16}/> Create Reminder
+                </button>
+                <div className="w-full space-y-2 max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
+                  {reminderProfiles.length === 0 ? (
+                    <p className="text-blue-100/50 text-sm italic py-2">No reminders set.</p>
+                  ) : reminderProfiles.map(prof => (
+                    <div 
+                      key={prof.id} 
+                      className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left"
+                      onClick={() => {
+                        setReminderForm(prof);
+                        setShowReminderPopup(true);
+                      }}
+                    >
+                      <div className="flex flex-col flex-1 min-w-0 pr-2">
+                        <span className="font-bold text-xs text-white truncate">{prof.name}</span>
+                        <span className="text-[10px] text-blue-200 truncate">{prof.jobTitle}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="text-[9px] text-blue-300 font-medium bg-blue-500/20 px-1 rounded">{prof.date}</span>
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
+                          }} 
+                          className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                        >
+                          <X size={12}/>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes 30% */}
+              <div className="w-[30%] bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-teal-300/30 flex flex-col justify-center items-center text-center cursor-default">
+                <h2 className="text-lg font-bold text-white mb-3 tracking-tight">Notes</h2>
+                <button 
+                  onClick={() => {
+                    setNotesForm({id: '', notes: '', email: '', date: '', time: ''});
+                    setShowNotesPopup(true);
+                  }} 
+                  className="bg-white text-teal-600 px-3 py-2 rounded-lg font-bold text-sm hover:bg-teal-50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-1.5 mb-3 shadow-sm w-full justify-center"
+                >
+                  <Plus size={16}/> New Note
+                </button>
+                <div className="w-full space-y-2 max-h-[100px] overflow-y-auto pr-1 custom-scrollbar">
+                  {notesProfiles.length === 0 ? (
+                    <p className="text-teal-100/50 text-xs italic py-2">No notes.</p>
+                  ) : notesProfiles.map(prof => (
+                    <div 
+                      key={prof.id} 
+                      className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left"
+                      onClick={() => {
+                        setNotesForm(prof);
+                        setShowNotesPopup(true);
+                      }}
+                    >
+                      <div className="flex flex-col flex-1 min-w-0 pr-1">
+                        <span className="font-bold text-[10px] text-teal-100 truncate">{prof.date}</span>
+                      </div>
                       <button 
                         onClick={(e) => { 
                           e.stopPropagation(); 
-                          setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
+                          setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
                         }} 
-                        className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                        className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
                       >
-                        <X size={14}/>
+                        <X size={12}/>
                       </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -2838,6 +2937,7 @@ function App() {
                   setShowReminderErrors(false);
 
                   const templateParams = {
+                    type: 'reminder',
                     to_email: reminderForm.email,
                     job_title: reminderForm.jobTitle,
                     company_name: reminderForm.name,
@@ -2903,6 +3003,150 @@ function App() {
                 className="px-5 py-2.5 bg-brand-accent hover:bg-brand-accent/80 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
               >
                 <Save size={16} /> Save Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes Popup Editor */}
+      {showNotesPopup && (
+        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden">
+            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-teal-500/10">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
+              <button onClick={() => setShowNotesPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+            
+            <div className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[60vh] custom-scrollbar">
+              <div>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Notes</label>
+                <textarea 
+                  placeholder="e.g. Discussed system design..." 
+                  className={`w-full bg-black/40 border ${showNotesErrors && !notesForm.notes ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors h-24 resize-none`} 
+                  value={notesForm.notes} 
+                  onChange={e => setNotesForm({...notesForm, notes: e.target.value})} 
+                />
+                {showNotesErrors && !notesForm.notes && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
+                <input type="email" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.email} onChange={e => setNotesForm({...notesForm, email: e.target.value})} />
+                {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                {showNotesErrors && notesForm.email && !/^\S+@\S+\.\S+$/.test(notesForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
+                  <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => setNotesForm({...notesForm, date: e.target.value})} />
+                  {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
+                  {showNotesErrors && notesForm.date && !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
+                  <input type="text" placeholder="HH:MM (24h)" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.time} onChange={e => setNotesForm({...notesForm, time: e.target.value})} />
+                  {showNotesErrors && !notesForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
+                  {showNotesErrors && notesForm.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
+              <button 
+                onClick={() => setShowNotesPopup(false)}
+                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all"
+              >
+                Cancel
+              </button>
+              
+              {emailSendStatus === 'sending' && (
+                <div className="px-5 py-2.5 bg-teal-600/50 text-white rounded-xl font-bold flex items-center gap-2 border border-teal-500/50">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending...
+                </div>
+              )}
+              {emailSendStatus === 'success' && (
+                <div className="px-5 py-2.5 bg-green-500/20 text-green-400 rounded-xl font-bold flex items-center gap-2 border border-green-500/50">
+                  <CheckCircle2 size={16} /> Sent!
+                </div>
+              )}
+              {emailSendStatus === 'idle' && (
+              <button 
+                onClick={() => {
+                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(notesForm.date);
+                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time);
+                  const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
+                  
+                  if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
+                    setShowNotesErrors(true);
+                    return;
+                  }
+                  setShowNotesErrors(false);
+
+                  const templateParams = {
+                    type: 'note',
+                    email: notesForm.email,
+                    date: notesForm.date,
+                    time: notesForm.time,
+                    notes: notesForm.notes,
+                  };
+
+                  // Send to Google Apps Script
+                  setEmailSendStatus('sending');
+                  fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(templateParams)
+                  })
+                  .then(() => {
+                    setEmailSendStatus('success');
+                    // Save Profile
+                    if (notesForm.id) {
+                      setNotesProfiles(prev => prev.map(p => p.id === notesForm.id ? notesForm : p));
+                    } else {
+                      setNotesProfiles(prev => [{...notesForm, id: Date.now().toString()}, ...prev]);
+                    }
+                    
+                    setTimeout(() => {
+                      setShowNotesPopup(false);
+                      setEmailSendStatus('idle');
+                    }, 1500);
+                  })
+                  .catch(err => {
+                    setEmailSendStatus('idle');
+                    console.error('Google Script Error:', err);
+                    setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
+                  });
+                }}
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+              >
+                Send Notes
+              </button>
+              )}
+              <button 
+                onClick={() => {
+                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(notesForm.date);
+                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time);
+                  const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
+                  
+                  if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
+                    setShowNotesErrors(true);
+                    return;
+                  }
+                  setShowNotesErrors(false);
+                  
+                  if (notesForm.id) {
+                    setNotesProfiles(prev => prev.map(p => p.id === notesForm.id ? notesForm : p));
+                  } else {
+                    setNotesProfiles(prev => [{...notesForm, id: Date.now().toString()}, ...prev]);
+                  }
+                  setShowNotesPopup(false);
+                }}
+                className="px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+              >
+                <Save size={16} /> Save Note
               </button>
             </div>
           </div>
