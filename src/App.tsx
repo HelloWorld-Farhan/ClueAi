@@ -12,8 +12,14 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 
 const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
   const [copied, setCopied] = useState(false);
+  const [empty, setEmpty] = useState(false);
   
   const handleCopy = () => {
+    if (!text || text.trim() === '') {
+      setEmpty(true);
+      setTimeout(() => setEmpty(false), 2000);
+      return;
+    }
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -22,6 +28,7 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
   return (
     <div className="flex items-center gap-2">
       {copied && <span className="text-green-400 text-[10px] font-bold animate-pulse">Copied!</span>}
+      {empty && <span className="text-rose-400 text-[10px] font-bold animate-pulse">No Text</span>}
       <button 
         onClick={handleCopy}
         className={className}
@@ -1504,37 +1511,22 @@ function App() {
               </div>
               
               {isPaused ? (
-                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-green-500 hover:bg-green-400 text-black px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.4)] group">
-                  <div className="flex items-center gap-1.5 font-black text-[11px] tracking-wide mb-0.5">
-                    <Play size={12} fill="currentColor" /> NEXT Q.
-                  </div>
-                  <span className="text-[8px] font-bold text-white drop-shadow-md">Press Z or 1</span>
+                <button onClick={handlePauseToggle} title="Next Question (Press Z or 1)" className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)]">
+                  <Play size={12} fill="currentColor" /> NEXT Q.
                 </button>
               ) : (
-                <button onClick={handlePauseToggle} className="flex flex-col items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
-                  <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                    <Pause size={12} fill="currentColor" /> Pause
-                  </div>
-                  <span className="text-[8px] font-medium text-white/70">Press Z or 1</span>
+                <button onClick={handlePauseToggle} title="Pause (Press Z or 1)" className="flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
+                  <Pause size={12} fill="currentColor" /> PAUSE
                 </button>
               )}
-              <button onClick={handleSnipClick} className="flex flex-col items-center justify-center bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                  <Crop size={12} /> Snip UI
-                </div>
-                <span className="text-[8px] font-medium text-white/70">Press A or 4</span>
+              <button onClick={handleSnipClick} title="Snip UI (Press A or 4)" className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
+                <Crop size={12} /> SNIP
               </button>
-              <button onClick={handleClearAll} className="flex flex-col items-center justify-center bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                  <Trash2 size={12} fill="currentColor" /> Clear
-                </div>
-                <span className="text-[8px] font-medium text-white/70">Press C or 3</span>
+              <button onClick={handleClearAll} title="Clear Transcript (Press C or 3)" className="flex items-center gap-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
+                <Trash2 size={12} fill="currentColor" /> CLEAR
               </button>
-              <button onClick={stopRecording} className="flex flex-col items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-md transition-all hover:scale-105 active:scale-95 group">
-                <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                  <Square size={12} fill="currentColor" /> Stop
-                </div>
-                <span className="text-[8px] font-medium text-white/70">Press D or 6</span>
+              <button onClick={stopRecording} title="Stop Session (Press D or 6)" className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
+                <Square size={12} fill="currentColor" /> STOP
               </button>
             </>
           ) : (
