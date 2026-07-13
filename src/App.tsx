@@ -1270,11 +1270,11 @@ function App() {
       const key = e.key.toLowerCase();
       
       // Resize window shortcuts (Robust using physical key codes)
-      if (e.altKey && (e.code === 'Equal' || e.code === 'NumpadAdd' || key === '=' || key === '+' || e.code === 'BracketRight' || key === ']')) {
+      if (e.altKey && (e.code === 'Digit9' || e.code === 'Numpad9' || key === '9')) {
         e.preventDefault();
         ipcRenderer.invoke('resize-window', 50, 50);
         return;
-      } else if (e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract' || key === '-' || key === '_' || e.code === 'BracketLeft' || key === '[')) {
+      } else if (e.altKey && (e.code === 'Digit8' || e.code === 'Numpad8' || key === '8')) {
         e.preventDefault();
         ipcRenderer.invoke('resize-window', -50, -50);
         return;
@@ -1539,10 +1539,10 @@ function App() {
 
           {/* Minimize / Maximize / Close */}
           <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border">
-            <button onClick={() => ipcRenderer.invoke('resize-window', -50, -50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
+            <button onClick={() => ipcRenderer.invoke('resize-window', -50, -50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt + 8)">
               <ZoomOut size={16} />
             </button>
-            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt + 9)">
               <ZoomIn size={16} />
             </button>
             <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
@@ -2127,11 +2127,11 @@ function App() {
                   <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
                   <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
                     <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + +</span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + 9</span>
                   </div>
                   <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
                     <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + -</span>
+                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + 8</span>
                   </div>
                   <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
                     <span className="text-sm text-white/90 font-medium">Move Window</span>
