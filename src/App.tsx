@@ -1270,11 +1270,11 @@ function App() {
       const key = e.key.toLowerCase();
       
       // Resize window shortcuts (Robust using physical key codes)
-      if (e.altKey && (e.code === 'Equal' || e.code === 'NumpadAdd' || key === '=' || key === '+')) {
+      if (e.altKey && (e.code === 'Equal' || e.code === 'NumpadAdd' || key === '=' || key === '+' || e.code === 'BracketRight' || key === ']')) {
         e.preventDefault();
         ipcRenderer.invoke('resize-window', 50, 50);
         return;
-      } else if (e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract' || key === '-' || key === '_')) {
+      } else if (e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract' || key === '-' || key === '_' || e.code === 'BracketLeft' || key === '[')) {
         e.preventDefault();
         ipcRenderer.invoke('resize-window', -50, -50);
         return;
