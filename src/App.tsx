@@ -2321,8 +2321,9 @@ function App() {
               <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-full w-full cursor-default">
-              <div className="flex flex-col mb-3 w-full">
+            <div className="relative h-full w-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 overflow-hidden shadow-lg border border-blue-400/30 flex flex-col cursor-default">
+                <div className="flex flex-col mb-3 w-full shrink-0">
                 <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-xl w-full mb-3">
                   <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
                     <CheckCircle2 size={12} />
@@ -2427,6 +2428,7 @@ function App() {
                   });
                 })()}
               </div>
+            </div>
             </div>
           </div>
           
