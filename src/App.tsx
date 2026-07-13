@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, Copy, RefreshCcw } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -1738,25 +1738,10 @@ function App() {
                     <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
                       <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-400 hover:underline">aistudio.google.com/app/apikey</a> and log in.</li>
                       <li>Click <strong>Create API Key</strong> and select an existing project or create a new one.</li>
-                      <li>Copy the generated key (it starts with `AIzaSy`).</li>
+                      <li>Copy the generated key (it starts with `AIzaSy` or `AQ.`).</li>
                       <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
                       <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
                     </ol>
-                    <div className="mt-3 p-3 bg-black/40 rounded-lg border border-white/5">
-                      <p className="text-xs font-bold text-white mb-2">Provided API Key (Ready to use):</p>
-                      <div className="flex items-center gap-2">
-                        <input type="text" readOnly value={"AQ.Ab8RN6L2L08tOgsV9ty7JU" + "jvUbwGmlN0SM0ecipFy4ZABZoo7A"} className="bg-black/50 border border-brand-border rounded px-2 py-1.5 text-[10px] text-brand-subtext flex-1 outline-none font-mono" />
-                        <button onClick={(e) => {
-                          navigator.clipboard.writeText("AQ.Ab8RN6L2L08tOgsV9ty7JU" + "jvUbwGmlN0SM0ecipFy4ZABZoo7A");
-                          const btn = e.currentTarget;
-                          const originalText = btn.innerHTML;
-                          btn.innerHTML = '<span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!</span>';
-                          setTimeout(() => btn.innerHTML = originalText, 2000);
-                        }} className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-1.5 rounded text-[10px] font-bold flex items-center justify-center min-w-[70px] transition-colors">
-                          <span className="flex items-center gap-1"><Copy size={12} /> Copy</span>
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -2337,14 +2322,14 @@ function App() {
             </div>
             
             <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-[200px] w-full cursor-default">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-white tracking-tight flex items-center gap-2 text-sm">
+              <div className="flex justify-between items-center mb-3 relative">
+                <h3 className="font-bold text-white tracking-tight flex items-center gap-2 text-sm w-1/3">
                   <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
                     <CheckCircle2 size={12} />
                   </div>
-                  Interview Reminders & Notes
+                  Reminders & Notes
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex gap-2 absolute left-1/2 -translate-x-1/2">
                   <button 
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
@@ -2366,72 +2351,81 @@ function App() {
                 </div>
               </div>
 
-              <div className="flex gap-4 flex-1 h-full overflow-hidden">
-                {/* Reminders (70%) */}
-                <div className="w-[70%] space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  {reminderProfiles.length === 0 ? (
-                    <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders set.</p>
-                  ) : (
-                    reminderProfiles.map(prof => (
-                      <div 
-                        key={prof.id} 
-                        className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                        onClick={() => {
-                          setReminderForm(prof);
-                          setShowReminderPopup(true);
-                        }}
-                      >
-                        <div className="flex flex-col flex-1 min-w-0 pr-3">
-                          <span className="font-bold text-xs text-white truncate">{prof.name}</span>
-                          <span className="text-[10px] text-blue-200 truncate">{prof.jobTitle}</span>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
-                            <button 
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
-                              }} 
-                              className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X size={14}/>
-                            </button>
+              <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                {(() => {
+                  const combined = [
+                    ...reminderProfiles.map(p => ({ ...p, type: 'reminder' as const })),
+                    ...notesProfiles.map(p => ({ ...p, type: 'note' as const }))
+                  ].sort((a, b) => Number(b.id) - Number(a.id));
+                  
+                  if (combined.length === 0) {
+                    return <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders or notes saved yet.</p>;
+                  }
+                  
+                  return combined.map(prof => {
+                    if (prof.type === 'reminder') {
+                      return (
+                        <div 
+                          key={prof.id} 
+                          className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                          onClick={() => {
+                            setReminderForm(prof as any);
+                            setShowReminderPopup(true);
+                          }}
+                        >
+                          <div className="flex flex-col flex-1 min-w-0 pr-3">
+                            <span className="font-bold text-xs text-white truncate">{prof.name}</span>
+                            <span className="text-[10px] text-blue-200 font-bold truncate">Reminder <span className="opacity-70 font-normal">• {prof.jobTitle}</span></span>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
+                                }} 
+                                className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X size={14}/>
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Notes (30%) */}
-                <div className="w-[30%] space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  {notesProfiles.length === 0 ? (
-                    <p className="text-teal-100/50 text-[10px] italic py-2 text-center h-full flex items-center justify-center">No notes.</p>
-                  ) : notesProfiles.map(prof => (
-                    <div 
-                      key={prof.id} 
-                      className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                      onClick={() => {
-                        setNotesForm(prof);
-                        setShowNotesPopup(true);
-                      }}
-                    >
-                      <div className="flex flex-col flex-1 min-w-0 pr-1">
-                        <span className="font-bold text-[10px] text-teal-100 truncate">{prof.date}</span>
-                      </div>
-                      <button 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
-                        }} 
-                        className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
-                      >
-                        <X size={12}/>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    } else {
+                      return (
+                        <div 
+                          key={prof.id} 
+                          className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                          onClick={() => {
+                            setNotesForm(prof as any);
+                            setShowNotesPopup(true);
+                          }}
+                        >
+                          <div className="flex flex-col flex-1 min-w-0 pr-1">
+                            <span className="font-bold text-xs text-white truncate">Note: {prof.date}</span>
+                            <span className="text-[10px] text-teal-200 font-bold truncate">Note <span className="opacity-70 font-normal">• {prof.email}</span></span>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
+                                }} 
+                                className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
+                              >
+                                <X size={14}/>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  });
+                })()}
               </div>
             </div>
           </div>
