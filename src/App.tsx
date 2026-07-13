@@ -488,13 +488,29 @@ function App() {
   useEffect(() => {
     if (showVirtualKeyboard) {
       setEditTranscript(transcript);
-      setTimeout(() => {
+      
+      const focusTextarea = () => {
         if (virtualKeyboardTextareaRef.current) {
           virtualKeyboardTextareaRef.current.focus();
           virtualKeyboardTextareaRef.current.selectionStart = virtualKeyboardTextareaRef.current.value.length;
           virtualKeyboardTextareaRef.current.selectionEnd = virtualKeyboardTextareaRef.current.value.length;
         }
-      }, 150);
+      };
+      
+      // Try multiple times to beat the IPC window focus
+      setTimeout(focusTextarea, 50);
+      setTimeout(focusTextarea, 150);
+      setTimeout(focusTextarea, 300);
+
+      const handleGlobalKeydown = (e: KeyboardEvent) => {
+        // If they start typing and the textarea isn't focused, focus it
+        if (document.activeElement !== virtualKeyboardTextareaRef.current && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          focusTextarea();
+        }
+      };
+      
+      window.addEventListener('keydown', handleGlobalKeydown);
+      return () => window.removeEventListener('keydown', handleGlobalKeydown);
     }
   }, [showVirtualKeyboard]);
 
@@ -2294,6 +2310,13 @@ function App() {
               <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm">
                 {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
               </span>
+              <button 
+                onClick={() => navigator.clipboard.writeText(transcript)} 
+                className="text-white/30 hover:text-white transition-colors ml-2"
+                title="Copy Transcript"
+              >
+                <FileText size={14} />
+              </button>
             </div>
           </div>
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
@@ -2386,7 +2409,13 @@ function App() {
               )}
             </span>
             <div className="flex items-center gap-3">
-              {/* Copy button intentionally removed for maximum stealth */}
+              <button 
+                onClick={() => navigator.clipboard.writeText(aiAnswer)} 
+                className="text-white/30 hover:text-white transition-colors"
+                title="Copy Answer"
+              >
+                <FileText size={14} />
+              </button>
             </div>
           </div>
           <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">
@@ -2397,14 +2426,23 @@ function App() {
                     code({node, inline, className, children, ...props}: any) {
                       const match = /language-(\w+)/.exec(className || '')
                       return !inline && match ? (
-                        <SyntaxHighlighter
-                          {...props}
-                          children={String(children).replace(/\n$/, '')}
-                          style={vscDarkPlus}
-                          language={match[1]}
-                          PreTag="div"
-                          className="rounded-xl border border-white/10 !bg-[#1e1e1e]/90 backdrop-blur-md !my-4 !p-4 !shadow-xl text-[14px]"
-                        />
+                        <div className="relative group/code">
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
+                            className="absolute top-2 right-2 p-1.5 bg-white/10 hover:bg-white/20 text-white rounded opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                            title="Copy code"
+                          >
+                            <FileText size={14} />
+                          </button>
+                          <SyntaxHighlighter
+                            {...props}
+                            children={String(children).replace(/\n$/, '')}
+                            style={vscDarkPlus}
+                            language={match[1]}
+                            PreTag="div"
+                            className="rounded-xl border border-white/10 !bg-[#1e1e1e]/90 backdrop-blur-md !my-4 !p-4 !shadow-xl text-[14px]"
+                          />
+                        </div>
                       ) : (
                         <code {...props} className={`${className} bg-black/20 rounded px-1.5 py-0.5 text-[15px]`}>
                           {children}

@@ -140,6 +140,8 @@ function createWindow() {
       'Alt+Plus': () => resizeWindow(50, 50),
       'Alt+numadd': () => resizeWindow(50, 50),
       'Alt+-': () => resizeWindow(-50, -50),
+      'Alt+_': () => resizeWindow(-50, -50),
+      'CommandOrControl+-': () => resizeWindow(-50, -50),
       'Alt+numsub': () => resizeWindow(-50, -50),
       'Alt+Up': () => moveWindow(0, -50),
       'Alt+Down': () => moveWindow(0, 50),
@@ -328,9 +330,7 @@ function createWindow() {
         fetchWindowIcons: false
       });
       
-      if (mainWindow) {
-        mainWindow.setOpacity(1); // Restore visibility
-      }
+      // Delay restoring visibility until snip is finished
       
       // Find the specific source or just use the first screen
       let targetSource = sources.find(s => s.id === sourceId) || sources[0];
@@ -376,10 +376,11 @@ function createWindow() {
       } catch(e) {}
       
       return new Promise((resolve) => {
-        ipcMain.once('snip-complete', (e, croppedDataUrl) => {
+        ipcMain.once('snip-complete', (e, b64) => {
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
           unregisterEsc();
-          resolve(croppedDataUrl);
+          if (mainWindow) mainWindow.setOpacity(1);
+          resolve(b64);
         });
         
         ipcMain.once('snip-cancel', () => {
@@ -391,6 +392,7 @@ function createWindow() {
         snipWindow.on('closed', () => {
           snipWindow = null;
           unregisterEsc();
+          if (mainWindow) mainWindow.setOpacity(1);
           resolve(null);
         });
       });
@@ -399,6 +401,7 @@ function createWindow() {
       console.error('Snipping error:', err);
       if (snipWindow) { snipWindow.close(); snipWindow = null; }
       try { globalShortcut.unregister('Escape'); } catch(e) {}
+      if (mainWindow) mainWindow.setOpacity(1);
       return null;
     }
   });
