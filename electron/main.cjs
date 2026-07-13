@@ -143,9 +143,6 @@ function createWindow() {
       'Alt+_': () => resizeWindow(-50, -50),
       'CommandOrControl+-': () => resizeWindow(-50, -50),
       'Alt+numsub': () => resizeWindow(-50, -50),
-      'Alt+Subtract': () => resizeWindow(-50, -50),
-      'Alt+Minus': () => resizeWindow(-50, -50),
-      'CommandOrControl+Minus': () => resizeWindow(-50, -50),
       'Shift+Alt+-': () => resizeWindow(-50, -50),
       'Alt+Up': () => moveWindow(0, -50),
       'Alt+Down': () => moveWindow(0, 50),
@@ -299,6 +296,13 @@ function createWindow() {
       } else {
         mainWindow.setSize(450, 850);
       }
+    }
+  });
+
+  ipcMain.handle('resize-window', (event, dw, dh) => {
+    if (mainWindow) {
+      const [currW, currH] = mainWindow.getSize();
+      mainWindow.setSize(currW + dw, currH + dh);
     }
   });
 

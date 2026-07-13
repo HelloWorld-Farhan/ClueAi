@@ -1332,6 +1332,15 @@ function App() {
         e.preventDefault();
         handleSnipClick();
       }
+      
+      // Fallback resize keys if global shortcuts fail
+      if (e.altKey && (key === '-' || key === '_' || key === 'subtract')) {
+        e.preventDefault();
+        ipcRenderer.invoke('resize-window', -50, -50);
+      } else if (e.altKey && (key === '=' || key === '+' || key === 'add')) {
+        e.preventDefault();
+        ipcRenderer.invoke('resize-window', 50, 50);
+      }
     };
 
     const handleIPCHotkey = (_event: any, action: string) => {
