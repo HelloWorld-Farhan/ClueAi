@@ -132,8 +132,12 @@ function createWindow() {
     
     const resizeWindow = (dw, dh) => {
       if (mainWindow) {
-        const [currW, currH] = mainWindow.getSize();
-        mainWindow.setSize(currW + dw, currH + dh);
+        const bounds = mainWindow.getBounds();
+        let newW = bounds.width + dw;
+        let newH = bounds.height + dh;
+        if (newW < 200) newW = 200;
+        if (newH < 200) newH = 200;
+        mainWindow.setBounds({ width: newW, height: newH });
       }
     };
 
@@ -302,8 +306,12 @@ function createWindow() {
 
   ipcMain.handle('resize-window', (event, dw, dh) => {
     if (mainWindow) {
-      const [currW, currH] = mainWindow.getSize();
-      mainWindow.setSize(currW + dw, currH + dh);
+      const bounds = mainWindow.getBounds();
+      let newW = bounds.width + dw;
+      let newH = bounds.height + dh;
+      if (newW < 200) newW = 200;
+      if (newH < 200) newH = 200;
+      mainWindow.setBounds({ width: newW, height: newH });
     }
   });
 
