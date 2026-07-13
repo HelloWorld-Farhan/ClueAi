@@ -2315,21 +2315,21 @@ function App() {
       {!isRecording && !showSettings && !showInfo && (
         <div className="flex-1 flex flex-col gap-6 overflow-hidden mt-2 px-2">
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center text-center cursor-default">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
               <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
               <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br/><br/>Development driven by real users<br/>Faster iteration on features that matter</p>
               <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-[200px] w-full cursor-default">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-full w-full cursor-default">
               <div className="flex flex-col mb-3 w-full">
-                <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-sm w-full mb-3">
+                <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-xl w-full mb-3">
                   <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
                     <CheckCircle2 size={12} />
                   </div>
                   Interview and Notes Reminder
                 </h3>
-                <div className="flex justify-between items-center w-full px-2">
+                <div className="flex justify-center items-center gap-4 w-full px-2">
                   <button 
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
