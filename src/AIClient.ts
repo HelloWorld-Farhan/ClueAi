@@ -85,12 +85,6 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
     let userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
 
     if (currentProvider === 'groq' && groqClients.length > 0) {
-      const client = groqClients[currentGroqIndex];
-      const usedIndex = currentGroqIndex;
-      currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
-      
-      onStart({ provider: 'groq', index: usedIndex + 1 });
-      
       const messages: any[] = [
         { role: 'system', content: systemPrompt },
       ];
@@ -119,24 +113,44 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       let stream: any = null;
       let lastGroqError: any = null;
 
-      for (const modelName of modelsToTry) {
-        try {
-          stream = await client.chat.completions.create({
-            model: modelName,
-            messages,
-            stream: true,
-            temperature: 0.5,
-          });
-          console.log(`Successfully connected to Groq model: ${modelName}`);
-          break; // Successfully connected
-        } catch (err: any) {
-          lastGroqError = err;
-          console.warn(`Groq model ${modelName} failed. Trying next...`);
+      // Try up to `groqClients.length` keys
+      const maxKeyAttempts = Math.min(15, groqClients.length);
+      
+      for (let attempt = 0; attempt < maxKeyAttempts; attempt++) {
+        const client = groqClients[currentGroqIndex];
+        const usedIndex = currentGroqIndex;
+        currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
+        
+        onStart({ provider: 'groq', index: usedIndex + 1 });
+        let keySuccess = false;
+
+        for (const modelName of modelsToTry) {
+          try {
+            stream = await client.chat.completions.create({
+              model: modelName,
+              messages,
+              stream: true,
+              temperature: 0.5,
+            });
+            console.log(`Successfully connected to Groq model: ${modelName} using Key #${usedIndex + 1}`);
+            keySuccess = true;
+            break; // Successfully connected
+          } catch (err: any) {
+            lastGroqError = err;
+            console.warn(`Groq model ${modelName} on Key #${usedIndex + 1} failed.`, err?.message);
+            // If it's a 429 Too Many Requests, break out of model loop and try next key immediately
+            if (err?.status === 429 || err?.message?.includes('429')) {
+              console.warn(`Rate limit hit on Key #${usedIndex + 1}. Rotating to next API key...`);
+              break; 
+            }
+          }
         }
+        
+        if (keySuccess) break;
       }
 
       if (!stream) {
-        throw new Error(`Groq API Error: All models failed. Last error: ${lastGroqError?.message || lastGroqError}`);
+        throw new Error(`Groq API Error: All keys/models failed. Last error: ${lastGroqError?.message || lastGroqError}`);
       }
 
       for await (const chunk of stream) {

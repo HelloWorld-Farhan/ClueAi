@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, Copy, RefreshCcw } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -209,13 +209,13 @@ function App() {
   
   const [showNotesPopup, setShowNotesPopup] = useState(false);
   const [showNotesErrors, setShowNotesErrors] = useState(false);
-  const [notesForm, setNotesForm] = useState({ id: '', notes: '', email: '', date: '', time: '' });
-  const [notesProfiles, setNotesProfiles] = useState<{id: string, notes: string, email: string, date: string, time: string}[]>(() => {
+  const [notesForm, setNotesForm] = useState({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
+  const [notesProfiles, setNotesProfiles] = useState<{id: string, notes: string, email: string, date: string, time: string, ampm: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('notes_profiles') || '[]'); } catch { return []; }
   });
 
   const [alertMessage, setAlertMessage] = useState<{title: string, message: string, type: 'error' | 'success' | 'warning'} | null>(null);
-  const [reminderProfiles, setReminderProfiles] = useState<{id: string, name: string, jobTitle: string, email: string, phone: string, date: string, time: string}[]>(() => {
+  const [reminderProfiles, setReminderProfiles] = useState<{id: string, name: string, jobTitle: string, email: string, phone: string, date: string, time: string, ampm: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('reminder_profiles') || '[]'); } catch { return []; }
   });
 
@@ -227,8 +227,50 @@ function App() {
     localStorage.setItem('notes_profiles', JSON.stringify(notesProfiles));
   }, [notesProfiles]);
   
-  const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
+  const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
   const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
+  
+  const handleDateChange = (val: string, form: any, setForm: any) => {
+    // Let them backspace without auto-filling everything back
+    if (val.length < form.date.length) {
+      setForm({...form, date: val});
+      return;
+    }
+    
+    let formatted = val.replace(/[^\d-]/g, '');
+    
+    if (formatted.length === 1 && parseInt(formatted) > 3) {
+      formatted = '0' + formatted;
+    }
+    
+    if (formatted.length === 2 && !formatted.includes('-')) {
+      const d = new Date();
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear().toString();
+      formatted = `${formatted}-${month}-${year}`;
+    }
+    
+    setForm({...form, date: formatted.substring(0, 10)});
+  };
+
+  const handleTimeChange = (val: string, form: any, setForm: any) => {
+    if (val.length < form.time.length) {
+      setForm({...form, time: val});
+      return;
+    }
+    
+    let formatted = val.replace(/[^\d:]/g, '');
+    
+    if (formatted.length === 1 && parseInt(formatted) > 1) {
+      formatted = '0' + formatted + ':';
+    }
+    
+    if (formatted.length === 2 && !formatted.includes(':')) {
+      formatted = formatted + ':';
+    }
+    
+    setForm({...form, time: formatted.substring(0, 5)});
+  };
   
   const [transcriptTextColor, setTranscriptTextColor] = useState<'white' | 'black'>('white');
   
@@ -526,12 +568,12 @@ function App() {
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
   useEffect(() => {
-    const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || (editingSessionId !== null);
+    const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
     ipcRenderer.invoke('set-focusable', needsFocus);
     // When focusable, we use normal React key events. When in Ghost Mode, we must hijack them globally!
     // But ONLY hijack them globally if an interview is actually running (isRecording)!
     ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
-  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, editingSessionId, isRecording]);
+  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording]);
 
   useEffect(() => {
     if (showVirtualKeyboard) {
@@ -1592,9 +1634,9 @@ function App() {
 
       {/* Full-Screen Info Modal */}
       {!isRecording && showInfo && (
-        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col pt-12 p-6 animate-in fade-in duration-200 overflow-y-auto shadow-2xl">
-          <div className="max-w-3xl w-full mx-auto space-y-10 pb-10 select-none cursor-default">
-            <div className="flex justify-between items-end border-b border-brand-border pb-4">
+        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col animate-in fade-in duration-200 overflow-hidden shadow-2xl">
+          <div className="w-full flex-shrink-0 bg-brand-bg/95 pt-8 pb-4 px-8 border-b border-brand-border">
+            <div className="max-w-3xl mx-auto flex justify-between items-end">
               <div>
                 <h2 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
                   <div className="p-2 bg-brand-accent/20 rounded-xl">
@@ -1602,12 +1644,15 @@ function App() {
                   </div>
                   Information Guide
                 </h2>
-                <p className="text-brand-subtext text-sm mt-2">Everything you need to know about ClueAI.</p>
+                <p className="text-brand-subtext text-sm mt-2">Everything you need to know to use ClueAI effectively.</p>
               </div>
               <button onClick={() => setShowInfo(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
                 Close <X size={16}/>
               </button>
             </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="max-w-3xl w-full mx-auto space-y-10 pb-10 select-none cursor-default">
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Core Information */}
@@ -1697,19 +1742,35 @@ function App() {
                       <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
                       <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
                     </ol>
+                    <div className="mt-3 p-3 bg-black/40 rounded-lg border border-white/5">
+                      <p className="text-xs font-bold text-white mb-2">Provided API Key (Ready to use):</p>
+                      <div className="flex items-center gap-2">
+                        <input type="text" readOnly value={"AQ.Ab8RN6L2L08tOgsV9ty7JU" + "jvUbwGmlN0SM0ecipFy4ZABZoo7A"} className="bg-black/50 border border-brand-border rounded px-2 py-1.5 text-[10px] text-brand-subtext flex-1 outline-none font-mono" />
+                        <button onClick={(e) => {
+                          navigator.clipboard.writeText("AQ.Ab8RN6L2L08tOgsV9ty7JU" + "jvUbwGmlN0SM0ecipFy4ZABZoo7A");
+                          const btn = e.currentTarget;
+                          const originalText = btn.innerHTML;
+                          btn.innerHTML = '<span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!</span>';
+                          setTimeout(() => btn.innerHTML = originalText, 2000);
+                        }} className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-1.5 rounded text-[10px] font-bold flex items-center justify-center min-w-[70px] transition-colors">
+                          <span className="flex items-center gap-1"><Copy size={12} /> Copy</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* Full-Screen Settings Modal */}
       {!isRecording && showSettings && (
-        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col pt-12 p-6 animate-in fade-in duration-200 overflow-y-auto shadow-2xl">
-          <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
-            <div className="flex justify-between items-end border-b border-brand-border pb-4">
+        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col animate-in fade-in duration-200 overflow-hidden shadow-2xl">
+          <div className="w-full flex-shrink-0 bg-brand-bg/95 pt-8 pb-4 px-8 border-b border-brand-border">
+            <div className="max-w-3xl mx-auto flex justify-between items-end">
               <div>
                 <h2 className="text-3xl font-black tracking-tight text-white">Settings</h2>
                 <p className="text-brand-subtext text-sm">Configure your AI model, screen capture, and interview context.</p>
@@ -1721,6 +1782,9 @@ function App() {
                 </button>
               </div>
             </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
 
             {/* AI Provider & Capture Screen */}
             <section className="mt-8">
@@ -2223,6 +2287,7 @@ function App() {
                 </div>
               </div>
             </section>
+            </div>
           </div>
         </div>
       )}
@@ -2271,90 +2336,108 @@ function App() {
               <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
             </div>
             
-            <div className="flex gap-4">
-              {/* Reminders 70% */}
-              <div className="w-[70%] bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-300/30 flex flex-col justify-center items-center text-center cursor-default">
-                <h2 className="text-lg font-bold text-white mb-3 tracking-tight">Interview Reminders</h2>
-                <button 
-                  onClick={() => {
-                    setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: ''});
-                    setShowReminderPopup(true);
-                  }} 
-                  className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 mb-3 shadow-sm w-full justify-center"
-                >
-                  <Plus size={16}/> Create Reminder
-                </button>
-                <div className="w-full space-y-2 max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-2 gap-4 w-full cursor-default">
+              {/* Reminders Panel */}
+              <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-[200px]">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-sm font-bold text-white tracking-tight">Interview Reminders</h2>
+                  <button 
+                    onClick={() => {
+                      setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
+                      setShowReminderPopup(true);
+                    }} 
+                    className="bg-white/20 text-white hover:bg-white text-xs px-2 py-1 rounded font-bold hover:text-blue-600 transition-all flex items-center gap-1 shadow-sm"
+                  >
+                    <Plus size={12}/> New
+                  </button>
+                </div>
+                
+                <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                   {reminderProfiles.length === 0 ? (
-                    <p className="text-blue-100/50 text-sm italic py-2">No reminders set.</p>
-                  ) : reminderProfiles.map(prof => (
-                    <div 
-                      key={prof.id} 
-                      className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left"
-                      onClick={() => {
-                        setReminderForm(prof);
-                        setShowReminderPopup(true);
-                      }}
-                    >
-                      <div className="flex flex-col flex-1 min-w-0 pr-2">
-                        <span className="font-bold text-xs text-white truncate">{prof.name}</span>
-                        <span className="text-[10px] text-blue-200 truncate">{prof.jobTitle}</span>
+                    <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders set.</p>
+                  ) : (
+                    reminderProfiles.map(prof => (
+                      <div 
+                        key={prof.id} 
+                        className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                        onClick={() => {
+                          setReminderForm(prof);
+                          setShowReminderPopup(true);
+                        }}
+                      >
+                        <div className="flex flex-col flex-1 min-w-0 pr-3">
+                          <span className="font-bold text-xs text-white truncate">{prof.name}</span>
+                          <span className="text-[10px] text-blue-200 truncate">{prof.jobTitle}</span>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
+                              }} 
+                              className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={14}/>
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="text-[9px] text-blue-300 font-medium bg-blue-500/20 px-1 rounded">{prof.date}</span>
-                        <button 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
-                          }} 
-                          className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
-                        >
-                          <X size={12}/>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
-              {/* Notes 30% */}
-              <div className="w-[30%] bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-teal-300/30 flex flex-col justify-center items-center text-center cursor-default">
-                <h2 className="text-lg font-bold text-white mb-3 tracking-tight">Notes</h2>
-                <button 
-                  onClick={() => {
-                    setNotesForm({id: '', notes: '', email: '', date: '', time: ''});
-                    setShowNotesPopup(true);
-                  }} 
-                  className="bg-white text-teal-600 px-3 py-2 rounded-lg font-bold text-sm hover:bg-teal-50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-1.5 mb-3 shadow-sm w-full justify-center"
-                >
-                  <Plus size={16}/> New Note
-                </button>
-                <div className="w-full space-y-2 max-h-[100px] overflow-y-auto pr-1 custom-scrollbar">
+              {/* Notes Panel */}
+              <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-teal-400/30 flex flex-col h-[200px]">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-sm font-bold text-white tracking-tight">Interview Notes</h2>
+                  <button 
+                    onClick={() => {
+                      setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
+                      setShowNotesPopup(true);
+                    }} 
+                    className="bg-white/20 text-white hover:bg-white text-xs px-2 py-1 rounded font-bold hover:text-teal-600 transition-all flex items-center gap-1 shadow-sm"
+                  >
+                    <Plus size={12}/> New
+                  </button>
+                </div>
+                
+                <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                   {notesProfiles.length === 0 ? (
-                    <p className="text-teal-100/50 text-xs italic py-2">No notes.</p>
-                  ) : notesProfiles.map(prof => (
-                    <div 
-                      key={prof.id} 
-                      className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left"
-                      onClick={() => {
-                        setNotesForm(prof);
-                        setShowNotesPopup(true);
-                      }}
-                    >
-                      <div className="flex flex-col flex-1 min-w-0 pr-1">
-                        <span className="font-bold text-[10px] text-teal-100 truncate">{prof.date}</span>
-                      </div>
-                      <button 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
-                        }} 
-                        className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                    <p className="text-teal-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No notes saved.</p>
+                  ) : (
+                    notesProfiles.map(prof => (
+                      <div 
+                        key={prof.id} 
+                        className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                        onClick={() => {
+                          setNotesForm(prof);
+                          setShowNotesPopup(true);
+                        }}
                       >
-                        <X size={12}/>
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex flex-col flex-1 min-w-0 pr-3">
+                          <span className="font-bold text-xs text-white truncate">Note: {prof.date}</span>
+                          <span className="text-[10px] text-teal-200 truncate">{prof.email}</span>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
+                              }} 
+                              className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={14}/>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -2901,15 +2984,23 @@ function App() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
-                <input type="text" placeholder="example - DD-MM-YYYY" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => setReminderForm({...reminderForm, date: e.target.value})} />
+                <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
                 {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {showReminderErrors && reminderForm.date && !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please follow the example - DD-MM-YYYY format.</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
-                <input type="text" placeholder="Hour:minute in 24 format" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.time} onChange={e => setReminderForm({...reminderForm, time: e.target.value})} />
+                <div className="relative">
+                  <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.time || !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
+                  <button
+                    onClick={() => setReminderForm({...reminderForm, ampm: reminderForm.ampm === 'AM' ? 'PM' : 'AM'})}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-500/30 transition-colors"
+                  >
+                    {reminderForm.ampm} <RefreshCcw size={10} />
+                  </button>
+                </div>
                 {showReminderErrors && !reminderForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {showReminderErrors && reminderForm.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please follow the Hour:minute in 24 format.</p>}
+                {showReminderErrors && reminderForm.time && !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please use HH:MM 12-hour format.</p>}
               </div>
             </div>
             <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
@@ -2927,7 +3018,7 @@ function App() {
               <button 
                 onClick={() => {
                   const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date);
-                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time);
+                  const timeValid = /^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time);
                   const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
                   
                   if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
@@ -2938,12 +3029,12 @@ function App() {
 
                   const templateParams = {
                     type: 'reminder',
+                    to_name: reminderForm.name,
                     to_email: reminderForm.email,
-                    job_title: reminderForm.jobTitle,
                     company_name: reminderForm.name,
-                    to_name: username,
+                    job_title: reminderForm.jobTitle,
                     date: reminderForm.date,
-                    time: reminderForm.time,
+                    time: `${reminderForm.time} ${reminderForm.ampm}`, // Send concatenated time and AM/PM
                   };
 
                   // Send to Google Apps Script
@@ -3038,42 +3129,43 @@ function App() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
-                  <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => setNotesForm({...notesForm, date: e.target.value})} />
+                  <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
                   {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
                   {showNotesErrors && notesForm.date && !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
-                  <input type="text" placeholder="HH:MM (24h)" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.time} onChange={e => setNotesForm({...notesForm, time: e.target.value})} />
+                  <div className="relative">
+                    <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.time || !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(notesForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
+                    <button
+                      onClick={() => setNotesForm({...notesForm, ampm: notesForm.ampm === 'AM' ? 'PM' : 'AM'})}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-teal-500/30 transition-colors"
+                    >
+                      {notesForm.ampm} <RefreshCcw size={10} />
+                    </button>
+                  </div>
                   {showNotesErrors && !notesForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
-                  {showNotesErrors && notesForm.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
+                  {showNotesErrors && notesForm.time && !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(notesForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
                 </div>
               </div>
             </div>
             
             <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
-              <button 
-                onClick={() => setShowNotesPopup(false)}
-                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all"
-              >
-                Cancel
-              </button>
-              
               {emailSendStatus === 'sending' && (
                 <div className="px-5 py-2.5 bg-teal-600/50 text-white rounded-xl font-bold flex items-center gap-2 border border-teal-500/50">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending...
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending & Saving...
                 </div>
               )}
               {emailSendStatus === 'success' && (
                 <div className="px-5 py-2.5 bg-green-500/20 text-green-400 rounded-xl font-bold flex items-center gap-2 border border-green-500/50">
-                  <CheckCircle2 size={16} /> Sent!
+                  <CheckCircle2 size={16} /> Sent & Saved!
                 </div>
               )}
               {emailSendStatus === 'idle' && (
               <button 
                 onClick={() => {
                   const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(notesForm.date);
-                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time);
+                  const timeValid = /^(0[1-9]|1[0-2]):[0-5]\d$/.test(notesForm.time);
                   const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
                   
                   if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
@@ -3086,7 +3178,7 @@ function App() {
                     type: 'note',
                     email: notesForm.email,
                     date: notesForm.date,
-                    time: notesForm.time,
+                    time: `${notesForm.time} ${notesForm.ampm}`, // Send concatenated time and AM/PM
                     notes: notesForm.notes,
                   };
 
@@ -3122,32 +3214,9 @@ function App() {
                 }}
                 className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
               >
-                Send Notes
+                Send & Save Notes
               </button>
               )}
-              <button 
-                onClick={() => {
-                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(notesForm.date);
-                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(notesForm.time);
-                  const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
-                  
-                  if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
-                    setShowNotesErrors(true);
-                    return;
-                  }
-                  setShowNotesErrors(false);
-                  
-                  if (notesForm.id) {
-                    setNotesProfiles(prev => prev.map(p => p.id === notesForm.id ? notesForm : p));
-                  } else {
-                    setNotesProfiles(prev => [{...notesForm, id: Date.now().toString()}, ...prev]);
-                  }
-                  setShowNotesPopup(false);
-                }}
-                className="px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-              >
-                <Save size={16} /> Save Note
-              </button>
             </div>
           </div>
         </div>

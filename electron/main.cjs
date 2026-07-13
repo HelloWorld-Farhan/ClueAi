@@ -316,9 +316,9 @@ function createWindow() {
   ipcMain.handle('set-layout', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 350); // Sleek horizontal interview layout
+        mainWindow.setSize(1000, 600); 
       } else {
-        mainWindow.setSize(450, 850); // Vertical interview layout
+        mainWindow.setSize(450, 850);
       }
     }
   });
