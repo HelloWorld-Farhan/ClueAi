@@ -1453,8 +1453,8 @@ function App() {
   };
 
   const handleShrinkWindow = () => {
-    const MIN_WIDTH = layout === 'horizontal' ? 800 : 380;
-    const MIN_HEIGHT = layout === 'horizontal' ? 300 : 700;
+    const MIN_WIDTH = layout === 'horizontal' ? 950 : 450;
+    const MIN_HEIGHT = layout === 'horizontal' ? 450 : 800;
     
     if (window.innerWidth - 50 < MIN_WIDTH || window.innerHeight - 50 < MIN_HEIGHT) {
       setShowMinSizeWarning(true);
@@ -1578,22 +1578,22 @@ function App() {
               </div>
               
               {isPaused ? (
-                <button onClick={handlePauseToggle} title="Next Question (Press Z or 1)" className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)]">
-                  <Play size={12} fill="currentColor" /> NEXT Q.
+                <button onClick={handlePauseToggle} title="Next Question (Press Z or 1)" className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0">
+                  <Play size={12} fill="currentColor" /> NEXT Q. <span className="opacity-70 text-[8px] bg-black/20 px-1 rounded ml-0.5">1</span>
                 </button>
               ) : (
-                <button onClick={handlePauseToggle} title="Pause (Press Z or 1)" className="flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
-                  <Pause size={12} fill="currentColor" /> PAUSE
+                <button onClick={handlePauseToggle} title="Pause (Press Z or 1)" className="flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
+                  <Pause size={12} fill="currentColor" /> PAUSE <span className="opacity-70 text-[8px] border border-yellow-500/30 px-1 rounded ml-0.5">1</span>
                 </button>
               )}
-              <button onClick={handleSnipClick} title="Snip UI (Press A or 4)" className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
-                <Crop size={12} /> SNIP
+              <button onClick={handleSnipClick} title="Snip UI (Press A or 4)" className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
+                <Crop size={12} /> SNIP <span className="opacity-70 text-[8px] border border-cyan-500/30 px-1 rounded ml-0.5">4</span>
               </button>
-              <button onClick={handleClearAll} title="Clear Transcript (Press C or 3)" className="flex items-center gap-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
-                <Trash2 size={12} fill="currentColor" /> CLEAR
+              <button onClick={handleClearAll} title="Clear Transcript (Press C or 3)" className="flex items-center gap-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
+                <Trash2 size={12} fill="currentColor" /> CLEAR <span className="opacity-70 text-[8px] border border-slate-500/30 px-1 rounded ml-0.5">3</span>
               </button>
-              <button onClick={stopRecording} title="Stop Session (Press D or 6)" className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all">
-                <Square size={12} fill="currentColor" /> STOP
+              <button onClick={stopRecording} title="Stop Session (Press D or 6)" className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
+                <Square size={12} fill="currentColor" /> STOP <span className="opacity-70 text-[8px] border border-rose-500/30 px-1 rounded ml-0.5">6</span>
               </button>
             </>
           ) : (
