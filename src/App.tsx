@@ -2322,20 +2322,20 @@ function App() {
             </div>
             
             <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col h-[200px] w-full cursor-default">
-              <div className="flex justify-between items-center mb-3 relative">
-                <h3 className="font-bold text-white tracking-tight flex items-center gap-2 text-sm w-1/3">
+              <div className="flex flex-col mb-3 w-full">
+                <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-sm w-full mb-3">
                   <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
                     <CheckCircle2 size={12} />
                   </div>
-                  Reminders & Notes
+                  Interview and Notes Reminder
                 </h3>
-                <div className="flex gap-2 absolute left-1/2 -translate-x-1/2">
+                <div className="flex justify-between items-center w-full px-2">
                   <button 
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
                       setShowReminderPopup(true);
                     }} 
-                    className="bg-white/20 text-white hover:bg-white px-2 py-1.5 rounded font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                    className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
                   >
                     <Plus size={14}/> Create Reminder
                   </button>
@@ -2344,7 +2344,7 @@ function App() {
                       setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
                       setShowNotesPopup(true);
                     }} 
-                    className="bg-teal-500/80 text-white hover:bg-teal-400 px-2 py-1.5 rounded font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                    className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
                   >
                     <Plus size={14}/> New Note
                   </button>
