@@ -1269,13 +1269,14 @@ function App() {
       
       const key = e.key.toLowerCase();
       
-      // Resize window shortcuts
-      if (e.altKey && (key === '=' || key === '+')) {
+      // Resize window shortcuts (Robust using physical key codes)
+      if (e.altKey && (e.code === 'Equal' || e.code === 'NumpadAdd' || key === '=' || key === '+')) {
         e.preventDefault();
-        ipcRenderer.send('resize-window', { width: 50, height: 50 });
-      } else if (e.altKey && key === '-') {
+        ipcRenderer.invoke('resize-window', 50, 50);
+        return;
+      } else if (e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract' || key === '-' || key === '_')) {
         e.preventDefault();
-        ipcRenderer.send('resize-window', { width: -50, height: -50 });
+        ipcRenderer.invoke('resize-window', -50, -50);
         return;
       } else if (key === 'arrowup') {
         e.preventDefault();
@@ -1331,15 +1332,6 @@ function App() {
       } else if (key === 'a' || key === '4') {
         e.preventDefault();
         handleSnipClick();
-      }
-      
-      // Fallback resize keys if global shortcuts fail
-      if (e.altKey && (key === '-' || key === '_' || key === 'subtract')) {
-        e.preventDefault();
-        ipcRenderer.invoke('resize-window', -50, -50);
-      } else if (e.altKey && (key === '=' || key === '+' || key === 'add')) {
-        e.preventDefault();
-        ipcRenderer.invoke('resize-window', 50, 50);
       }
     };
 

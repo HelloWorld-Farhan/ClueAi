@@ -12,6 +12,8 @@ function createWindow() {
     transparent: true,
     frame: false,
     hasShadow: false,
+    minWidth: 100,
+    minHeight: 100,
     thickFrame: false,
     roundedCorners: false,
     resizable: false,
@@ -144,6 +146,10 @@ function createWindow() {
       'CommandOrControl+-': () => resizeWindow(-50, -50),
       'Alt+numsub': () => resizeWindow(-50, -50),
       'Shift+Alt+-': () => resizeWindow(-50, -50),
+      'Alt+Subtract': () => resizeWindow(-50, -50),
+      'Alt+Minus': () => resizeWindow(-50, -50),
+      'CommandOrControl+Minus': () => resizeWindow(-50, -50),
+      'CommandOrControl+Subtract': () => resizeWindow(-50, -50),
       'Alt+Up': () => moveWindow(0, -50),
       'Alt+Down': () => moveWindow(0, 50),
       'Alt+Left': () => moveWindow(-50, 0),
@@ -156,7 +162,10 @@ function createWindow() {
       try {
         globalShortcut.register(key, action);
       } catch(e) {
-        console.error('Failed to register window shortcut:', key);
+        // Silently ignore speculative minus bindings that Electron might reject on some OS versions
+        if (!key.toLowerCase().includes('minus') && !key.toLowerCase().includes('subtract')) {
+          console.error('Failed to register window shortcut:', key);
+        }
       }
     }
   };
