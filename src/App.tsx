@@ -2747,7 +2747,7 @@ function App() {
                 />
             </div>
           </div>
-          <div ref={transcriptScrollRef} className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative scroll-smooth">
+          <div ref={transcriptScrollRef} className={`flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative scroll-smooth ${isAnswerMaximized ? 'hidden' : ''}`}>
             <div 
               className={`w-full px-5 py-4 bg-transparent font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshots.length > 0 ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
               style={{ fontSize: transcriptTextSize + 'px' }}
