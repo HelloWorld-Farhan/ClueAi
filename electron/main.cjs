@@ -489,8 +489,12 @@ if (!gotTheLock) {
   const { globalShortcut } = require('electron');
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.showInactive();
+      if (mainWindow.isFocused()) {
+        mainWindow.minimize();
+      } else {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.showInactive();
+      }
     }
   });
 });

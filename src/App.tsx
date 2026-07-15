@@ -1733,24 +1733,56 @@ function App() {
                 <p className="text-brand-subtext text-sm leading-relaxed">ClueAI is an advanced, ultra-stealthy AI copilot designed to help you ace your interviews and tests. It secretly records system audio and captures screen snapshots, feeding them to state-of-the-art AI models (Groq and Gemini) to provide you with instant, perfectly accurate answers and hints on your screen—all completely invisible to screen sharing software.</p>
               </div>
 
-              {/* Hotkeys Control */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center mb-2">
-                  <Settings size={20} />
+              {/* Keyboard Shortcuts */}
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-4 group hover:border-white/10 transition-colors">
+                <div className="flex items-center gap-3 border-b border-white/10 pb-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center">
+                    <Settings size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Keyboard Shortcuts</h3>
+                    <p className="text-brand-subtext text-xs">Control ClueAI instantly without clicking.</p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-white">Hotkeys Control</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed mb-2">
-                  Hotkeys allow you to control ClueAI instantly without clicking. <strong>When active, these shortcuts will block you from typing those specific keys in other applications.</strong> You can toggle them ON and OFF in the Interview Screen.
-                </p>
-                <div className="grid grid-cols-2 gap-3 text-[10px]">
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>0 / Num0</strong>: Text color</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>1, Z / Num1</strong>: Pause / Resume</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>2, X / Num2</strong>: Ask AI</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>3, C / Num3</strong>: Clear Transcript</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>4, A / Num4</strong>: Snipping Tool</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>5, S / Num5</strong>: Switch Model</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>6, D / Num6</strong>: Stop Gen</div>
-                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>7, Q / Num7</strong>: Edit Text</div>
+
+                <div className="space-y-4">
+                  {/* General Hotkeys */}
+                  <div>
+                    <h4 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-2">Interview Controls (Toggleable)</h4>
+                    <p className="text-brand-subtext text-xs leading-relaxed mb-2">
+                      <strong>When active, these block you from typing those specific keys elsewhere.</strong> Toggle them ON/OFF in the Interview Screen.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 text-[10px]">
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>0 / Num0</strong>: Text color</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>1, Z / Num1</strong>: Pause / Resume</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>2, X / Num2</strong>: Ask AI</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>3, C / Num3</strong>: Clear Transcript</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>4, A / Num4</strong>: Snipping Tool</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>5, S / Num5</strong>: Switch Model</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>6, D / Num6</strong>: Stop Gen</div>
+                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>7, Q / Num7</strong>: Edit Text</div>
+                    </div>
+                  </div>
+
+                  {/* Scrolling Shortcuts */}
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2">Stealth Scrolling (Always Active)</h4>
+                    <div className="bg-black/30 p-3 rounded-lg border border-white/5">
+                      <p className="text-xs text-brand-subtext leading-relaxed">
+                        Hold <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Alt</kbd> + <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">↑/↓</kbd> or <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">PgUp/PgDn</kbd> to scroll the text boxes during an interview without using your mouse.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Global Launch Shortcut */}
+                  <div>
+                    <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-2">Global Launch (Always Active)</h4>
+                    <div className="bg-black/30 p-3 rounded-lg border border-white/5">
+                      <p className="text-xs text-brand-subtext leading-relaxed">
+                        Press <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Ctrl + Shift + K</kbd> anywhere on your computer to instantly hide/minimize or show ClueAI.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1915,7 +1947,7 @@ function App() {
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                   <Layout size={16}/> Interview Layout & Content
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Transcript Size */}
                   <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mb-3">
@@ -1960,17 +1992,6 @@ function App() {
                       />
                       <span className="text-sm font-mono font-bold text-fuchsia-400 bg-brand-bg px-2 py-1 rounded-md border border-brand-border">{aiAnswerTextSize}px</span>
                     </div>
-                  </div>
-
-                  {/* Scroll Hotkeys */}
-                  <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors justify-center">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
-                      <ArrowUp size={16} />
-                    </div>
-                    <h4 className="text-xs font-bold text-white uppercase mb-1">Stealth Scrolling</h4>
-                    <p className="text-[11px] text-brand-subtext leading-relaxed mt-auto">
-                      Hold <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Alt</kbd> + <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">↑/↓</kbd> or <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">PgUp/PgDn</kbd> to scroll the text boxes during an interview without using your mouse.
-                    </p>
                   </div>
                 </div>
             </section>
