@@ -1672,6 +1672,7 @@ function App() {
         </div>
       </div>
       </div>
+      </div>
 
       {/* Full-Screen Info Modal */}
       {!isRecording && showInfo && (
@@ -3549,7 +3550,7 @@ function App() {
                     <div className="text-white text-sm whitespace-pre-wrap leading-relaxed">
                       <ReactMarkdown
                         components={{
-                          code({node, inline, className, children, ...props}: any) {
+                          code({inline, children}: any) {
                             return !inline ? (
                               <div className="bg-black/60 rounded-md p-3 my-2 border border-white/10 font-mono text-xs overflow-x-auto text-blue-300">{children}</div>
                             ) : (
