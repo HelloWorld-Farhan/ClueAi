@@ -165,6 +165,7 @@ function App() {
   const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
 
   const isRecordingRef = useRef(false);
   const isRecoveringRef = useRef(false);
@@ -1416,7 +1417,13 @@ function App() {
         setTranscriptTextColor(prev => prev === 'white' ? 'black' : 'white');
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
-        if (!isGenerating) manualTriggerAI();
+        setIsAnswerMaximized(prev => {
+          if (!prev) {
+            if (!isGenerating) manualTriggerAI();
+            return true;
+          }
+          return false;
+        });
       } else if (key === 'z' || key === '1') {
         e.preventDefault();
         handlePauseToggle();
@@ -2689,7 +2696,7 @@ function App() {
             <div className="flex-1 flex gap-4 flex-col min-h-0">
             {/* Left/Top Panel - Transcript */}
           <div 
-            className="flex flex-col rounded-3xl overflow-hidden transition-all duration-200 flex-1"
+            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-300 ${isAnswerMaximized ? 'flex-none h-24' : 'flex-1'}`}
             style={{ 
               backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
               backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
@@ -2788,9 +2795,16 @@ function App() {
             }}
           >
              <button 
-                onClick={manualTriggerAI}
-                disabled={isGenerating}
-                className="w-full py-1.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none transition-all flex flex-col items-center justify-center transform active:scale-95"
+                onClick={() => {
+                  setIsAnswerMaximized(prev => {
+                    if (!prev) {
+                      if (!isGenerating) manualTriggerAI();
+                      return true;
+                    }
+                    return false;
+                  });
+                }}
+                className={`w-full py-1.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white rounded-2xl transition-all flex flex-col items-center justify-center transform active:scale-95 ${isGenerating ? 'opacity-50 shadow-none' : 'shadow-[0_0_15px_rgba(6,182,212,0.3)]'}`}
              >
                 <div className="flex items-center gap-2 font-bold text-xs">
                   {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
