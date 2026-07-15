@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, ArrowUp, ArrowDown } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -188,6 +188,19 @@ function App() {
   const [showStealthWarning, setShowStealthWarning] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
   const virtualKeyboardTextareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const [transcriptTextSize, setTranscriptTextSize] = useState(() => {
+    try { return parseInt(localStorage.getItem('clueai_transcript_size') || '15'); } catch { return 15; }
+  });
+  const [aiAnswerTextSize, setAiAnswerTextSize] = useState(() => {
+    try { return parseInt(localStorage.getItem('clueai_answer_size') || '15'); } catch { return 15; }
+  });
+  const [currentSessionHistory, setCurrentSessionHistory] = useState<{question: string, answer: string, images?: string[]}[]>([]);
+  const [showPreviousQuestions, setShowPreviousQuestions] = useState(false);
+  
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
+  const aiAnswerScrollRef = useRef<HTMLDivElement>(null);
+  
   const [editTranscript, setEditTranscript] = useState('');
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1030,6 +1043,11 @@ function App() {
     setIsPaused(true);
     isPausedRef.current = true;
     setIsGenerating(true);
+    
+    if (transcript.trim() || aiAnswer.trim()) {
+      setCurrentSessionHistory(prev => [...prev, { question: transcript, answer: aiAnswer, images: [...currentSnapshots] }]);
+    }
+    
     setAiAnswer('');
     let finalAnswer = '';
     let currentProviderInfo = '';
@@ -1100,6 +1118,7 @@ function App() {
       setIsPaused(false);
       setSnapshotHistory([]);
       setCurrentSnapshots([]);
+      setCurrentSessionHistory([]);
     }
     
     if (processorRef.current) processorRef.current.disconnect();
@@ -1353,15 +1372,25 @@ function App() {
         e.preventDefault();
         handleShrinkWindow();
         return;
-      } else if (key === 'arrowup') {
+      } else if (e.altKey && (key === 'arrowup' || key === 'pageup')) {
+        e.preventDefault();
+        if (transcriptScrollRef.current) transcriptScrollRef.current.scrollTop -= 60;
+        if (aiAnswerScrollRef.current) aiAnswerScrollRef.current.scrollTop -= 60;
+        return;
+      } else if (e.altKey && (key === 'arrowdown' || key === 'pagedown')) {
+        e.preventDefault();
+        if (transcriptScrollRef.current) transcriptScrollRef.current.scrollTop += 60;
+        if (aiAnswerScrollRef.current) aiAnswerScrollRef.current.scrollTop += 60;
+        return;
+      } else if (!e.altKey && key === 'arrowup') {
         e.preventDefault();
         ipcRenderer.send('move-window-by', { x: 0, y: -50 });
         return;
-      } else if (key === 'arrowdown') {
+      } else if (!e.altKey && key === 'arrowdown') {
         e.preventDefault();
         ipcRenderer.send('move-window-by', { x: 0, y: 50 });
         return;
-      } else if (key === 'arrowleft') {
+      } else if (!e.altKey && key === 'arrowleft') {
         e.preventDefault();
         ipcRenderer.send('move-window-by', { x: -50, y: 0 });
         return;
@@ -1482,30 +1511,61 @@ function App() {
           (e.target as HTMLElement).releasePointerCapture(e.pointerId);
         }}
       >
-        {isRecording && (
-          <div className="flex items-center gap-2 mb-3 w-full">
-            {stealthMode ? (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
-                Stealth: ON
-              </span>
-            ) : (
-              <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
-                <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
-              </span>
+        {/* Header Container */}
+      <div className="w-full flex-none bg-brand-bg/80 backdrop-blur-3xl px-4 py-3 border-b border-brand-border flex flex-col gap-3 shadow-[0_2px_20px_rgba(0,0,0,0.5)] relative z-30 drag-area rounded-t-2xl shrink-0">
+        
+        {/* ROW 1: Status Tags and Window Controls */}
+        <div className="flex items-center justify-between w-full no-drag">
+          <div className="flex items-center gap-2">
+            {isRecording && (
+              <>
+                {stealthMode ? (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
+                    Stealth: ON
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
+                    <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
+                  </span>
+                )}
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
+                  Opacity: {Math.round(opacity * 100)}%
+                </span>
+                <span className="text-[9px] font-bold px-2 py-1 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
+                  Press 7 or Q to edit Transcript
+                </span>
+                <span className="text-[9px] font-bold px-2 py-1 rounded border bg-white text-black border-white uppercase tracking-wider leading-none">
+                  Press 0 to change text color
+                </span>
+                <span className="text-[9px] font-bold px-2 py-1 rounded border bg-blue-500/20 text-blue-300 border-blue-500/30 uppercase tracking-wider leading-none flex items-center gap-1">
+                  <ArrowUp size={10} /><ArrowDown size={10} /> Alt + Arrows to Scroll
+                </span>
+              </>
             )}
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
-              Opacity: {Math.round(opacity * 100)}%
-            </span>
-            <span className="text-[9px] font-bold px-2 py-1 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
-              Press 7 or Q to edit Transcript
-            </span>
-            <span className="text-[9px] font-bold px-2 py-1 rounded border bg-white text-black border-white uppercase tracking-wider leading-none">
-              Press 0 to change text color
-            </span>
           </div>
-        )}
+          
+          {/* Minimize / Maximize / Close (Moved to Row 1) */}
+          <div className="flex items-center gap-1">
+            <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
+              <ZoomOut size={16} />
+            </button>
+            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+              <ZoomIn size={16} />
+            </button>
+            <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
+              <Maximize size={16} />
+            </button>
+            <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
+              <Minus size={16} />
+            </button>
+            <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
 
-        <div className="flex items-center justify-between w-full">
+        {/* ROW 2: Logo and Primary Controls */}
+        <div className="flex items-center justify-between w-full no-drag">
           <div className="flex items-center gap-3">
             <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
               <Move size={16} />
@@ -1609,25 +1669,6 @@ function App() {
               </button>
             </>
           )}
-
-          {/* Minimize / Maximize / Close */}
-          <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border shrink-0">
-            <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
-              <ZoomOut size={16} />
-            </button>
-            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
-              <ZoomIn size={16} />
-            </button>
-            <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-              <Maximize size={16} />
-            </button>
-            <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-              <Minus size={16} />
-            </button>
-            <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
-              <X size={16} />
-            </button>
-          </div>
         </div>
       </div>
       </div>
@@ -1834,6 +1875,45 @@ function App() {
                       {stealthMode ? 'Enabled (May cause crashes on some PCs)' : 'Disabled (App is visible in screen share)'}
                     </span>
                   </label>
+                </div>
+              </div>
+            </section>
+            
+            {/* Interview Content Settings */}
+            <section>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><Layout size={16}/> Interview Layout & Content</h3>
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Transcript Base Size (px)</label>
+                    <input 
+                      type="number" 
+                      min="10" 
+                      max="40"
+                      value={transcriptTextSize}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 15;
+                        setTranscriptTextSize(val);
+                        localStorage.setItem('clueai_transcript_size', val.toString());
+                      }}
+                      className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all outline-none focus:border-brand-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">AI Answer Base Size (px)</label>
+                    <input 
+                      type="number" 
+                      min="10" 
+                      max="40"
+                      value={aiAnswerTextSize}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 15;
+                        setAiAnswerTextSize(val);
+                        localStorage.setItem('clueai_answer_size', val.toString());
+                      }}
+                      className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all outline-none focus:border-brand-accent"
+                    />
+                  </div>
                 </div>
               </div>
             </section>
@@ -2483,20 +2563,20 @@ function App() {
       )}
 
       {/* Main UI */}
-      {isRecording && (
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
-          <div className={`flex-1 flex gap-4 ${layout === 'horizontal' ? 'flex-row' : 'flex-col'} min-h-0`}>
+        {isRecording && (
+          <div className="flex-1 flex flex-col gap-4 min-h-0">
+            <div className="flex-1 flex gap-4 flex-col min-h-0">
             {/* Left/Top Panel - Transcript */}
-        <div 
-          className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-200 ${layout === 'horizontal' ? 'flex-1' : 'h-1/2'}`}
-          style={{ 
-            backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
-            backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
-            borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`,
-            borderWidth: '1px',
-            boxShadow: opacity < 0.05 ? 'none' : `0 25px 50px -12px rgba(0, 0, 0, ${opacity * 0.5})`
-          }}
-        >
+          <div 
+            className="flex flex-col rounded-3xl overflow-hidden transition-all duration-200 flex-1"
+            style={{ 
+              backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
+              backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
+              borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`,
+              borderWidth: '1px',
+              boxShadow: opacity < 0.05 ? 'none' : `0 25px 50px -12px rgba(0, 0, 0, ${opacity * 0.5})`
+            }}
+          >
           <div 
             className="px-5 py-3.5 flex justify-between items-center border-b transition-all duration-200"
             style={{ 
@@ -2514,19 +2594,33 @@ function App() {
               )}
             </span>
             <div className="flex items-center gap-3">
-              <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm">
-                {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
-              </span>
-              <CopyButton 
-                text={transcript}
-                className="text-white/30 hover:text-white transition-colors ml-2"
-                tooltip="Copy Transcript"
-              />
+                <div className="flex items-center gap-1 bg-white/5 rounded-md p-0.5 border border-white/10 shrink-0">
+                  <button onClick={() => {
+                    const next = Math.max(10, transcriptTextSize - 1);
+                    setTranscriptTextSize(next);
+                    localStorage.setItem('clueai_transcript_size', next.toString());
+                  }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Decrease Text Size">A-</button>
+                  <span className="text-[10px] text-white/30 font-mono w-4 text-center select-none">{transcriptTextSize}</span>
+                  <button onClick={() => {
+                    const next = Math.min(30, transcriptTextSize + 1);
+                    setTranscriptTextSize(next);
+                    localStorage.setItem('clueai_transcript_size', next.toString());
+                  }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Increase Text Size">A+</button>
+                </div>
+                <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm shrink-0 hidden sm:block">
+                  {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
+                </span>
+                <CopyButton 
+                  text={transcript}
+                  className="text-white/30 hover:text-white transition-colors ml-1 shrink-0"
+                  tooltip="Copy Transcript"
+                />
             </div>
           </div>
-          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative">
+          <div ref={transcriptScrollRef} className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative scroll-smooth">
             <div 
-              className={`w-full px-5 py-4 bg-transparent text-[15px] font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshots.length > 0 ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
+              className={`w-full px-5 py-4 bg-transparent font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshots.length > 0 ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
+              style={{ fontSize: transcriptTextSize + 'px' }}
             >
               {transcript || <span className={transcriptTextColor === 'black' ? "text-black/50" : "text-white/30"}>Listening to interviewer...</span>}
             </div>
@@ -2588,7 +2682,7 @@ function App() {
 
         {/* Right/Bottom Panel - Answer */}
         <div 
-          className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-200 ${layout === 'horizontal' ? 'flex-1' : 'h-1/2'}`}
+          className="flex flex-col rounded-3xl overflow-hidden transition-all duration-200 flex-1"
           style={{ 
             backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
             backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
@@ -2614,16 +2708,38 @@ function App() {
               )}
             </span>
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-white/5 rounded-md p-0.5 border border-white/10 shrink-0">
+                <button onClick={() => {
+                  const next = Math.max(10, aiAnswerTextSize - 1);
+                  setAiAnswerTextSize(next);
+                  localStorage.setItem('clueai_answer_size', next.toString());
+                }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Decrease Text Size">A-</button>
+                <span className="text-[10px] text-white/30 font-mono w-4 text-center select-none">{aiAnswerTextSize}</span>
+                <button onClick={() => {
+                  const next = Math.min(40, aiAnswerTextSize + 1);
+                  setAiAnswerTextSize(next);
+                  localStorage.setItem('clueai_answer_size', next.toString());
+                }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Increase Text Size">A+</button>
+              </div>
+              <button 
+                onClick={() => setShowPreviousQuestions(true)}
+                className="text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded border border-white/10 uppercase tracking-wider font-bold transition-colors shrink-0"
+              >
+                Previous ({currentSessionHistory.length})
+              </button>
               <CopyButton 
                 text={aiAnswer}
-                className="text-white/30 hover:text-white transition-colors"
+                className="text-white/30 hover:text-white transition-colors ml-1 shrink-0"
                 tooltip="Copy Answer"
               />
             </div>
           </div>
-          <div className="flex-1 p-5 overflow-y-auto relative custom-scrollbar">
+          <div ref={aiAnswerScrollRef} className="flex-1 p-5 overflow-y-auto relative custom-scrollbar scroll-smooth">
             {aiAnswer ? (
-              <div className={`text-[18px] leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-md cursor-default select-none ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}>
+              <div 
+                className={`leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-md cursor-default select-none ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
+                style={{ fontSize: aiAnswerTextSize + 'px' }}
+              >
                 <ReactMarkdown
                   components={{
                     code({node, inline, className, children, ...props}: any) {
@@ -3401,6 +3517,53 @@ function App() {
                   Save Name
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Previous Questions Modal */}
+      {showPreviousQuestions && (
+        <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl mx-auto bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden">
+            <div className="px-6 py-4 border-b border-brand-border flex justify-between items-center bg-brand-bg/50">
+              <h2 className="font-black text-xl text-white tracking-wide flex items-center gap-2">
+                <FileText size={20} className="text-brand-accent" />
+                Previous Questions (Active Session)
+              </h2>
+              <button onClick={() => setShowPreviousQuestions(false)} className="text-white/50 hover:text-white p-2 bg-white/5 hover:bg-rose-500 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              {currentSessionHistory.length === 0 ? (
+                <div className="text-center text-brand-subtext font-medium italic mt-10">No questions asked in this session yet.</div>
+              ) : currentSessionHistory.map((item, idx) => (
+                <div key={idx} className="bg-brand-bg/30 border border-white/5 rounded-xl p-5 space-y-4">
+                  <div>
+                    <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Mic size={14} /> Transcript {idx + 1}</h3>
+                    <p className="text-white/90 text-sm whitespace-pre-wrap leading-relaxed">{item.question}</p>
+                  </div>
+                  <div className="pt-4 border-t border-white/5">
+                    <h3 className="text-xs font-bold text-fuchsia-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Cpu size={14} /> AI Answer</h3>
+                    <div className="text-white text-sm whitespace-pre-wrap leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          code({node, inline, className, children, ...props}: any) {
+                            return !inline ? (
+                              <div className="bg-black/60 rounded-md p-3 my-2 border border-white/10 font-mono text-xs overflow-x-auto text-blue-300">{children}</div>
+                            ) : (
+                              <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded text-[11px] font-mono">{children}</code>
+                            )
+                          }
+                        }}
+                      >
+                        {item.answer}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
