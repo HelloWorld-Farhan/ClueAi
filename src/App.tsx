@@ -166,6 +166,8 @@ function App() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
+  const [showReminderEmailSuggest, setShowReminderEmailSuggest] = useState(false);
+  const [showNotesEmailSuggest, setShowNotesEmailSuggest] = useState(false);
 
   const isRecordingRef = useRef(false);
   const isRecoveringRef = useRef(false);
@@ -3216,9 +3218,44 @@ function App() {
                 <input type="text" placeholder="e.g. Software Engineer" className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.jobTitle ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.jobTitle} onChange={e => setReminderForm({...reminderForm, jobTitle: e.target.value})} />
                 {showReminderErrors && !reminderForm.jobTitle && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
-                <input type="email" list="saved-emails" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.email} onChange={e => setReminderForm({...reminderForm, email: e.target.value})} />
+                <input 
+                  type="email" 
+                  placeholder="e.g. user@example.com" 
+                  className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} 
+                  value={reminderForm.email} 
+                  onChange={e => {
+                     setReminderForm({...reminderForm, email: e.target.value});
+                     const saved = localStorage.getItem('clueai_saved_email');
+                     if (saved && e.target.value && saved.toLowerCase().startsWith(e.target.value.toLowerCase()) && e.target.value.toLowerCase() !== saved.toLowerCase()) {
+                        setShowReminderEmailSuggest(true);
+                     } else {
+                        setShowReminderEmailSuggest(false);
+                     }
+                  }}
+                  onFocus={() => {
+                     const saved = localStorage.getItem('clueai_saved_email');
+                     if (saved && !reminderForm.email) {
+                        setShowReminderEmailSuggest(true);
+                     }
+                  }}
+                  onBlur={() => setTimeout(() => setShowReminderEmailSuggest(false), 200)}
+                />
+                {showReminderEmailSuggest && localStorage.getItem('clueai_saved_email') && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                    <div 
+                      className="px-4 py-3 hover:bg-white/10 cursor-pointer flex flex-col transition-colors"
+                      onClick={() => {
+                         setReminderForm({...reminderForm, email: localStorage.getItem('clueai_saved_email') || ''});
+                         setShowReminderEmailSuggest(false);
+                      }}
+                    >
+                      <span className="text-[10px] font-bold text-brand-accent uppercase tracking-wider mb-0.5">Suggested</span>
+                      <span className="text-sm text-white font-medium">{localStorage.getItem('clueai_saved_email')}</span>
+                    </div>
+                  </div>
+                )}
                 {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {showReminderErrors && reminderForm.email && !/^\S+@\S+\.\S+$/.test(reminderForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
               </div>
@@ -3361,9 +3398,44 @@ function App() {
                 />
                 {showNotesErrors && !notesForm.notes && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
-                <input type="email" list="saved-emails" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.email} onChange={e => setNotesForm({...notesForm, email: e.target.value})} />
+                <input 
+                  type="email" 
+                  placeholder="e.g. user@example.com" 
+                  className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} 
+                  value={notesForm.email} 
+                  onChange={e => {
+                     setNotesForm({...notesForm, email: e.target.value});
+                     const saved = localStorage.getItem('clueai_saved_email');
+                     if (saved && e.target.value && saved.toLowerCase().startsWith(e.target.value.toLowerCase()) && e.target.value.toLowerCase() !== saved.toLowerCase()) {
+                        setShowNotesEmailSuggest(true);
+                     } else {
+                        setShowNotesEmailSuggest(false);
+                     }
+                  }}
+                  onFocus={() => {
+                     const saved = localStorage.getItem('clueai_saved_email');
+                     if (saved && !notesForm.email) {
+                        setShowNotesEmailSuggest(true);
+                     }
+                  }}
+                  onBlur={() => setTimeout(() => setShowNotesEmailSuggest(false), 200)}
+                />
+                {showNotesEmailSuggest && localStorage.getItem('clueai_saved_email') && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                    <div 
+                      className="px-4 py-3 hover:bg-white/10 cursor-pointer flex flex-col transition-colors"
+                      onClick={() => {
+                         setNotesForm({...notesForm, email: localStorage.getItem('clueai_saved_email') || ''});
+                         setShowNotesEmailSuggest(false);
+                      }}
+                    >
+                      <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-0.5">Suggested</span>
+                      <span className="text-sm text-white font-medium">{localStorage.getItem('clueai_saved_email')}</span>
+                    </div>
+                  </div>
+                )}
                 {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {showNotesErrors && notesForm.email && !/^\S+@\S+\.\S+$/.test(notesForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
               </div>
