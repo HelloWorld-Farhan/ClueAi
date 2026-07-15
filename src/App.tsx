@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, ArrowUp, ArrowDown } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, ArrowUp, ArrowDown, User } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -1733,6 +1733,27 @@ function App() {
                 <p className="text-brand-subtext text-sm leading-relaxed">ClueAI is an advanced, ultra-stealthy AI copilot designed to help you ace your interviews and tests. It secretly records system audio and captures screen snapshots, feeding them to state-of-the-art AI models (Groq and Gemini) to provide you with instant, perfectly accurate answers and hints on your screen—all completely invisible to screen sharing software.</p>
               </div>
 
+              {/* Hotkeys Control */}
+              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center mb-2">
+                  <Settings size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">Hotkeys Control</h3>
+                <p className="text-brand-subtext text-sm leading-relaxed mb-2">
+                  Hotkeys allow you to control ClueAI instantly without clicking. <strong>When active, these shortcuts will block you from typing those specific keys in other applications.</strong> You can toggle them ON and OFF in the Interview Screen.
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-[10px]">
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>0 / Num0</strong>: Text color</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>1, Z / Num1</strong>: Pause / Resume</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>2, X / Num2</strong>: Ask AI</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>3, C / Num3</strong>: Clear Transcript</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>4, A / Num4</strong>: Snipping Tool</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>5, S / Num5</strong>: Switch Model</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>6, D / Num6</strong>: Stop Gen</div>
+                  <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>7, Q / Num7</strong>: Edit Text</div>
+                </div>
+              </div>
+
               {/* Sessions */}
               <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center mb-2">
@@ -1840,25 +1861,7 @@ function App() {
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
             <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
 
-            {/* AI Provider & Capture Screen */}
-            <section className="mt-8">
-              <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16}/> Hotkeys Control</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <p className="text-brand-subtext text-sm mb-4 leading-relaxed">
-                  Hotkeys allow you to control ClueAI instantly without clicking. <strong>When active, these shortcuts will block you from typing those specific keys in other applications.</strong> You can toggle them ON and OFF in the Interview Screen (next to the timer) when you need to type normally.
-                </p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>0 or Num0</strong>: Toggle text color</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>1, Z, or Num1</strong>: Pause / Resume</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>2, X, or Num2</strong>: Ask AI (Force Trigger)</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>3, C, or Num3</strong>: Clear Transcript</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>4, A, or Num4</strong>: Snipping Tool</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>5, S, or Num5</strong>: Switch Model</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>6, D, or Num6</strong>: Stop Generation</div>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/5"><strong>7, Q, or Num7</strong>: Edit Transcript</div>
-                </div>
-              </div>
-            </section>
+
             <section>
               <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16}/> Provider & Display</h3>
               <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
@@ -2126,112 +2129,134 @@ function App() {
             {/* Interview Context */}
             <section>
               <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Interview Context</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-6">
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-2">Title of Interview</label>
-                  <input 
-                    type="text" 
-                    value={interviewTitle} 
-                    onChange={e => setInterviewTitle(e.target.value)} 
-                    className="w-full bg-brand-secondary border border-brand-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                    placeholder="e.g. Senior Backend Developer" 
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold text-brand-subtext uppercase">Resume Context 1 (Optional)</label>
-                    <label className="flex items-center gap-1.5 text-xs text-brand-text cursor-pointer">
-                      <input type="radio" name="resumePriority" checked={resumePriority === 1} onChange={() => setResumePriority(1)} className="accent-brand-accent cursor-pointer" />
-                      <span className={resumePriority === 1 ? 'text-brand-accent font-bold' : ''}>High Priority</span>
+              <div className="bg-brand-card p-6 rounded-2xl border border-brand-border shadow-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Interview Title */}
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-black text-brand-subtext uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <Layout size={14} className="text-brand-accent" /> Title of Interview
                     </label>
+                    <input 
+                      type="text" 
+                      value={interviewTitle} 
+                      onChange={e => setInterviewTitle(e.target.value)} 
+                      className="w-full bg-brand-bg/50 border border-brand-border rounded-xl px-4 py-3 text-sm outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/50 text-white transition-all placeholder:text-white/20" 
+                      placeholder="e.g. Senior Backend Developer" 
+                    />
                   </div>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-2 px-5 py-2.5 bg-brand-accent/10 hover:bg-brand-accent/20 border border-brand-accent/30 text-brand-accent rounded-lg cursor-pointer transition-all text-sm font-bold shadow-[0_0_15px_rgba(139,92,246,0.1)]">
-                        {isUploadingResume ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />} 
-                        {isUploadingResume ? 'Analyzing...' : 'Upload PDF/TXT 1'}
-                        <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume1')} disabled={isUploadingResume} />
+
+                  {/* Resume Context 1 */}
+                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
+                        <FileText size={14} className="text-blue-400" /> Resume Context 1
                       </label>
-                      {resumeFileName && !isUploadingResume && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
-                            <FileText size={14} className="flex-shrink-0" /> {resumeFileName}
-                          </span>
-                          <button onClick={() => handleDeleteFile('resume1')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
+                      <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-brand-text cursor-pointer hover:text-brand-accent transition-colors">
+                        <input type="radio" name="resumePriority" checked={resumePriority === 1} onChange={() => setResumePriority(1)} className="accent-brand-accent cursor-pointer" />
+                        <span className={resumePriority === 1 ? 'text-brand-accent' : ''}>High Priority</span>
+                      </label>
                     </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg cursor-pointer transition-all text-xs font-bold">
+                          {isUploadingResume ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
+                          {isUploadingResume ? 'Analyzing...' : 'Upload PDF/TXT'}
+                          <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume1')} disabled={isUploadingResume} />
+                        </label>
+                        {resumeFileName && !isUploadingResume && (
+                          <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
+                              <FileText size={12} className="shrink-0" /> {resumeFileName}
+                            </span>
+                            <button onClick={() => handleDeleteFile('resume1')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <textarea 
                         value={resumeText} 
                         onChange={(e) => setResumeText(e.target.value)} 
-                        className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap"
+                        className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-blue-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
                         placeholder="Paste your resume text here or upload a file..."
                       />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold text-brand-subtext uppercase">Resume Context 2 (Optional)</label>
-                    <label className="flex items-center gap-1.5 text-xs text-brand-text cursor-pointer">
-                      <input type="radio" name="resumePriority" checked={resumePriority === 2} onChange={() => setResumePriority(2)} className="accent-brand-accent cursor-pointer" />
-                      <span className={resumePriority === 2 ? 'text-brand-accent font-bold' : ''}>High Priority</span>
-                    </label>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-2 px-5 py-2.5 bg-brand-accent/10 hover:bg-brand-accent/20 border border-brand-accent/30 text-brand-accent rounded-lg cursor-pointer transition-all text-sm font-bold shadow-[0_0_15px_rgba(139,92,246,0.1)]">
-                        {isUploadingResume2 ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />} 
-                        {isUploadingResume2 ? 'Analyzing...' : 'Upload PDF/TXT 2'}
-                        <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume2')} disabled={isUploadingResume2} />
-                      </label>
-                      {resumeFileName2 && !isUploadingResume2 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
-                            <FileText size={14} className="flex-shrink-0" /> {resumeFileName2}
-                          </span>
-                          <button onClick={() => handleDeleteFile('resume2')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
                     </div>
+                  </div>
+
+                  {/* Resume Context 2 */}
+                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
+                        <FileText size={14} className="text-cyan-400" /> Resume Context 2
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-brand-text cursor-pointer hover:text-brand-accent transition-colors">
+                        <input type="radio" name="resumePriority" checked={resumePriority === 2} onChange={() => setResumePriority(2)} className="accent-brand-accent cursor-pointer" />
+                        <span className={resumePriority === 2 ? 'text-brand-accent' : ''}>High Priority</span>
+                      </label>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg cursor-pointer transition-all text-xs font-bold">
+                          {isUploadingResume2 ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
+                          {isUploadingResume2 ? 'Analyzing...' : 'Upload PDF/TXT'}
+                          <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume2')} disabled={isUploadingResume2} />
+                        </label>
+                        {resumeFileName2 && !isUploadingResume2 && (
+                          <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
+                              <FileText size={12} className="shrink-0" /> {resumeFileName2}
+                            </span>
+                            <button onClick={() => handleDeleteFile('resume2')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <textarea 
                         value={resumeText2} 
                         onChange={(e) => setResumeText2(e.target.value)} 
-                        className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap"
+                        className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-cyan-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
                         placeholder="Paste your second resume text here or upload a file..."
                       />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Personal Context</label>
-                  <p className="text-xs text-brand-subtext/70 mb-2 italic">HIGH PRIORITY: This document is about yourself (strengths, weaknesses, hobbies).</p>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-2 px-5 py-2.5 bg-brand-accent/10 hover:bg-brand-accent/20 border border-brand-accent/30 text-brand-accent rounded-lg cursor-pointer transition-all text-sm font-bold shadow-[0_0_15px_rgba(139,92,246,0.1)]">
-                        {isUploadingPersonalContext ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />} 
-                        {isUploadingPersonalContext ? 'Analyzing...' : 'Upload PDF/TXT'}
-                        <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'personal')} disabled={isUploadingPersonalContext} />
-                      </label>
-                      {personalContextFileName && !isUploadingPersonalContext && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-400 flex items-center gap-1.5 truncate max-w-[300px] bg-green-500/10 px-3 py-2 rounded-md border border-green-500/20">
-                            <FileText size={14} className="flex-shrink-0" /> {personalContextFileName}
-                          </span>
-                          <button onClick={() => handleDeleteFile('personal')} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 hover:bg-red-500/20 rounded border border-red-500/20">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
                     </div>
-                    <textarea 
-                      value={personalContextText} 
-                      onChange={(e) => setPersonalContextText(e.target.value)} 
-                      className="w-full h-32 bg-black/40 border border-brand-border rounded-lg p-3 text-xs text-white/80 font-mono resize-y outline-none custom-scrollbar whitespace-pre-wrap mt-2"
-                      placeholder="Paste your personal context here (strengths, weaknesses, background) or upload a file..."
-                    />
+                  </div>
+
+                  {/* Personal Context */}
+                  <div className="md:col-span-2 bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-300">
+                    <div className="mb-4">
+                      <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2 mb-1">
+                        <User size={14} className="text-fuchsia-400" /> Personal Context
+                      </label>
+                      <p className="text-[10px] text-brand-subtext/70 italic">High Priority: This document should contain information about yourself (strengths, weaknesses, hobbies, background).</p>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3 w-1/2">
+                        <label className="flex items-center justify-center gap-2 px-4 py-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400 rounded-lg cursor-pointer transition-all text-xs font-bold shrink-0">
+                          {isUploadingPersonalContext ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
+                          {isUploadingPersonalContext ? 'Analyzing...' : 'Upload PDF/TXT'}
+                          <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'personal')} disabled={isUploadingPersonalContext} />
+                        </label>
+                        {personalContextFileName && !isUploadingPersonalContext && (
+                          <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
+                              <FileText size={12} className="shrink-0" /> {personalContextFileName}
+                            </span>
+                            <button onClick={() => handleDeleteFile('personal')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <textarea 
+                        value={personalContextText} 
+                        onChange={(e) => setPersonalContextText(e.target.value)} 
+                        className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-fuchsia-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
+                        placeholder="Paste your personal context here (strengths, weaknesses, background) or upload a file..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2467,7 +2492,7 @@ function App() {
                 <div className="flex justify-center items-center gap-4 w-full px-2">
                   <button 
                     onClick={() => {
-                      setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
+                      setReminderForm({id: '', name: '', jobTitle: '', email: localStorage.getItem('clueai_saved_email') || '', phone: '', date: '', time: '', ampm: 'AM'});
                       setShowReminderPopup(true);
                     }} 
                     className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -2476,7 +2501,7 @@ function App() {
                   </button>
                   <button 
                     onClick={() => {
-                      setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
+                      setNotesForm({id: '', notes: '', email: localStorage.getItem('clueai_saved_email') || '', date: '', time: '', ampm: 'AM'});
                       setShowNotesPopup(true);
                     }} 
                     className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -2498,6 +2523,18 @@ function App() {
                   }
                   
                   return combined.map(prof => {
+                    // Check status
+                    let isPast = false;
+                    try {
+                      const [d, m, y] = prof.date.split('-');
+                      const [h, min] = prof.time.split(':');
+                      let hours = parseInt(h);
+                      if (prof.ampm === 'PM' && hours < 12) hours += 12;
+                      if (prof.ampm === 'AM' && hours === 12) hours = 0;
+                      const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                      isPast = new Date() > targetDate;
+                    } catch(e) {}
+
                     if (prof.type === 'reminder') {
                       return (
                         <div 
@@ -2509,7 +2546,10 @@ function App() {
                           }}
                         >
                           <div className="flex flex-col flex-1 min-w-0 pr-3">
-                            <span className="font-bold text-xs text-white truncate">{prof.name}</span>
+                            <span className="font-bold text-xs text-white truncate flex items-center gap-2">
+                                {prof.name}
+                                {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
+                            </span>
                             <span className="text-[10px] text-blue-200 font-bold truncate">Reminder <span className="opacity-70 font-normal">• {prof.jobTitle}</span></span>
                           </div>
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -2539,7 +2579,10 @@ function App() {
                           }}
                         >
                           <div className="flex flex-col flex-1 min-w-0 pr-1">
-                            <span className="font-bold text-xs text-white truncate">Note: {prof.date}</span>
+                            <span className="font-bold text-xs text-white truncate flex items-center gap-2">
+                                Note
+                                {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
+                            </span>
                             <span className="text-[10px] text-teal-200 font-bold truncate">Note <span className="opacity-70 font-normal">• {prof.email}</span></span>
                           </div>
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -3234,7 +3277,7 @@ function App() {
               <button 
                 onClick={() => {
                   const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date);
-                  const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(reminderForm.time);
+                  const timeValid = /^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time);
                   const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
                   
                   if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
@@ -3242,6 +3285,7 @@ function App() {
                     return;
                   }
                   setShowReminderErrors(false);
+                  localStorage.setItem('clueai_saved_email', reminderForm.email);
                   
                   if (reminderForm.id) {
                     setReminderProfiles(prev => prev.map(p => p.id === reminderForm.id ? reminderForm : p));
@@ -3332,6 +3376,7 @@ function App() {
                     return;
                   }
                   setShowNotesErrors(false);
+                  localStorage.setItem('clueai_saved_email', notesForm.email);
 
                   const templateParams = {
                     type: 'note',
