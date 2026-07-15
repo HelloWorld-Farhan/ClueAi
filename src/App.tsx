@@ -1497,6 +1497,9 @@ function App() {
       className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none"
       style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
     >
+      <datalist id="saved-emails">
+        {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
+      </datalist>
       <div 
         className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
         onPointerDown={(e) => {
@@ -2513,7 +2516,7 @@ function App() {
                 <div className="flex justify-center items-center gap-4 w-full px-2">
                   <button 
                     onClick={() => {
-                      setReminderForm({id: '', name: '', jobTitle: '', email: localStorage.getItem('clueai_saved_email') || '', phone: '', date: '', time: '', ampm: 'AM'});
+                      setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
                       setShowReminderPopup(true);
                     }} 
                     className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -2522,7 +2525,7 @@ function App() {
                   </button>
                   <button 
                     onClick={() => {
-                      setNotesForm({id: '', notes: '', email: localStorage.getItem('clueai_saved_email') || '', date: '', time: '', ampm: 'AM'});
+                      setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
                       setShowNotesPopup(true);
                     }} 
                     className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -3201,7 +3204,7 @@ function App() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
-                <input type="email" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.email} onChange={e => setReminderForm({...reminderForm, email: e.target.value})} />
+                <input type="email" list="saved-emails" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.email} onChange={e => setReminderForm({...reminderForm, email: e.target.value})} />
                 {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {showReminderErrors && reminderForm.email && !/^\S+@\S+\.\S+$/.test(reminderForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
               </div>
@@ -3346,7 +3349,7 @@ function App() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
-                <input type="email" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.email} onChange={e => setNotesForm({...notesForm, email: e.target.value})} />
+                <input type="email" list="saved-emails" placeholder="e.g. user@example.com" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.email} onChange={e => setNotesForm({...notesForm, email: e.target.value})} />
                 {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {showNotesErrors && notesForm.email && !/^\S+@\S+\.\S+$/.test(notesForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
               </div>
