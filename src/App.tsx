@@ -1512,88 +1512,72 @@ function App() {
         }}
       >
         {/* Header Container */}
-      <div className="w-full flex-none bg-brand-bg/80 backdrop-blur-3xl px-4 py-3 border-b border-brand-border flex flex-col gap-3 shadow-[0_2px_20px_rgba(0,0,0,0.5)] relative z-30 drag-area rounded-t-2xl shrink-0">
-        
-        {/* ROW 1: Status Tags and Window Controls */}
-        <div className="flex items-center justify-between w-full no-drag">
-          <div className="flex items-center gap-2">
-            {isRecording && (
-              <>
-                {stealthMode ? (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
-                    Stealth: ON
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
-                    <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
-                  </span>
-                )}
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
-                  Opacity: {Math.round(opacity * 100)}%
-                </span>
-                <span className="text-[9px] font-bold px-2 py-1 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
-                  Press 7 or Q to edit Transcript
-                </span>
-                <span className="text-[9px] font-bold px-2 py-1 rounded border bg-white text-black border-white uppercase tracking-wider leading-none">
-                  Press 0 to change text color
-                </span>
-                <span className="text-[9px] font-bold px-2 py-1 rounded border bg-blue-500/20 text-blue-300 border-blue-500/30 uppercase tracking-wider leading-none flex items-center gap-1">
-                  <ArrowUp size={10} /><ArrowDown size={10} /> Alt + Arrows to Scroll
-                </span>
-              </>
-            )}
-          </div>
+      {isRecording ? (
+        // --- INTERVIEW PAGE HEADER (2 ROWS) ---
+        <div className="w-full flex-none bg-brand-bg/80 backdrop-blur-3xl px-4 py-3 border-b border-brand-border flex flex-col gap-3 shadow-[0_2px_20px_rgba(0,0,0,0.5)] relative z-30 drag-area rounded-t-2xl shrink-0">
           
-          {/* Minimize / Maximize / Close (Moved to Row 1) */}
-          <div className="flex items-center gap-1">
-            <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
-              <ZoomOut size={16} />
-            </button>
-            <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
-              <ZoomIn size={16} />
-            </button>
-            <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-              <Maximize size={16} />
-            </button>
-            <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-              <Minus size={16} />
-            </button>
-            <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
-              <X size={16} />
-            </button>
+          {/* ROW 1: Status Tags and Window Controls */}
+          <div className="flex items-center justify-between w-full no-drag">
+            <div className="flex items-center gap-2">
+              {stealthMode ? (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
+                  Stealth: ON
+                </span>
+              ) : (
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
+                  <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
+                </span>
+              )}
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
+                Opacity: {Math.round(opacity * 100)}%
+              </span>
+              <span className="text-[9px] font-bold px-2 py-1 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
+                Press 7 or Q to edit Transcript
+              </span>
+              <span className="text-[9px] font-bold px-2 py-1 rounded border bg-white text-black border-white uppercase tracking-wider leading-none">
+                Press 0 to change text color
+              </span>
+              <span className="text-[9px] font-bold px-2 py-1 rounded border bg-blue-500/20 text-blue-300 border-blue-500/30 uppercase tracking-wider leading-none flex items-center gap-1">
+                <ArrowUp size={10} /><ArrowDown size={10} /> Alt + Arrows to Scroll
+              </span>
+            </div>
+            
+            {/* Minimize / Maximize / Close (Row 1) */}
+            <div className="flex items-center gap-1">
+              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
+                <ZoomOut size={16} />
+              </button>
+              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+                <ZoomIn size={16} />
+              </button>
+              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
+                <Maximize size={16} />
+              </button>
+              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
+                <Minus size={16} />
+              </button>
+              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* ROW 2: Logo and Primary Controls */}
-        <div className="flex items-center justify-between w-full no-drag">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
-              <Move size={16} />
+          {/* ROW 2: Logo and Primary Controls */}
+          <div className="flex items-center justify-between w-full no-drag">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
+                <Move size={16} />
+              </div>
+              <div className="flex flex-col justify-center shrink-0">
+                <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
+                  <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
+                  <span>ClueAI</span>
+                  <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>
+                </h1>
+              </div>
             </div>
-            <div className="flex flex-col justify-center shrink-0">
-              <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
-                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
-                <span>ClueAI</span>
-                {!isRecording && username && (
-                  <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
-                    <span className="mx-2 text-white/30">|</span> {username}
-                    <button 
-                      onClick={() => { setTempUsername(username); setShowUsernamePrompt(true); }}
-                      className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-md transition-colors shadow-sm ml-1"
-                      title="Rename"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                  </span>
-                )}
-                {isRecording && <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>}
-              </h1>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {isRecording ? (
-            <>
+            
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-3 mr-2 relative">
                 <div className="flex flex-col items-center justify-center mr-2">
                   <button 
@@ -1655,23 +1639,66 @@ function App() {
               <button onClick={stopRecording} title="Stop Session (Press D or 6)" className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
                 <Square size={12} fill="currentColor" /> STOP <span className="opacity-70 text-[8px] border border-rose-500/30 px-1 rounded ml-0.5">6</span>
               </button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
-                <Info size={16} />
-              </button>
-              <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
-                <Settings size={16} />
-              </button>
-              <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
-                <Play size={14} fill="currentColor" /> Start Interview
-              </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
-      </div>
+      ) : (
+        // --- MAIN DASHBOARD HEADER (1 ROW) ---
+        <div className="w-full flex-none bg-brand-bg/80 backdrop-blur-3xl px-4 py-3 border-b border-brand-border flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.5)] relative z-30 drag-area rounded-t-2xl shrink-0">
+          <div className="flex items-center gap-3 no-drag">
+            <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
+              <Move size={16} />
+            </div>
+            <div className="flex flex-col justify-center shrink-0">
+              <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
+                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
+                <span>ClueAI</span>
+                {username && (
+                  <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
+                    <span className="mx-2 text-white/30">|</span> {username}
+                    <button 
+                      onClick={() => { setTempUsername(username); setShowUsernamePrompt(true); }}
+                      className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-md transition-colors shadow-sm ml-1"
+                      title="Rename"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                  </span>
+                )}
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 no-drag">
+            <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+              <Info size={16} />
+            </button>
+            <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+              <Settings size={16} />
+            </button>
+            <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
+              <Play size={14} fill="currentColor" /> Start Interview
+            </button>
+            {/* Minimize / Maximize / Close */}
+            <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border shrink-0">
+              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
+                <ZoomOut size={16} />
+              </button>
+              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+                <ZoomIn size={16} />
+              </button>
+              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
+                <Maximize size={16} />
+              </button>
+              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
+                <Minus size={16} />
+              </button>
+              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Full-Screen Info Modal */}
@@ -1882,41 +1909,67 @@ function App() {
             
             {/* Interview Content Settings */}
             <section>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><Layout size={16}/> Interview Layout & Content</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Transcript Base Size (px)</label>
-                    <input 
-                      type="number" 
-                      min="10" 
-                      max="40"
-                      value={transcriptTextSize}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 15;
-                        setTranscriptTextSize(val);
-                        localStorage.setItem('clueai_transcript_size', val.toString());
-                      }}
-                      className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all outline-none focus:border-brand-accent"
-                    />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Layout size={16}/> Interview Layout & Content
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Transcript Size */}
+                  <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mb-3">
+                      <FileText size={16} />
+                    </div>
+                    <label className="block text-xs font-bold text-white uppercase mb-2">Transcript Font Size</label>
+                    <div className="flex items-center gap-2 mt-auto">
+                      <input 
+                        type="range" 
+                        min="10" 
+                        max="40"
+                        value={transcriptTextSize}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 15;
+                          setTranscriptTextSize(val);
+                          localStorage.setItem('clueai_transcript_size', val.toString());
+                        }}
+                        className="flex-1 accent-brand-accent h-1.5 bg-brand-bg rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-sm font-mono font-bold text-brand-accent bg-brand-bg px-2 py-1 rounded-md border border-brand-border">{transcriptTextSize}px</span>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">AI Answer Base Size (px)</label>
-                    <input 
-                      type="number" 
-                      min="10" 
-                      max="40"
-                      value={aiAnswerTextSize}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 15;
-                        setAiAnswerTextSize(val);
-                        localStorage.setItem('clueai_answer_size', val.toString());
-                      }}
-                      className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all outline-none focus:border-brand-accent"
-                    />
+
+                  {/* AI Answer Size */}
+                  <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center mb-3">
+                      <Cpu size={16} />
+                    </div>
+                    <label className="block text-xs font-bold text-white uppercase mb-2">AI Answer Font Size</label>
+                    <div className="flex items-center gap-2 mt-auto">
+                      <input 
+                        type="range" 
+                        min="10" 
+                        max="40"
+                        value={aiAnswerTextSize}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 15;
+                          setAiAnswerTextSize(val);
+                          localStorage.setItem('clueai_answer_size', val.toString());
+                        }}
+                        className="flex-1 accent-brand-accent h-1.5 bg-brand-bg rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-sm font-mono font-bold text-fuchsia-400 bg-brand-bg px-2 py-1 rounded-md border border-brand-border">{aiAnswerTextSize}px</span>
+                    </div>
+                  </div>
+
+                  {/* Scroll Hotkeys */}
+                  <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
+                      <ArrowUp size={16} />
+                    </div>
+                    <h4 className="text-xs font-bold text-white uppercase mb-1">Stealth Scrolling</h4>
+                    <p className="text-[11px] text-brand-subtext leading-relaxed mt-auto">
+                      Hold <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Alt</kbd> + <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">↑/↓</kbd> or <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">PgUp/PgDn</kbd> to scroll the text boxes during an interview without using your mouse.
+                    </p>
                   </div>
                 </div>
-              </div>
             </section>
 
             {/* API Keys Configuration */}
