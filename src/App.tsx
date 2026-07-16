@@ -2698,7 +2698,7 @@ function App() {
             <div className="flex-1 flex gap-4 flex-col min-h-0">
             {/* Left/Top Panel - Transcript */}
           <div 
-            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-300 ${isAnswerMaximized ? 'flex-none h-24' : 'flex-1'}`}
+            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-300 ${isAnswerMaximized ? 'flex-none' : 'flex-1'}`}
             style={{ 
               backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
               backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
@@ -2778,7 +2778,7 @@ function App() {
               </div>
             )}
           </div>
-          <div className="px-5 py-2 flex gap-2 flex-wrap bg-transparent border-t border-white/5">
+          <div className={`px-5 py-2 flex gap-2 flex-wrap bg-transparent border-t border-white/5 ${isAnswerMaximized ? 'hidden' : ''}`}>
             {['Example', 'Types', 'Explain', 'Pros & Cons', 'Difference'].map(keyword => (
                <button 
                   key={keyword}
