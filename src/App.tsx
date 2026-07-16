@@ -1525,7 +1525,7 @@ function App() {
       
       <div 
         className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
-        style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
+        style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent', transition: 'none' }}
       >
       <datalist id="saved-emails">
         {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
@@ -2752,7 +2752,7 @@ function App() {
 
             {/* 2. Main Conversation Window */}
             <div 
-              className="flex-1 flex flex-col min-h-0 rounded-[2.5rem] overflow-hidden transition-all duration-500 ease-in-out w-full mx-auto relative z-10"
+              className="flex-1 flex flex-col min-h-0 rounded-[2.5rem] overflow-hidden w-full mx-auto relative z-10"
               style={{ 
                 backgroundColor: altColor ? "rgba(128, 128, 128, 0.2)" : "rgba(24, 24, 27, 0.6)",
                 backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
