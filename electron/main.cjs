@@ -317,10 +317,25 @@ function createWindow() {
   ipcMain.handle('set-layout', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 600); 
+        mainWindow.setSize(1000, 850); 
       } else {
         mainWindow.setSize(450, 850);
       }
+    }
+  });
+
+  ipcMain.handle('start-interview-window', (event, layout) => {
+    if (mainWindow) {
+      if (layout === 'horizontal') {
+        mainWindow.setSize(1000, 850); 
+      } else {
+        mainWindow.setSize(450, 850);
+      }
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width } = primaryDisplay.workAreaSize;
+      const bounds = mainWindow.getBounds();
+      mainWindow.setPosition(Math.round((width - bounds.width) / 2), 0);
     }
   });
 
