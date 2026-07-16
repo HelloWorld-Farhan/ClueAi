@@ -2719,17 +2719,19 @@ function App() {
       {/* Main UI */}
         {isRecording && (
           <div className="flex-1 flex flex-col gap-4 min-h-0">
-            <div className="flex-1 flex gap-4 flex-col min-h-0">
+            <div 
+              className="flex-1 flex flex-col min-h-0 rounded-3xl overflow-hidden transition-all duration-500 ease-in-out"
+              style={{ 
+                backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
+                backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
+                borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`,
+                borderWidth: '1px',
+                boxShadow: opacity < 0.05 ? 'none' : `0 25px 50px -12px rgba(0, 0, 0, ${opacity * 0.5})`
+              }}
+            >
             {/* Left/Top Panel - Transcript */}
           <div 
-            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'h-[46px] flex-none' : 'flex-1 min-h-[150px]'}`}
-            style={{ 
-              backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
-              backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
-              borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`,
-              borderWidth: '1px',
-              boxShadow: opacity < 0.05 ? 'none' : `0 25px 50px -12px rgba(0, 0, 0, ${opacity * 0.5})`
-            }}
+            className={`flex flex-col transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'h-[46px] flex-none' : 'flex-1 min-h-[150px]'}`}
           >
           <div 
             className="px-5 py-3.5 flex justify-between items-center border-b transition-all duration-200"
@@ -2813,9 +2815,8 @@ function App() {
                </button>
             ))}
           </div>
-          <div 
-            className="p-3 border-t transition-all duration-200"
-            style={{ 
+          <div className={`p-3 transition-all duration-200 ${isAnswerMaximized ? 'opacity-0 h-0 p-0 overflow-hidden' : 'opacity-100 border-t'}`}
+            style={isAnswerMaximized ? {} : { 
               backgroundColor: `rgba(255, 255, 255, ${opacity * 0.03})`,
               borderColor: `rgba(255, 255, 255, ${opacity * 0.05})`
             }}
@@ -2843,14 +2844,7 @@ function App() {
 
         {/* Right/Bottom Panel - Answer */}
         <div 
-          className="flex flex-col rounded-3xl overflow-hidden transition-all duration-500 flex-1"
-          style={{ 
-            backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
-            backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
-            borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`,
-            borderWidth: '1px',
-            boxShadow: opacity < 0.05 ? 'none' : `0 25px 50px -12px rgba(0, 0, 0, ${opacity * 0.5})`
-          }}
+          className={`flex flex-col transition-all duration-500 flex-1 relative ${isAnswerMaximized ? '' : 'border-t border-white/10'}`}
         >
           <div 
             className="px-5 py-3.5 border-b flex justify-between items-center transition-all duration-200"
