@@ -317,32 +317,44 @@ function createWindow() {
   ipcMain.handle('set-layout', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 850); 
+        mainWindow.setSize(1000, 800); 
       } else {
-        mainWindow.setSize(450, 850);
+        mainWindow.setSize(450, 800);
       }
     }
   });
 
   ipcMain.handle('start-interview-window', (event, layout) => {
     if (mainWindow) {
-      if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 800); 
-      } else {
-        mainWindow.setSize(450, 800);
-      }
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width } = primaryDisplay.workAreaSize;
-      const bounds = mainWindow.getBounds();
-      mainWindow.setPosition(Math.round((width - bounds.width) / 2), 0);
+      
+      const w = layout === 'horizontal' ? 1000 : 450;
+      const h = 800;
+
+      mainWindow.setBounds({
+        width: w,
+        height: h,
+        x: Math.round((width - w) / 2),
+        y: 0
+      });
     }
   });
 
   ipcMain.handle('stop-interview-window', (event) => {
     if (mainWindow) {
-      mainWindow.setSize(1000, 600);
-      mainWindow.center();
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.workAreaSize;
+      const w = 1000;
+      const h = 600;
+      mainWindow.setBounds({
+        width: w,
+        height: h,
+        x: Math.round((width - w) / 2),
+        y: Math.round((height - h) / 2)
+      });
     }
   });
 
