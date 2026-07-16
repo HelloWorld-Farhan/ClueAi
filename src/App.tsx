@@ -724,8 +724,6 @@ function App() {
       return;
     }
     
-    // Reset to current interview layout dimensions and position
-    ipcRenderer.invoke('start-interview-window', layout);
 
     if (!selectedSource) {
       setAlertMessage({ title: 'Source Missing', message: 'Please select a screen to capture.', type: 'warning' });
@@ -817,6 +815,8 @@ function App() {
       setTranscript('');
       finalizedTranscriptRef.current = '';
       interimTranscriptRef.current = '';
+      // Reset to current interview layout dimensions and position exactly when recording starts
+      ipcRenderer.invoke('start-interview-window', layout);
       setIsRecording(true);
       setIsPaused(false);
     }
@@ -1124,8 +1124,8 @@ function App() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-    // Reset to default main menu size
-    ipcRenderer.invoke('set-window-size', 1000, 600);
+    // Reset to default main menu size cleanly
+    ipcRenderer.invoke('stop-interview-window');
 
     if (!silent) {
       setIsRecording(false);
@@ -1512,9 +1512,7 @@ function App() {
       {showSplash && (
         <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-[1500ms] fill-mode-forwards rounded-3xl overflow-hidden border border-white/10">
            <div className="relative flex flex-col items-center animate-in zoom-in-95 fade-in duration-1000">
-              <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.5)] mb-6 animate-pulse">
-                 <span className="text-5xl font-black text-white tracking-tighter">C</span>
-              </div>
+              <img src="./logo.png" alt="ClueAI Logo" className="w-24 h-24 object-cover rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.5)] mb-6 animate-pulse border border-white/10" />
               <h1 className="text-4xl font-black text-white tracking-tight mb-2">Clue<span className="text-cyan-400">AI</span></h1>
               <p className="text-brand-subtext text-[10px] font-bold tracking-[0.2em] uppercase">The Ultimate Interview Assistant</p>
               

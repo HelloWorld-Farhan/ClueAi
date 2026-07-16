@@ -327,9 +327,9 @@ function createWindow() {
   ipcMain.handle('start-interview-window', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 850); 
+        mainWindow.setSize(1000, 800); 
       } else {
-        mainWindow.setSize(450, 850);
+        mainWindow.setSize(450, 800);
       }
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
@@ -339,10 +339,18 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('stop-interview-window', (event) => {
+    if (mainWindow) {
+      mainWindow.setSize(1000, 600);
+      mainWindow.center();
+    }
+  });
+
   ipcMain.handle('set-window-size', (event, width, height) => {
     if (mainWindow) {
       mainWindow.setSize(width, height);
       mainWindow.center(); // Re-center after resetting size
+
     }
   });
 
