@@ -129,7 +129,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500);
+    const timer = setTimeout(() => setShowSplash(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -1511,7 +1511,7 @@ function App() {
   return (
     <>
       {showSplash && (
-        <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-2000 fill-mode-forwards">
+        <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-[1500ms] fill-mode-forwards rounded-xl overflow-hidden">
            <div className="relative flex flex-col items-center animate-in zoom-in-95 fade-in duration-1000">
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.5)] mb-6 animate-pulse">
                  <span className="text-5xl font-black text-white tracking-tighter">C</span>
@@ -1526,11 +1526,10 @@ function App() {
         </div>
       )}
       
-      {!showSplash && (
       <div 
-        className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none"
-      style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
-    >
+        className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
+        style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
+      >
       <datalist id="saved-emails">
         {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
       </datalist>
@@ -2723,7 +2722,7 @@ function App() {
             <div className="flex-1 flex gap-4 flex-col min-h-0">
             {/* Left/Top Panel - Transcript */}
           <div 
-            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-300 ${isAnswerMaximized ? 'flex-none' : 'flex-1'}`}
+            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'h-[60px]' : 'flex-1 min-h-[150px]'}`}
             style={{ 
               backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
               backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
@@ -2772,7 +2771,7 @@ function App() {
                 />
             </div>
           </div>
-          <div ref={transcriptScrollRef} className={`flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative scroll-smooth ${isAnswerMaximized ? 'hidden' : ''}`}>
+          <div ref={transcriptScrollRef} className={`flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative scroll-smooth transition-opacity duration-300 ${isAnswerMaximized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div 
               className={`w-full px-5 py-4 bg-transparent font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshots.length > 0 ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
               style={{ fontSize: transcriptTextSize + 'px' }}
@@ -2803,7 +2802,7 @@ function App() {
               </div>
             )}
           </div>
-          <div className={`px-5 py-2 flex gap-2 flex-wrap bg-transparent border-t border-white/5 ${isAnswerMaximized ? 'hidden' : ''}`}>
+          <div className={`flex gap-2 flex-wrap bg-transparent border-t transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'opacity-0 h-0 p-0 border-transparent overflow-hidden' : 'opacity-100 px-5 py-2 border-white/5'}`}>
             {['Example', 'Types', 'Explain', 'Pros & Cons', 'Difference'].map(keyword => (
                <button 
                   key={keyword}
@@ -2844,7 +2843,7 @@ function App() {
 
         {/* Right/Bottom Panel - Answer */}
         <div 
-          className="flex flex-col rounded-3xl overflow-hidden transition-all duration-200 flex-1"
+          className="flex flex-col rounded-3xl overflow-hidden transition-all duration-500 flex-1"
           style={{ 
             backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
             backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
@@ -3803,7 +3802,6 @@ function App() {
         </div>
       )}
       </div>
-      )}
     </>
   );
 }
