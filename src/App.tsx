@@ -126,6 +126,13 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 };
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
     try { 
@@ -1502,8 +1509,26 @@ function App() {
   };
 
   return (
-    <div 
-      className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none"
+    <>
+      {showSplash && (
+        <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-2000 fill-mode-forwards">
+           <div className="relative flex flex-col items-center animate-in zoom-in-95 fade-in duration-1000">
+              <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.5)] mb-6 animate-pulse">
+                 <span className="text-5xl font-black text-white tracking-tighter">C</span>
+              </div>
+              <h1 className="text-4xl font-black text-white tracking-tight mb-2">Clue<span className="text-cyan-400">AI</span></h1>
+              <p className="text-brand-subtext text-[10px] font-bold tracking-[0.2em] uppercase">The Ultimate Interview Assistant</p>
+              
+              <div className="w-48 h-1 bg-white/10 rounded-full mt-12 overflow-hidden relative">
+                 <div className="absolute inset-y-0 left-0 bg-cyan-400 w-1/2 rounded-full animate-ping" />
+              </div>
+           </div>
+        </div>
+      )}
+      
+      {!showSplash && (
+      <div 
+        className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none"
       style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
     >
       <datalist id="saved-emails">
@@ -3686,7 +3711,7 @@ function App() {
         </div>
       )}
       
-      {showUsernamePrompt && (
+      {!showSplash && showUsernamePrompt && (
         <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
           <div className="w-full max-w-sm bg-brand-secondary border border-brand-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
             <div className="px-6 py-6 flex flex-col gap-4">
@@ -3777,7 +3802,9 @@ function App() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+      )}
+    </>
   );
 }
 
