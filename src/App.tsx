@@ -1511,7 +1511,7 @@ function App() {
   return (
     <>
       {showSplash && (
-        <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-[1500ms] fill-mode-forwards rounded-xl overflow-hidden">
+        <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-[1500ms] fill-mode-forwards rounded-3xl overflow-hidden border border-white/10">
            <div className="relative flex flex-col items-center animate-in zoom-in-95 fade-in duration-1000">
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.5)] mb-6 animate-pulse">
                  <span className="text-5xl font-black text-white tracking-tighter">C</span>
@@ -1527,7 +1527,7 @@ function App() {
       )}
       
       <div 
-        className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
+        className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
         style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent' }}
       >
       <datalist id="saved-emails">
@@ -2722,7 +2722,7 @@ function App() {
             <div className="flex-1 flex gap-4 flex-col min-h-0">
             {/* Left/Top Panel - Transcript */}
           <div 
-            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'h-[60px]' : 'flex-1 min-h-[150px]'}`}
+            className={`flex flex-col rounded-3xl overflow-hidden transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'h-[46px] flex-none' : 'flex-1 min-h-[150px]'}`}
             style={{ 
               backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
               backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
@@ -3038,7 +3038,7 @@ function App() {
       {/* Minimum Size Warning Modal */}
       {showMinSizeWarning && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 select-none">
-          <div className="bg-[#09090b]/90 border border-brand-border rounded-[2rem] w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-[#09090b]/90 border border-brand-border rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-300">
             <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
               <h3 className="font-black text-lg text-white flex items-center gap-2"><ZoomOut size={18} className="text-brand-accent"/> Size Limit Reached</h3>
             </div>
@@ -3061,9 +3061,9 @@ function App() {
       {showStartStealthWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
           <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 rounded-[2rem] blur opacity-40"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 rounded-3xl blur opacity-40"></div>
             
-            <div className="relative bg-[#09090b]/90 border border-red-500/30 rounded-[2rem] w-full overflow-hidden shadow-[0_0_80px_rgba(225,29,72,0.3)]">
+            <div className="relative bg-[#09090b]/90 border border-red-500/30 rounded-3xl w-full overflow-hidden shadow-[0_0_80px_rgba(225,29,72,0.3)]">
               <div className="px-8 py-6 border-b border-red-500/20 flex justify-between items-center bg-red-500/10">
                 <h3 className="font-black text-xl text-rose-500 tracking-wide flex items-center gap-2"><AlertTriangle size={20} /> Warning</h3>
                 <button onClick={() => setShowStartStealthWarning(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
@@ -3101,9 +3101,9 @@ function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
           <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
             {/* Glowing Accent Border */}
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-[2rem] blur opacity-30"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
             
-            <div className="relative bg-[#09090b]/90 border border-white/10 rounded-[2rem] w-full overflow-hidden shadow-[0_0_80px_rgba(0,0,0,1)]">
+            <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full overflow-hidden shadow-[0_0_80px_rgba(0,0,0,1)]">
               <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                 <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Initialize Session</h3>
                 <button onClick={() => setShowSessionPrompt(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
@@ -3712,7 +3712,7 @@ function App() {
       
       {!showSplash && showUsernamePrompt && (
         <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
-          <div className="w-full max-w-sm bg-brand-secondary border border-brand-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="w-full max-w-sm bg-brand-secondary border border-brand-border rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             <div className="px-6 py-6 flex flex-col gap-4">
               <div>
                 <h2 className="text-lg font-bold tracking-tight text-white mb-1">Your Name</h2>
