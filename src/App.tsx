@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, ArrowUp, ArrowDown, User, MessageSquare, ChevronUp, Clock } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, ChevronUp, Clock } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -188,6 +188,7 @@ function App() {
   const [aiAnswer, setAiAnswer] = useState('');
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
+  const [altColor, setAltColor] = useState(false);
   const [stealthMode, setStealthMode] = useState(() => {
     try {
       const saved = localStorage.getItem('appStealthMode');
@@ -1450,7 +1451,7 @@ function App() {
 
     const handleIPCHotkey = (_event: any, action: string) => {
       if (action === 'toggle-color') {
-        // do nothing
+        setAltColor(prev => !prev);
       } else if (action === 'toggle-pause') {
         handlePauseToggle();
       } else if (action === 'force-ai') {
@@ -1904,24 +1905,41 @@ function App() {
 
       {/* Full-Screen Settings Modal */}
       {!isRecording && showSettings && (
-        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col animate-in fade-in duration-200 overflow-hidden shadow-2xl">
-          <div className="w-full flex-shrink-0 bg-brand-bg/95 pt-8 pb-4 px-8 border-b border-brand-border">
-            <div className="max-w-3xl mx-auto flex justify-between items-end">
+        <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xl flex flex-col animate-in fade-in duration-200 overflow-hidden">
+          <div className="w-full max-w-4xl mx-auto my-auto bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col h-[90vh] overflow-hidden">
+            <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
               <div>
-                <h2 className="text-3xl font-black tracking-tight text-white">Settings</h2>
-                <p className="text-brand-subtext text-sm">Configure your AI model, screen capture, and interview context.</p>
+                <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
+                <p className="text-white/50 text-xs mt-1">Configure your shortcuts, AI models, and stealth mode.</p>
               </div>
               <div className="flex items-center gap-3">
-                {deleteMsg && <span className="text-red-400 font-bold text-xs bg-red-500/10 px-3 py-1.5 rounded border border-red-500/20">{deleteMsg}</span>}
-                <button onClick={() => setShowSettings(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
-                  Done <X size={16}/>
+                {deleteMsg && <span className="text-rose-400 font-bold text-xs bg-rose-500/10 px-3 py-1.5 rounded border border-rose-500/20">{deleteMsg}</span>}
+                <button onClick={() => setShowSettings(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors shadow-sm">
+                  <X size={18}/>
                 </button>
               </div>
             </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
-
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-black/[0.02]">
+              <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
+              
+              {/* Shortcuts Info Section */}
+              <section>
+                <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Info size={16}/> Global Shortcuts</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col gap-1">
+                    <span className="text-xs font-bold text-white/50">Toggle Stealth Text (Hide/Show)</span>
+                    <span className="text-lg font-black text-white">Press 0</span>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col gap-1">
+                    <span className="text-xs font-bold text-white/50">Generate AI Answer</span>
+                    <span className="text-lg font-black text-white">Press 2</span>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col gap-1">
+                    <span className="text-xs font-bold text-white/50">Clear Transcript & Start Fresh</span>
+                    <span className="text-lg font-black text-white">Press 3</span>
+                  </div>
+                </div>
+              </section>
 
             <section>
               <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16}/> Provider & Display</h3>
@@ -2482,6 +2500,7 @@ function App() {
               </div>
             </section>
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -2722,7 +2741,7 @@ function App() {
                {/* Center: Fake Search Bar / Status */}
                <div className="flex-1 mx-6 relative group max-w-2xl">
                   <div className="w-full bg-[#18181b] border border-white/10 rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden">
-                     <span className="tracking-wide truncate block max-w-[85%]">{!isRecording ? "Ask me anything..." : (isGenerating ? "Drafting response..." : (isPaused ? "Paused..." : (transcript ? transcript : "Listening to conversation...")))}</span>
+                     <span className={`tracking-wide truncate block max-w-[85%] ${altColor ? 'opacity-0' : 'text-white'}`}>{!isRecording ? "Ask me anything..." : (isGenerating ? "Drafting response..." : (isPaused ? "Paused..." : (transcript ? transcript : "Listening to conversation...")))}</span>
                      <div className="flex items-center gap-3 shrink-0">
                          {currentSessionHistory.length > 0 && (
                             <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white shadow-sm tracking-widest">
@@ -2738,8 +2757,8 @@ function App() {
                   <button onClick={() => setShowPreviousQuestions(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-colors text-white shadow-sm" title="History">
                      <Clock size={20} />
                   </button>
-                  <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-colors text-white shadow-sm" title="Settings">
-                     <Settings size={20} />
+                  <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-colors text-white shadow-sm" title="Info & Settings">
+                     <Info size={20} />
                   </button>
                </div>
             </div>
@@ -2757,9 +2776,12 @@ function App() {
             >
                {/* Header */}
                <div className="px-8 py-5 flex justify-between items-center border-b border-white/10 bg-black/40 backdrop-blur-md">
-                  <div>
-                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-sm">Current Answer</h2>
-                     <p className="text-[11px] font-bold text-white/50 drop-shadow-sm mt-0.5">{currentSessionHistory.length} messages in this conversation</p>
+                  <div className="flex items-center gap-3">
+                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-sm">AI Answer</h2>
+                     <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5">
+                        <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider}` : "Generate Area"}
+                     </div>
+                     {aiAnswer && <CopyButton text={aiAnswer} className="bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-white/60 hover:text-white shadow-sm transition-all" tooltip="Copy Answer" size={12} />}
                   </div>
                   <div className="flex items-center gap-4">
                      <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
@@ -2776,33 +2798,14 @@ function App() {
                         }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
                      </div>
                      <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
-                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : "New Chat"} <ChevronUp size={16} className="opacity-80" />
+                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : "Generate Answer"} <ChevronUp size={16} className="opacity-80" />
                      </button>
                   </div>
-               </div>
-
-               {/* Keyword Tags (Floating just below header) */}
-               <div className="px-8 py-3 flex gap-2 flex-wrap bg-white/[0.02] border-b border-white/5 shadow-inner">
-                 {["Example", "Types", "Explain", "Pros & Cons", "Difference"].map(keyword => (
-                    <button 
-                       key={keyword}
-                       onClick={() => setTranscript(prev => prev ? `${prev} ${keyword}` : keyword)}
-                       className="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-full text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm border border-white/10"
-                    >
-                       + {keyword}
-                    </button>
-                 ))}
                </div>
 
                <div className="flex-1 flex flex-col min-h-0">
                  {/* Generate Area (Bottom) */}
                  <div className="flex-1 overflow-y-auto custom-scrollbar p-8 relative bg-black/10" ref={aiAnswerScrollRef}>
-                    <div className="absolute top-4 left-6 flex gap-2 z-10">
-                      <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5">
-                        <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider}` : "Generate Area"}
-                      </div>
-                      {aiAnswer && <CopyButton text={aiAnswer} className="bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-white/60 hover:text-white shadow-sm transition-all" tooltip="Copy Answer" size={12} />}
-                    </div>
 
                     <div className="mt-8">
                       {/* Snapshots inserted inline if any */}
@@ -2831,7 +2834,7 @@ function App() {
                       )}
                       {aiAnswer ? (
                          <div 
-                           className="leading-relaxed whitespace-pre-wrap font-semibold text-white drop-shadow-sm px-2"
+                           className={`leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-sm px-2 ${altColor ? 'opacity-0' : 'text-white'}`}
                            style={{ fontSize: aiAnswerTextSize + "px" }}
                          >
                            <ReactMarkdown
@@ -3698,42 +3701,89 @@ function App() {
 
       {/* Previous Questions Modal */}
       {showPreviousQuestions && (
-        <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-sm flex flex-col p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl mx-auto bg-white/90 backdrop-blur-xl border border-black/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col h-full overflow-hidden">
-            <div className="px-8 py-5 border-b border-black/5 flex justify-between items-center bg-white/50">
-              <h2 className="font-black text-xl text-black tracking-tight flex items-center gap-2">
-                <FileText size={20} className="text-black/60" />
+        <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-xl flex flex-col p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl mx-auto bg-[#09090b]/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col h-full overflow-hidden">
+            <div className="px-8 py-5 border-b border-white/5 flex justify-between items-center bg-white/5">
+              <h2 className="font-black text-xl text-white tracking-tight flex items-center gap-2">
+                <FileText size={20} className="text-white/60" />
                 Previous Questions (Active Session)
               </h2>
-              <button onClick={() => setShowPreviousQuestions(false)} className="text-black/50 hover:text-white p-2 bg-black/5 hover:bg-rose-500 rounded-xl transition-colors shadow-sm">
+              <button onClick={() => setShowPreviousQuestions(false)} className="text-white/50 hover:text-white p-2 bg-white/5 hover:bg-rose-500 rounded-xl transition-colors shadow-sm">
                 <X size={20} />
               </button>
             </div>
+
+            {/* Quick Add Keywords Section */}
+            <div className="px-8 py-3 bg-white/[0.02] border-b border-white/5 flex items-center gap-3 overflow-x-auto custom-scrollbar shrink-0">
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-wider whitespace-nowrap shrink-0">Quick Add:</span>
+              {['Explain this clearly', 'What are the main types?', 'Give an example', 'Optimize this code', 'Find the bug'].map((tag, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => {
+                    const lastIdx = currentSessionHistory.length - 1;
+                    if (lastIdx >= 0) {
+                      const updated = [...currentSessionHistory];
+                      updated[lastIdx].question += ' ' + tag;
+                      setCurrentSessionHistory(updated);
+                    }
+                  }}
+                  className="px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1"
+                >
+                  <Plus size={12} className="opacity-50" /> {tag}
+                </button>
+              ))}
+            </div>
+
             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-black/[0.02]">
               {currentSessionHistory.length === 0 ? (
-                <div className="text-center text-black/50 font-medium italic mt-10">No questions asked in this session yet.</div>
+                <div className="text-center text-white/30 font-medium italic mt-10">No questions asked in this session yet.</div>
               ) : currentSessionHistory.map((item, idx) => (
-                <div key={idx} className="bg-white border border-black/5 rounded-[1.5rem] p-6 space-y-6 shadow-sm">
+                <div key={idx} className="bg-white/5 border border-white/5 rounded-[1.5rem] p-6 space-y-6 shadow-sm">
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-[11px] font-black text-cyan-600 uppercase tracking-wider flex items-center gap-1.5"><Mic size={14} /> Transcript {idx + 1}</h3>
-                      <CopyButton text={item.question} className="text-black/40 hover:text-black transition-colors" tooltip="Copy Transcript" />
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-[11px] font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5"><Mic size={14} /> Transcript {idx + 1}</h3>
+                      <CopyButton text={item.question} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Transcript" />
                     </div>
-                    <p className="text-black/90 text-sm whitespace-pre-wrap leading-relaxed font-medium">{item.question}</p>
+                    
+                    <textarea 
+                      value={item.question}
+                      onChange={(e) => {
+                        const updated = [...currentSessionHistory];
+                        updated[idx].question = e.target.value;
+                        setCurrentSessionHistory(updated);
+                      }}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white/90 text-sm font-medium focus:border-cyan-500/50 outline-none transition-colors min-h-[100px] resize-y"
+                    />
+                    
+                    <div className="mt-3 flex justify-end">
+                      <button 
+                        onClick={() => {
+                          setTranscript(item.question);
+                          finalizedTranscriptRef.current = item.question;
+                          setShowPreviousQuestions(false);
+                          if (!isGenerating) {
+                            manualTriggerAI();
+                          }
+                        }}
+                        className="px-4 py-2 bg-brand-accent hover:bg-cyan-400 text-white rounded-lg font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2"
+                      >
+                        <RefreshCw size={14} /> Ask AI Again
+                      </button>
+                    </div>
                   </div>
-                  <div className="pt-6 border-t border-black/5">
+                  <div className="pt-6 border-t border-white/5">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-[11px] font-black text-fuchsia-600 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
-                      <CopyButton text={item.answer} className="text-black/40 hover:text-black transition-colors" tooltip="Copy Answer" />
+                      <h3 className="text-[11px] font-black text-fuchsia-400 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
+                      <CopyButton text={item.answer} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
                     </div>
-                    <div className="text-black font-bold text-sm whitespace-pre-wrap leading-relaxed">
+                    <div className="text-white/90 font-bold text-sm whitespace-pre-wrap leading-relaxed">
                       <ReactMarkdown
                         components={{
                           code({inline, children}: any) {
                             return !inline ? (
-                              <div className="bg-black/[0.03] rounded-xl p-4 my-3 border border-black/5 font-mono text-xs overflow-x-auto text-black/80">{children}</div>
+                              <div className="bg-black/40 rounded-xl p-4 my-3 border border-white/5 font-mono text-xs overflow-x-auto text-white/80">{children}</div>
                             ) : (
-                              <code className="bg-black/5 text-fuchsia-600 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
+                              <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
                             )
                           }
                         }}
