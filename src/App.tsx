@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, ArrowUp, ArrowDown, User } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, ArrowUp, ArrowDown, User, MessageSquare, ChevronUp, Clock } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -10,12 +10,14 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec';
 
+
+
 const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
   const [copied, setCopied] = useState(false);
   const [empty, setEmpty] = useState(false);
   
   const handleCopy = () => {
-    if (!text || text.trim() === '') {
+    if (!text || text.trim() === "") {
       setEmpty(true);
       setTimeout(() => setEmpty(false), 2000);
       return;
@@ -27,8 +29,8 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
   
   return (
     <div className="flex items-center gap-2">
-      {copied && <span className="text-green-400 text-[10px] font-bold animate-pulse">Copied!</span>}
-      {empty && <span className="text-rose-400 text-[10px] font-bold animate-pulse">No Text</span>}
+      {copied && <span className="text-green-500 text-[10px] font-bold animate-pulse">Copied!</span>}
+      {empty && <span className="text-rose-500 text-[10px] font-bold animate-pulse">No Text</span>}
       <button 
         onClick={handleCopy}
         className={className}
@@ -39,7 +41,6 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
     </div>
   );
 };
-
 const formatTimer = (totalSeconds: number) => {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -172,7 +173,7 @@ function App() {
   const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
 
   const [isRecording, setIsRecording] = useState(false);
-  const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
+  // const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
   const [showReminderEmailSuggest, setShowReminderEmailSuggest] = useState(false);
   const [showNotesEmailSuggest, setShowNotesEmailSuggest] = useState(false);
 
@@ -295,7 +296,7 @@ function App() {
     setForm({...form, time: formatted.substring(0, 5)});
   };
   
-  const [transcriptTextColor, setTranscriptTextColor] = useState<'white' | 'black'>('white');
+
   
   const [resumeText, setResumeText] = useState(localStorage.getItem('resume_text') || '');
   const [resumeFileName, setResumeFileName] = useState(localStorage.getItem('resume_file_name') || '');
@@ -333,7 +334,7 @@ function App() {
   const [showSessionPrompt, setShowSessionPrompt] = useState(false);
   const [showStartStealthWarning, setShowStartStealthWarning] = useState(false);
   const [showApiKeyMissingError, setShowApiKeyMissingError] = useState(false);
-  const [showNoInputError, setShowNoInputError] = useState(false);
+  // const [showNoInputError, setShowNoInputError] = useState(false);
   const [sessionNameInput, setSessionNameInput] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState('');
   
@@ -1045,8 +1046,7 @@ function App() {
   processAudioRef.current = processAudio;
 
   const manualTriggerAI = async () => {
-    if (!transcript && currentSnapshots.length === 0) {
-      setShowNoInputError(true);
+    if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !transcript) {
       return;
     }
     
@@ -1327,7 +1327,7 @@ function App() {
     setAiAnswer('');
     setCurrentSnapshots([]);
     setIsPaused(false);
-    setShowNoInputError(false);
+    // setShowNoInputError(false);
     isPausedRef.current = false;
   };
 
@@ -1423,16 +1423,9 @@ function App() {
         }
       } else if (key === '0') {
         e.preventDefault();
-        setTranscriptTextColor(prev => prev === 'white' ? 'black' : 'white');
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
-        setIsAnswerMaximized(prev => {
-          if (!prev) {
-            if (!isGenerating) manualTriggerAI();
-            return true;
-          }
-          return false;
-        });
+        if (!isGenerating) manualTriggerAI();
       } else if (key === 'z' || key === '1') {
         e.preventDefault();
         handlePauseToggle();
@@ -1457,7 +1450,7 @@ function App() {
 
     const handleIPCHotkey = (_event: any, action: string) => {
       if (action === 'toggle-color') {
-        setTranscriptTextColor(prev => prev === 'white' ? 'black' : 'white');
+        // do nothing
       } else if (action === 'toggle-pause') {
         handlePauseToggle();
       } else if (action === 'force-ai') {
@@ -2718,224 +2711,182 @@ function App() {
 
       {/* Main UI */}
         {isRecording && (
-          <div className="flex-1 flex flex-col gap-4 min-h-0">
+          <div className="flex-1 flex flex-col gap-6 min-h-0 relative">
+            {/* 1. Top Toolbar (The "Floating Pill") */}
+            <div className="flex items-center justify-between bg-[#09090b]/90 backdrop-blur-md rounded-[2rem] px-4 py-2.5 border border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] shrink-0 w-full mx-auto relative z-20">
+               {/* Left: Mic / Pause */}
+               <button onClick={handlePauseToggle} className="flex items-center justify-center w-11 h-11 rounded-full bg-white/5 hover:bg-white/10 transition-colors shadow-inner">
+                  <Mic size={20} className={!isPaused ? "animate-pulse text-cyan-400 drop-shadow-md" : "text-white/50"} />
+               </button>
+
+               {/* Center: Fake Search Bar / Status */}
+               <div className="flex-1 mx-6 relative group max-w-2xl">
+                  <div className="w-full bg-[#18181b] border border-white/10 rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner">
+                     <span className="tracking-wide">{!isRecording ? "Ask me anything..." : (isGenerating ? "Drafting response..." : (isPaused ? "Paused..." : "Listening to conversation..."))}</span>
+                     <div className="flex items-center gap-3">
+                         {currentSessionHistory.length > 0 && (
+                            <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white shadow-sm tracking-widest">
+                               {currentSessionHistory.length} <MessageSquare size={12} />
+                            </span>
+                         )}
+                     </div>
+                  </div>
+               </div>
+
+               {/* Right: Icons */}
+               <div className="flex items-center gap-2">
+                  <button onClick={() => setShowPreviousQuestions(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-colors text-white shadow-sm" title="History">
+                     <Clock size={20} />
+                  </button>
+                  <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-colors text-white shadow-sm" title="Settings">
+                     <Settings size={20} />
+                  </button>
+               </div>
+            </div>
+
+            {/* 2. Main Conversation Window */}
             <div 
-              className="flex-1 flex flex-col min-h-0 rounded-3xl overflow-hidden transition-all duration-500 ease-in-out"
+              className="flex-1 flex flex-col min-h-0 rounded-[2.5rem] overflow-hidden transition-all duration-500 ease-in-out w-full mx-auto relative z-10"
               style={{ 
-                backgroundColor: `rgba(24, 24, 27, ${opacity * 0.5})`,
-                backdropFilter: opacity < 0.05 ? 'none' : `blur(${opacity * 32}px)`,
-                borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`,
-                borderWidth: '1px',
-                boxShadow: opacity < 0.05 ? 'none' : `0 25px 50px -12px rgba(0, 0, 0, ${opacity * 0.5})`
+                backgroundColor: "rgba(255, 255, 255, 0.4)",
+                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 40}px)`,
+                borderColor: "rgba(255, 255, 255, 0.5)",
+                borderWidth: "1px",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
               }}
             >
-            {/* Left/Top Panel - Transcript */}
-          <div 
-            className={`flex flex-col transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'h-[46px] flex-none' : 'flex-1 min-h-[150px]'}`}
-          >
-          <div 
-            className="px-5 py-3.5 flex justify-between items-center border-b transition-all duration-200"
-            style={{ 
-              backgroundColor: `rgba(255, 255, 255, ${opacity * 0.05})`,
-              borderColor: `rgba(255, 255, 255, ${opacity * 0.05})`
-            }}
-          >
-            <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md relative">
-              <Mic size={14} className={!isPaused ? "animate-pulse text-cyan-400 drop-shadow-md" : "text-white/50"} />
-              Transcript
-              {showNoInputError && (
-                <span className="absolute left-full ml-3 whitespace-nowrap text-[9px] text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 animate-pulse font-black uppercase tracking-wider">
-                  No text is here! Press key Z or 1
-                </span>
-              )}
-            </span>
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 bg-white/5 rounded-md p-0.5 border border-white/10 shrink-0">
-                  <button onClick={() => {
-                    const next = Math.max(10, transcriptTextSize - 1);
-                    setTranscriptTextSize(next);
-                    localStorage.setItem('clueai_transcript_size', next.toString());
-                  }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Decrease Text Size">A-</button>
-                  <span className="text-[10px] text-white/30 font-mono w-4 text-center select-none">{transcriptTextSize}</span>
-                  <button onClick={() => {
-                    const next = Math.min(30, transcriptTextSize + 1);
-                    setTranscriptTextSize(next);
-                    localStorage.setItem('clueai_transcript_size', next.toString());
-                  }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Increase Text Size">A+</button>
-                </div>
-                <span className="text-[10px] text-white/50 font-mono font-bold tracking-wider uppercase drop-shadow-sm shrink-0 hidden sm:block">
-                  {!isRecording ? 'READY' : (isGenerating ? 'ANALYZING...' : (isPaused ? 'PAUSED' : 'LISTENING...'))}
-                </span>
-                <CopyButton 
-                  text={transcript}
-                  className="text-white/30 hover:text-white transition-colors ml-1 shrink-0"
-                  tooltip="Copy Transcript"
-                />
-            </div>
-          </div>
-          <div ref={transcriptScrollRef} className={`flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar relative scroll-smooth transition-opacity duration-300 ${isAnswerMaximized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-            <div 
-              className={`w-full px-5 py-4 bg-transparent font-semibold whitespace-pre-wrap cursor-default select-none leading-relaxed drop-shadow-md ${currentSnapshots.length > 0 ? 'min-h-[120px] flex-none' : 'flex-1 h-full'} ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
-              style={{ fontSize: transcriptTextSize + 'px' }}
-            >
-              {transcript || <span className={transcriptTextColor === 'black' ? "text-black/50" : "text-white/30"}>Listening to interviewer...</span>}
-            </div>
-            {currentSnapshots.length > 0 && (
-              <div className="px-5 pb-4 flex-none min-h-[120px] max-h-[180px] flex gap-3 overflow-x-auto custom-scrollbar relative items-center">
-                {currentSnapshots.map((snap, idx) => (
-                  <div key={idx} className="relative h-[90%] aspect-video rounded-xl overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.2)] border border-cyan-500/30 bg-black/50 group shrink-0">
-                    <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      <button onClick={() => setPreviewSnapshot(snap)} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
-                        <Eye size={14} /> Preview
-                      </button>
-                      <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="px-3 py-1.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
-                        <Trash2 size={14} /> Remove
-                      </button>
-                    </div>
+               {/* Header */}
+               <div className="px-8 py-5 flex justify-between items-center border-b border-black/5 bg-white/30 backdrop-blur-md">
+                  <div>
+                     <h2 className="text-xl font-black text-black tracking-tight drop-shadow-sm">Current Conversation</h2>
+                     <p className="text-[11px] font-bold text-black/60 drop-shadow-sm mt-0.5">{currentSessionHistory.length} messages in this conversation</p>
                   </div>
-                ))}
-                {currentSnapshots.length > 1 && (
-                  <button onClick={() => setCurrentSnapshots([])} className="h-[90%] aspect-square rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex flex-col items-center justify-center gap-2 shrink-0">
-                    <Trash2 size={24} />
-                    <span className="text-xs font-bold">Clear All</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className={`flex gap-2 flex-wrap bg-transparent border-t transition-all duration-500 ease-in-out ${isAnswerMaximized ? 'opacity-0 h-0 p-0 border-transparent overflow-hidden' : 'opacity-100 px-5 py-2 border-white/5'}`}>
-            {['Example', 'Types', 'Explain', 'Pros & Cons', 'Difference'].map(keyword => (
-               <button 
-                  key={keyword}
-                  onClick={() => setTranscript(prev => prev ? `${prev} ${keyword}` : keyword)}
-                  className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/10 shadow-sm"
-               >
-                  + {keyword}
-               </button>
-            ))}
-          </div>
-          <div className={`p-3 transition-all duration-200 ${isAnswerMaximized ? 'opacity-0 h-0 p-0 overflow-hidden' : 'opacity-100 border-t'}`}
-            style={isAnswerMaximized ? {} : { 
-              backgroundColor: `rgba(255, 255, 255, ${opacity * 0.03})`,
-              borderColor: `rgba(255, 255, 255, ${opacity * 0.05})`
-            }}
-          >
-             <button 
-                onClick={() => {
-                  setIsAnswerMaximized(prev => {
-                    if (!prev) {
-                      if (!isGenerating) manualTriggerAI();
-                      return true;
-                    }
-                    return false;
-                  });
-                }}
-                className={`w-full py-1.5 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-white rounded-2xl transition-all flex flex-col items-center justify-center transform active:scale-95 ${isGenerating ? 'opacity-50 shadow-none' : 'shadow-[0_0_15px_rgba(6,182,212,0.3)]'}`}
-             >
-                <div className="flex items-center gap-2 font-bold text-xs">
-                  {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
-                  Generate AI Response
-                </div>
-                <span className="text-[9px] font-medium text-white/90 mt-0.5">Press X or 2</span>
-             </button>
-          </div>
-        </div>
+                  <div className="flex items-center gap-4">
+                     <div className="flex items-center gap-1 bg-black/5 rounded-xl p-1 border border-black/5 shrink-0 shadow-inner">
+                        <button onClick={() => {
+                          const next = Math.max(10, transcriptTextSize - 1);
+                          setTranscriptTextSize(next);
+                          setAiAnswerTextSize(next);
+                        }} className="px-2 py-1.5 hover:bg-black/10 rounded-lg text-black/60 hover:text-black transition-colors font-black text-xs" title="Decrease Text Size">A-</button>
+                        <span className="text-[11px] text-black/60 font-mono w-4 text-center select-none font-black">{transcriptTextSize}</span>
+                        <button onClick={() => {
+                          const next = Math.min(40, transcriptTextSize + 1);
+                          setTranscriptTextSize(next);
+                          setAiAnswerTextSize(next);
+                        }} className="px-2 py-1.5 hover:bg-black/10 rounded-lg text-black/60 hover:text-black transition-colors font-black text-xs" title="Increase Text Size">A+</button>
+                     </div>
+                     <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-[#09090b] hover:bg-black text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-xl hover:shadow-2xl tracking-wide">
+                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : "New Chat"} <ChevronUp size={16} className="opacity-80" />
+                     </button>
+                  </div>
+               </div>
 
-        {/* Right/Bottom Panel - Answer */}
-        <div 
-          className={`flex flex-col transition-all duration-500 flex-1 relative ${isAnswerMaximized ? '' : 'border-t border-white/10'}`}
-        >
-          <div 
-            className="px-5 py-3.5 border-b flex justify-between items-center transition-all duration-200"
-            style={{ 
-              backgroundColor: `rgba(255, 255, 255, ${opacity * 0.05})`,
-              borderColor: `rgba(255, 255, 255, ${opacity * 0.05})`
-            }}
-          >
-            <span className="text-xs font-bold text-white flex items-center gap-2 drop-shadow-md">
-              <Cpu size={14} className="text-fuchsia-400 drop-shadow-md" /> 
-              AI Output
-              {activeAIInfo && (
-                <span className="ml-2 px-2 py-0.5 bg-fuchsia-500/20 text-fuchsia-300 rounded-md text-[10px] uppercase tracking-wider border border-fuchsia-500/30">
-                  {activeAIInfo.provider} (Key {activeAIInfo.index})
-                </span>
-              )}
-            </span>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-white/5 rounded-md p-0.5 border border-white/10 shrink-0">
-                <button onClick={() => {
-                  const next = Math.max(10, aiAnswerTextSize - 1);
-                  setAiAnswerTextSize(next);
-                  localStorage.setItem('clueai_answer_size', next.toString());
-                }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Decrease Text Size">A-</button>
-                <span className="text-[10px] text-white/30 font-mono w-4 text-center select-none">{aiAnswerTextSize}</span>
-                <button onClick={() => {
-                  const next = Math.min(40, aiAnswerTextSize + 1);
-                  setAiAnswerTextSize(next);
-                  localStorage.setItem('clueai_answer_size', next.toString());
-                }} className="px-1.5 py-0.5 hover:bg-white/10 rounded text-white/50 hover:text-white transition-colors font-bold text-xs" title="Increase Text Size">A+</button>
-              </div>
-              <button 
-                onClick={() => setShowPreviousQuestions(true)}
-                className="text-[10px] bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded border border-white/10 uppercase tracking-wider font-bold transition-colors shrink-0"
-              >
-                Previous ({currentSessionHistory.length})
-              </button>
-              <CopyButton 
-                text={aiAnswer}
-                className="text-white/30 hover:text-white transition-colors ml-1 shrink-0"
-                tooltip="Copy Answer"
-              />
-            </div>
-          </div>
-          <div ref={aiAnswerScrollRef} className="flex-1 p-5 overflow-y-auto relative custom-scrollbar scroll-smooth">
-            {aiAnswer ? (
-              <div 
-                className={`leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-md cursor-default select-none ${transcriptTextColor === 'black' ? 'text-black' : 'text-white'}`}
-                style={{ fontSize: aiAnswerTextSize + 'px' }}
-              >
-                <ReactMarkdown
-                  components={{
-                    code({node, inline, className, children, ...props}: any) {
-                      const match = /language-(\w+)/.exec(className || '')
-                      return !inline && match ? (
-                        <div className="relative group/code">
-                          <CopyButton 
-                            text={String(children).replace(/\n$/, '')}
-                            className="absolute top-2 right-2 p-1.5 bg-white/10 hover:bg-white/20 text-white rounded opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                            tooltip="Copy code"
-                          />
-                          <SyntaxHighlighter
-                            {...props}
-                            children={String(children).replace(/\n$/, '')}
-                            style={vscDarkPlus}
-                            language={match[1]}
-                            PreTag="div"
-                            className="rounded-xl border border-white/10 !bg-[#1e1e1e]/90 backdrop-blur-md !my-4 !p-4 !shadow-xl text-[14px]"
-                          />
+               {/* Keyword Tags (Floating just below header) */}
+               <div className="px-8 py-4 flex gap-2 flex-wrap bg-black/[0.02] border-b border-black/5 shadow-inner">
+                 {["Example", "Types", "Explain", "Pros & Cons", "Difference"].map(keyword => (
+                    <button 
+                       key={keyword}
+                       onClick={() => setTranscript(prev => prev ? `${prev} ${keyword}` : keyword)}
+                       className="px-4 py-2 bg-black/10 hover:bg-black/20 text-black/80 hover:text-black rounded-full text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
+                    >
+                       + {keyword}
+                    </button>
+                 ))}
+               </div>
+
+               {/* Scrolling Body containing Transcript and Answer */}
+               <div className="flex-1 overflow-y-auto custom-scrollbar p-10 flex flex-col gap-12 scroll-smooth relative" ref={transcriptScrollRef}>
+                  
+                  {/* Snapshots inserted inline if any */}
+                  {currentSnapshots.length > 0 && (
+                    <div className="flex-none min-h-[140px] max-h-[200px] flex gap-4 overflow-x-auto custom-scrollbar relative items-center pb-2">
+                      {currentSnapshots.map((snap, idx) => (
+                        <div key={idx} className="relative h-[140px] aspect-video rounded-[1.5rem] overflow-hidden shadow-lg border border-black/10 bg-black/50 group shrink-0">
+                          <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                            <button onClick={() => setPreviewSnapshot(snap)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
+                              <Eye size={14} /> Preview
+                            </button>
+                            <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="px-4 py-2 bg-rose-500/80 hover:bg-rose-500 text-white rounded-xl backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
+                              <Trash2 size={14} /> Remove
+                            </button>
+                          </div>
                         </div>
-                      ) : (
-                        <code {...props} className={`${className} bg-black/20 rounded px-1.5 py-0.5 text-[15px]`}>
-                          {children}
-                        </code>
-                      )
-                    }
-                  }}
-                >
-                  {aiAnswer}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 text-xs font-bold tracking-wide text-center px-6 drop-shadow-sm">
-                <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-fuchsia-400/80 animate-spin mb-3"></div>
-                {isGenerating ? 'Drafting response...' : 'Waiting for context...'}
-              </div>
-            )}
-          </div>
-        </div>
-        </div>
-          
+                      ))}
+                      {currentSnapshots.length > 1 && (
+                        <button onClick={() => setCurrentSnapshots([])} className="h-[140px] aspect-square rounded-[1.5rem] bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors flex flex-col items-center justify-center gap-2 shrink-0">
+                          <Trash2 size={24} />
+                          <span className="text-xs font-bold uppercase tracking-wider">Clear</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Transcript Section */}
+                  <div 
+                    className="leading-relaxed whitespace-pre-wrap font-medium text-black/90 drop-shadow-sm px-2"
+                    style={{ fontSize: transcriptTextSize + "px" }}
+                  >
+                     {transcript || <span className="text-black/40 italic">Listening to conversation...</span>}
+                  </div>
+                  
+                  {/* AI Answer Section */}
+                  {aiAnswer ? (
+                     <div 
+                       className="leading-relaxed whitespace-pre-wrap font-bold text-black border-t-2 border-black/10 pt-12 mt-auto drop-shadow-sm relative px-2"
+                       style={{ fontSize: aiAnswerTextSize + "px" }}
+                       ref={aiAnswerScrollRef}
+                     >
+                       {/* Context indicator and Copy */}
+                       <div className="absolute -top-[15px] left-4 flex gap-2">
+                         <div className="bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-black/10 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-600 shadow-sm flex items-center gap-1.5">
+                           <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider}` : "AI Output"}
+                         </div>
+                         <CopyButton text={aiAnswer} className="bg-white/90 hover:bg-white hover:scale-105 backdrop-blur-md px-3 py-1.5 rounded-full border border-black/10 text-black/60 hover:text-black shadow-sm transition-all" tooltip="Copy Answer" size={12} />
+                       </div>
+                       
+                       <ReactMarkdown
+                         components={{
+                           code(props: any) {
+                             const {node, className, children, ...rest} = props;
+                             const match = /language-(\w+)/.exec(className || "");
+                             return match ? (
+                               <div className="relative group/code my-6">
+                                 <CopyButton 
+                                   text={String(children).replace(/\n$/, "")}
+                                   className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                                   tooltip="Copy code"
+                                 />
+                                 <SyntaxHighlighter
+                                   {...rest}
+                                   children={String(children).replace(/\n$/, "")}
+                                   style={vscDarkPlus}
+                                   language={match[1]}
+                                   PreTag="div"
+                                   className="rounded-2xl border border-black/10 !bg-[#1e1e1e]/95 backdrop-blur-md !m-0 !p-6 !shadow-xl text-[14px]"
+                                 />
+                               </div>
+                             ) : (
+                               <code {...rest} className={`${className || ''} bg-black/10 text-black font-bold rounded-lg px-2 py-1 text-[15px]`}>
+                                 {children}
+                               </code>
+                             );
+                           }
+                         }}
+                       >
+                         {aiAnswer}
+                       </ReactMarkdown>
+                     </div>
+                  ) : (
+                    isGenerating && (
+                      <div className="flex flex-col items-center justify-center text-black/50 text-xs font-bold tracking-wide mt-10 p-12 border-t-2 border-black/10 border-dashed rounded-[2rem] bg-black/[0.02]">
+                        <div className="w-10 h-10 rounded-full border-2 border-black/10 border-t-black animate-spin mb-4"></div>
+                        Drafting response...
+                      </div>
+                    )
+                  )}
+               </div>
+            </div>
           {/* Bottom Snapshot History UI */}
           {snapshotHistory.length > 0 && (
             <div className="relative mt-2">
@@ -3751,36 +3702,42 @@ function App() {
 
       {/* Previous Questions Modal */}
       {showPreviousQuestions && (
-        <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl mx-auto bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col h-full overflow-hidden">
-            <div className="px-6 py-4 border-b border-brand-border flex justify-between items-center bg-brand-bg/50">
-              <h2 className="font-black text-xl text-white tracking-wide flex items-center gap-2">
-                <FileText size={20} className="text-brand-accent" />
+        <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-sm flex flex-col p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl mx-auto bg-white/90 backdrop-blur-xl border border-black/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col h-full overflow-hidden">
+            <div className="px-8 py-5 border-b border-black/5 flex justify-between items-center bg-white/50">
+              <h2 className="font-black text-xl text-black tracking-tight flex items-center gap-2">
+                <FileText size={20} className="text-black/60" />
                 Previous Questions (Active Session)
               </h2>
-              <button onClick={() => setShowPreviousQuestions(false)} className="text-white/50 hover:text-white p-2 bg-white/5 hover:bg-rose-500 rounded-lg transition-colors">
+              <button onClick={() => setShowPreviousQuestions(false)} className="text-black/50 hover:text-white p-2 bg-black/5 hover:bg-rose-500 rounded-xl transition-colors shadow-sm">
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-black/[0.02]">
               {currentSessionHistory.length === 0 ? (
-                <div className="text-center text-brand-subtext font-medium italic mt-10">No questions asked in this session yet.</div>
+                <div className="text-center text-black/50 font-medium italic mt-10">No questions asked in this session yet.</div>
               ) : currentSessionHistory.map((item, idx) => (
-                <div key={idx} className="bg-brand-bg/30 border border-white/5 rounded-xl p-5 space-y-4">
+                <div key={idx} className="bg-white border border-black/5 rounded-[1.5rem] p-6 space-y-6 shadow-sm">
                   <div>
-                    <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Mic size={14} /> Transcript {idx + 1}</h3>
-                    <p className="text-white/90 text-sm whitespace-pre-wrap leading-relaxed">{item.question}</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-[11px] font-black text-cyan-600 uppercase tracking-wider flex items-center gap-1.5"><Mic size={14} /> Transcript {idx + 1}</h3>
+                      <CopyButton text={item.question} className="text-black/40 hover:text-black transition-colors" tooltip="Copy Transcript" />
+                    </div>
+                    <p className="text-black/90 text-sm whitespace-pre-wrap leading-relaxed font-medium">{item.question}</p>
                   </div>
-                  <div className="pt-4 border-t border-white/5">
-                    <h3 className="text-xs font-bold text-fuchsia-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Cpu size={14} /> AI Answer</h3>
-                    <div className="text-white text-sm whitespace-pre-wrap leading-relaxed">
+                  <div className="pt-6 border-t border-black/5">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-[11px] font-black text-fuchsia-600 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
+                      <CopyButton text={item.answer} className="text-black/40 hover:text-black transition-colors" tooltip="Copy Answer" />
+                    </div>
+                    <div className="text-black font-bold text-sm whitespace-pre-wrap leading-relaxed">
                       <ReactMarkdown
                         components={{
                           code({inline, children}: any) {
                             return !inline ? (
-                              <div className="bg-black/60 rounded-md p-3 my-2 border border-white/10 font-mono text-xs overflow-x-auto text-blue-300">{children}</div>
+                              <div className="bg-black/[0.03] rounded-xl p-4 my-3 border border-black/5 font-mono text-xs overflow-x-auto text-black/80">{children}</div>
                             ) : (
-                              <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded text-[11px] font-mono">{children}</code>
+                              <code className="bg-black/5 text-fuchsia-600 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
                             )
                           }
                         }}
