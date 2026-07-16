@@ -21,6 +21,7 @@ function createWindow() {
     alwaysOnTop: true,
     focusable: false,
     skipTaskbar: true,
+    type: 'toolbar',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

@@ -2721,9 +2721,9 @@ function App() {
 
                {/* Center: Fake Search Bar / Status */}
                <div className="flex-1 mx-6 relative group max-w-2xl">
-                  <div className="w-full bg-[#18181b] border border-white/10 rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner">
-                     <span className="tracking-wide">{!isRecording ? "Ask me anything..." : (isGenerating ? "Drafting response..." : (isPaused ? "Paused..." : "Listening to conversation..."))}</span>
-                     <div className="flex items-center gap-3">
+                  <div className="w-full bg-[#18181b] border border-white/10 rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden">
+                     <span className="tracking-wide truncate block max-w-[85%]">{!isRecording ? "Ask me anything..." : (isGenerating ? "Drafting response..." : (isPaused ? "Paused..." : (transcript ? transcript : "Listening to conversation...")))}</span>
+                     <div className="flex items-center gap-3 shrink-0">
                          {currentSessionHistory.length > 0 && (
                             <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white shadow-sm tracking-widest">
                                {currentSessionHistory.length} <MessageSquare size={12} />
@@ -2758,7 +2758,7 @@ function App() {
                {/* Header */}
                <div className="px-8 py-5 flex justify-between items-center border-b border-white/10 bg-black/40 backdrop-blur-md">
                   <div>
-                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-sm">Current Conversation</h2>
+                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-sm">Current Answer</h2>
                      <p className="text-[11px] font-bold text-white/50 drop-shadow-sm mt-0.5">{currentSessionHistory.length} messages in this conversation</p>
                   </div>
                   <div className="flex items-center gap-4">
@@ -2795,11 +2795,15 @@ function App() {
                </div>
 
                <div className="flex-1 flex flex-col min-h-0">
-                 {/* Transcript Area (Top) */}
-                 <div className="flex-1 overflow-y-auto custom-scrollbar p-8 flex flex-col gap-6 relative border-b border-white/10 bg-black/20" ref={transcriptScrollRef}>
-                    <div className="absolute top-4 left-6 bg-white/10 backdrop-blur-md px-3 py-1 rounded-md border border-white/10 text-[10px] font-black uppercase tracking-[0.1em] text-cyan-400 flex items-center gap-1.5 z-10 shadow-sm">
-                      <Mic size={12} /> Transcript Area
+                 {/* Generate Area (Bottom) */}
+                 <div className="flex-1 overflow-y-auto custom-scrollbar p-8 relative bg-black/10" ref={aiAnswerScrollRef}>
+                    <div className="absolute top-4 left-6 flex gap-2 z-10">
+                      <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5">
+                        <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider}` : "Generate Area"}
+                      </div>
+                      {aiAnswer && <CopyButton text={aiAnswer} className="bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-white/60 hover:text-white shadow-sm transition-all" tooltip="Copy Answer" size={12} />}
                     </div>
+
                     <div className="mt-8">
                       {/* Snapshots inserted inline if any */}
                       {currentSnapshots.length > 0 && (
@@ -2825,27 +2829,6 @@ function App() {
                           )}
                         </div>
                       )}
-
-                      {/* Transcript Text */}
-                      <div 
-                        className="leading-relaxed whitespace-pre-wrap font-medium text-white/90 drop-shadow-sm px-2"
-                        style={{ fontSize: transcriptTextSize + "px" }}
-                      >
-                         {transcript || <span className="text-white/30 italic">Listening to conversation...</span>}
-                      </div>
-                    </div>
-                 </div>
-
-                 {/* Generate Area (Bottom) */}
-                 <div className="flex-[1.5] overflow-y-auto custom-scrollbar p-8 relative bg-black/10" ref={aiAnswerScrollRef}>
-                    <div className="absolute top-4 left-6 flex gap-2 z-10">
-                      <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5">
-                        <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider}` : "Generate Area"}
-                      </div>
-                      {aiAnswer && <CopyButton text={aiAnswer} className="bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-white/60 hover:text-white shadow-sm transition-all" tooltip="Copy Answer" size={12} />}
-                    </div>
-
-                    <div className="mt-8">
                       {aiAnswer ? (
                          <div 
                            className="leading-relaxed whitespace-pre-wrap font-semibold text-white drop-shadow-sm px-2"
