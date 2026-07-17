@@ -7,5 +7,15 @@ export default defineConfig({
   base: './',
   build: {
     chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      // @ts-ignore
+      checks: {
+        pluginTimings: false
+      },
+      onwarn(warning, warn) {
+        if (warning.code === 'PLUGIN_TIMINGS') return;
+        warn(warning);
+      }
+    }
   }
 })
