@@ -596,12 +596,14 @@ function App() {
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
   useEffect(() => {
-    const needsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
+    const wantsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
+    // If stealth mode is ON, the app must NEVER take focus, otherwise anti-cheat will detect it!
+    const needsFocus = stealthMode ? false : wantsFocus;
     ipcRenderer.invoke('set-focusable', needsFocus);
     // When focusable, we use normal React key events. When in Ghost Mode, we must hijack them globally!
     // But ONLY hijack them globally if an interview is actually running (isRecording)!
     ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
-  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording]);
+  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording, stealthMode]);
 
   useEffect(() => {
     if (showVirtualKeyboard) {
@@ -713,6 +715,11 @@ function App() {
   };
 
   const handleStartCaptureClick = async () => {
+    if (username.trim() === '') {
+      setShowUsernamePrompt(true);
+      return;
+    }
+
     const activeKeys = provider === 'groq' ? groqKeys : geminiKeys;
     const hasActiveKey = activeKeys.some(k => k.trim() !== '');
     const hasGroqKey = groqKeys.some(k => k.trim() !== '');
@@ -724,7 +731,6 @@ function App() {
       return;
     }
     
-
     if (!selectedSource) {
       setAlertMessage({ title: 'Source Missing', message: 'Please select a screen to capture.', type: 'warning' });
       return;
@@ -756,11 +762,16 @@ function App() {
       setShowStartStealthWarning(true);
       return;
     }
-    
+
     setSessionNameInput('');
     setCurrentSessionId('');
     setSessionError('');
-    setShowSessionPrompt(true);
+    if (stealthMode) {
+      // In stealth mode, start immediately to avoid focus prompts
+      startRecording(false, true);
+    } else {
+      setShowSessionPrompt(true);
+    }
   };
 
   const proceedWithInterview = () => {
@@ -768,12 +779,16 @@ function App() {
     setSessionNameInput('');
     setCurrentSessionId('');
     setSessionError('');
-    setShowSessionPrompt(true);
+    if (stealthMode) {
+      startRecording(false, true);
+    } else {
+      setShowSessionPrompt(true);
+    }
   };
 
   const activeAITimeoutRef = useRef<any>(null);
 
-  const startRecording = async (isSilentRestart: boolean | any = false) => {
+  const startRecording = async (isSilentRestart: boolean | any = false, isStealthBypass: boolean = false) => {
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
     if (!selectedSource) {
       setAlertMessage({ title: 'Source Missing', message: 'Screen capture source is missing. Trying to fetch it again... Please wait a moment and try again.', type: 'warning' });
@@ -785,9 +800,9 @@ function App() {
     }
 
     if (!silent) {
-      if (showSessionPrompt) {
+      if (showSessionPrompt || isStealthBypass) {
         if (!currentSessionId) {
-          const name = sessionNameInput.trim();
+          const name = isStealthBypass ? ('Stealth Session ' + new Date().toLocaleTimeString()) : sessionNameInput.trim();
           if (!name) {
             setSessionError('Please enter a session name.');
             return;
