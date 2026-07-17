@@ -344,17 +344,8 @@ function createWindow() {
 
   ipcMain.handle('stop-interview-window', (event) => {
     if (mainWindow) {
-      const { screen } = require('electron');
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width, height } = primaryDisplay.workAreaSize;
-      const w = 1000;
-      const h = 600;
-      mainWindow.setBounds({
-        width: w,
-        height: h,
-        x: Math.round((width - w) / 2),
-        y: Math.round((height - h) / 2)
-      });
+      // Do not resize the window back to default so the size remains constant
+      // when transitioning between main menu and interview view.
     }
   });
 

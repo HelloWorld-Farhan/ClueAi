@@ -766,12 +766,7 @@ function App() {
     setSessionNameInput('');
     setCurrentSessionId('');
     setSessionError('');
-    if (stealthMode) {
-      // In stealth mode, start immediately to avoid focus prompts
-      startRecording(false, true);
-    } else {
-      setShowSessionPrompt(true);
-    }
+    setShowSessionPrompt(true);
   };
 
   const proceedWithInterview = () => {
@@ -779,11 +774,7 @@ function App() {
     setSessionNameInput('');
     setCurrentSessionId('');
     setSessionError('');
-    if (stealthMode) {
-      startRecording(false, true);
-    } else {
-      setShowSessionPrompt(true);
-    }
+    setShowSessionPrompt(true);
   };
 
   const activeAITimeoutRef = useRef<any>(null);
@@ -2736,7 +2727,7 @@ function App() {
 
                {/* Center: Fake Search Bar / Status */}
                <div className="flex-1 mx-6 relative group max-w-2xl">
-                  <div className="w-full bg-[#18181b] border border-white/10 rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden">
+                  <div className="w-full rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden" style={{ backgroundColor: `rgba(24, 24, 27, ${Math.max(0, opacity)})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
                      <span className={`tracking-wide truncate block max-w-[85%] ${altColor ? 'text-black/40' : 'text-white'}`}>
                        {!isRecording 
                          ? "Ask me anything..." 
@@ -2769,15 +2760,15 @@ function App() {
             <div 
               className="flex-1 flex flex-col min-h-0 rounded-[2.5rem] overflow-hidden w-full mx-auto relative z-10"
               style={{ 
-                backgroundColor: altColor ? "rgba(128, 128, 128, 0.2)" : "rgba(24, 24, 27, 0.6)",
+                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
                 backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: altColor ? "rgba(128, 128, 128, 0.2)" : "rgba(255, 255, 255, 0.1)",
+                borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
                 borderWidth: "1px",
-                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+                boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"
               }}
             >
                {/* Header */}
-               <div className="px-8 py-5 flex justify-between items-center border-b border-white/10 bg-black/40 backdrop-blur-md">
+               <div className="px-8 py-5 flex justify-between items-center border-b backdrop-blur-md" style={{ backgroundColor: `rgba(0, 0, 0, ${0.4 * opacity})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})` }}>
                   <div className="flex items-center gap-3">
                      <h2 className="text-xl font-black text-white tracking-tight drop-shadow-sm">AI Answer</h2>
                      <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5">
@@ -2812,7 +2803,7 @@ function App() {
 
                <div className="flex-1 flex flex-col min-h-0">
                  {/* Generate Area (Bottom) */}
-                 <div className={`flex-1 overflow-y-auto custom-scrollbar px-8 pb-8 pt-0 relative ${altColor ? 'bg-gray-500/10' : 'bg-black/10'}`} ref={aiAnswerScrollRef}>
+                 <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-8 pt-0 relative" style={{ backgroundColor: altColor ? `rgba(107, 114, 128, ${0.1 * opacity})` : `rgba(0, 0, 0, ${0.1 * opacity})` }} ref={aiAnswerScrollRef}>
 
                     <div>
                       {/* Snapshots inserted inline if any */}
@@ -2863,7 +2854,8 @@ function App() {
                                          style={vscDarkPlus}
                                          language={match[1]}
                                          PreTag="div"
-                                         className={`rounded-2xl border border-white/10 !bg-black !m-0 !p-6 !shadow-xl text-[14px] ${altColor ? 'opacity-10' : ''}`}
+                                         className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px]`}
+                                         customStyle={{ backgroundColor: `rgba(0,0,0,${opacity})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})` }}
                                        />
                                      </div>
                                    </div>
