@@ -379,7 +379,7 @@ function createWindow() {
 
   ipcMain.handle('minimize-window', () => {
     if (mainWindow) {
-      mainWindow.minimize();
+      mainWindow.hide();
     }
   });
 
@@ -525,10 +525,9 @@ if (!gotTheLock) {
   const { globalShortcut } = require('electron');
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
-      if (mainWindow.isFocused()) {
-        mainWindow.minimize();
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
       } else {
-        if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.showInactive();
       }
     }
