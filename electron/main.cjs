@@ -420,11 +420,15 @@ function createWindow() {
       snipWindow = new BrowserWindow({
         width: width,
         height: height,
+        x: 0,
+        y: 0,
         frame: false,
         transparent: true,
         alwaysOnTop: true,
         focusable: false,
         skipTaskbar: true,
+        show: false,
+        type: 'toolbar',
         enableLargerThanScreen: true,
         roundedCorners: false,
         hasShadow: false,
@@ -436,10 +440,10 @@ function createWindow() {
       });
       
       snipWindow.setContentProtection(isStealthMode);
-      snipWindow.setFullScreen(true);
       snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
       
       snipWindow.webContents.once('did-finish-load', () => {
+        snipWindow.showInactive();
         snipWindow.webContents.send('snip-image', base64Image);
       });
       
