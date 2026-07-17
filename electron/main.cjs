@@ -344,8 +344,7 @@ function createWindow() {
 
   ipcMain.handle('stop-interview-window', (event) => {
     if (mainWindow) {
-      // Do not resize the window back to default so the size remains constant
-      // when transitioning between main menu and interview view.
+      mainWindow.setSize(1000, 600);
     }
   });
 

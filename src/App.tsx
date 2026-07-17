@@ -1055,8 +1055,10 @@ function App() {
   
   processAudioRef.current = processAudio;
 
-  const manualTriggerAI = async () => {
-    if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !transcript) {
+  const manualTriggerAI = async (overrideSnapshots?: string[]) => {
+    const snaps = overrideSnapshots || currentSnapshots;
+    
+    if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !transcript && snaps.length === 0) {
       return;
     }
     
@@ -1064,8 +1066,8 @@ function App() {
     isPausedRef.current = true;
     setIsGenerating(true);
     
-    if (transcript.trim() || aiAnswer.trim()) {
-      setCurrentSessionHistory(prev => [...prev, { question: transcript, answer: aiAnswer, images: [...currentSnapshots] }]);
+    if (transcript.trim() || aiAnswer.trim() || snaps.length > 0) {
+      setCurrentSessionHistory(prev => [...prev, { question: transcript, answer: aiAnswer, images: [...snaps] }]);
     }
     
     setAiAnswer('');
@@ -1079,7 +1081,7 @@ function App() {
       resumePriority,
       personalContextText,
       interviewTitle, 
-      currentSnapshots,
+      snaps,
       (chunk) => {
         finalAnswer += chunk;
         setAiAnswer(prev => prev + chunk);
@@ -2743,6 +2745,30 @@ function App() {
                          )}
                      </div>
                   </div>
+                  
+                  {/* Snapshots inserted inline if any */}
+                  {currentSnapshots.length > 0 && (
+                    <div className="flex-none flex gap-3 overflow-x-auto custom-scrollbar relative items-center py-2 px-4 rounded-2xl bg-black/40 border border-white/5 backdrop-blur-md">
+                      {currentSnapshots.map((snap, idx) => (
+                        <div key={idx} className="relative h-[60px] aspect-video rounded-lg overflow-hidden shadow-sm border border-cyan-500/30 bg-black/80 group shrink-0">
+                          <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                            <button onClick={() => setPreviewSnapshot(snap)} className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur-md transition-colors" title="Preview">
+                              <Eye size={12} />
+                            </button>
+                            <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded backdrop-blur-md transition-colors" title="Remove">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {currentSnapshots.length > 1 && (
+                        <button onClick={() => setCurrentSnapshots([])} className="h-[60px] aspect-square rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors flex flex-col items-center justify-center gap-1 shrink-0" title="Clear All">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                </div>
 
                {/* Right: Icons */}
@@ -2796,7 +2822,16 @@ function App() {
                         }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
                      </div>
                      <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
-                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : "Generate Answer (2)"} <ChevronUp size={16} className="opacity-80" />
+                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
+                          <div className="flex items-center gap-2">
+                            <span>Generate Answer</span>
+                            <div className="flex items-center gap-1 opacity-70 ml-1">
+                              <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
+                              <span className="text-[9px]">/</span>
+                              <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">X</span>
+                            </div>
+                          </div>
+                        )}
                      </button>
                   </div>
                </div>
@@ -2805,31 +2840,6 @@ function App() {
                  {/* Generate Area (Bottom) */}
                  <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-8 pt-0 relative" style={{ backgroundColor: altColor ? `rgba(107, 114, 128, ${0.1 * opacity})` : `rgba(0, 0, 0, ${0.1 * opacity})` }} ref={aiAnswerScrollRef}>
 
-                    <div>
-                      {/* Snapshots inserted inline if any */}
-                      {currentSnapshots.length > 0 && (
-                        <div className="flex-none min-h-[120px] max-h-[160px] flex gap-4 overflow-x-auto custom-scrollbar relative items-center pb-4 mb-6">
-                          {currentSnapshots.map((snap, idx) => (
-                            <div key={idx} className="relative h-[120px] aspect-video rounded-xl overflow-hidden shadow-lg border border-cyan-500/30 bg-black/80 group shrink-0">
-                              <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                <button onClick={() => setPreviewSnapshot(snap)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
-                                  <Eye size={14} /> Preview
-                                </button>
-                                <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="px-4 py-2 bg-rose-500/80 hover:bg-rose-500 text-white rounded-lg backdrop-blur-md transition-colors shadow-lg flex items-center gap-2 font-bold text-xs">
-                                  <Trash2 size={14} /> Remove
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                          {currentSnapshots.length > 1 && (
-                            <button onClick={() => setCurrentSnapshots([])} className="h-[120px] aspect-square rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors flex flex-col items-center justify-center gap-2 shrink-0">
-                              <Trash2 size={24} />
-                              <span className="text-xs font-bold uppercase tracking-wider">Clear</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
                       {aiAnswer ? (
                          <div 
                            className={`leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-sm px-2 ${altColor ? 'text-black/40' : 'text-white'}`}
@@ -3048,7 +3058,7 @@ function App() {
             {/* Glowing Accent Border */}
             <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
             
-            <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full overflow-hidden shadow-[0_0_80px_rgba(0,0,0,1)]">
+            <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full shadow-[0_0_80px_rgba(0,0,0,1)]">
               <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                 <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Initialize Session</h3>
                 <button onClick={() => setShowSessionPrompt(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
@@ -3103,7 +3113,7 @@ function App() {
                 )}
               </div>
               
-              <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md">
+              <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md rounded-b-3xl">
                 <button onClick={() => setShowSessionPrompt(false)} className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
                 <button onClick={startRecording} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] flex items-center gap-2 transform active:scale-95">
                   Start AI Interview <Play size={12} fill="currentColor" />
@@ -3725,6 +3735,14 @@ function App() {
                       <CopyButton text={item.question} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Transcript" />
                     </div>
                     
+                    {item.images && item.images.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto custom-scrollbar mb-4 pb-2">
+                        {item.images.map((img, i) => (
+                          <img key={i} src={img} alt="Snapshot" className="h-[80px] aspect-video object-cover rounded-lg border border-white/10" />
+                        ))}
+                      </div>
+                    )}
+
                     <textarea 
                       value={item.question}
                       onChange={(e) => {
@@ -3766,9 +3784,14 @@ function App() {
                         onClick={() => {
                           setTranscript(item.question);
                           finalizedTranscriptRef.current = item.question;
+                          let snaps = [];
+                          if (item.images && item.images.length > 0) {
+                            snaps = item.images;
+                            setCurrentSnapshots(snaps);
+                          }
                           setShowPreviousQuestions(false);
                           if (!isGenerating) {
-                            manualTriggerAI();
+                            manualTriggerAI(snaps);
                           }
                         }}
                         className="px-4 py-2 bg-brand-accent hover:bg-cyan-400 text-white rounded-lg font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2"
