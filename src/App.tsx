@@ -1067,7 +1067,8 @@ function App() {
     setIsGenerating(true);
     
     if (transcript.trim() || aiAnswer.trim() || snaps.length > 0) {
-      setCurrentSessionHistory(prev => [...prev, { question: transcript, answer: aiAnswer, images: [...snaps] }]);
+      // Create a temporary history item to show the question immediately, we'll update it with the answer later
+      setCurrentSessionHistory(prev => [...prev, { question: transcript, answer: '', images: [...snaps] }]);
     }
     
     setAiAnswer('');
@@ -1095,6 +1096,13 @@ function App() {
     );
     
     if (finalAnswer.trim()) {
+      setCurrentSessionHistory(prev => {
+        const newHistory = [...prev];
+        if (newHistory.length > 0) {
+          newHistory[newHistory.length - 1].answer = finalAnswer;
+        }
+        return newHistory;
+      });
       setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${currentSnapshots.length > 0 ? `[IMAGE_BASE64: MULTIPLE_IMAGES]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
     }
 
@@ -2865,7 +2873,7 @@ function App() {
                                          language={match[1]}
                                          PreTag="div"
                                          className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px]`}
-                                         customStyle={{ backgroundColor: `rgba(0,0,0,${opacity})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})` }}
+                                         customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
                                        />
                                      </div>
                                    </div>
@@ -2874,6 +2882,12 @@ function App() {
                                      {children}
                                    </code>
                                  );
+                               },
+                               ul({children, ...props}: any) {
+                                 return <ul className="flex flex-col gap-0 my-2" {...props}>{children}</ul>
+                               },
+                               li({node, children, ...props}: any) {
+                                 return <li className="flex items-start gap-2 mb-0" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
                                }
                              }}
                            >
@@ -3811,10 +3825,16 @@ function App() {
                           components={{
                             code({inline, children}: any) {
                               return !inline ? (
-                                <div className="bg-black/40 rounded-xl p-4 my-3 border border-white/5 font-mono text-xs overflow-x-auto text-white/80">{children}</div>
+                                <div className="bg-[#000000] rounded-xl p-4 my-3 border border-white/5 font-mono text-xs overflow-x-auto text-white/80">{children}</div>
                               ) : (
                                 <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
                               )
+                            },
+                            ul({children, ...props}: any) {
+                              return <ul className="flex flex-col gap-0 my-2" {...props}>{children}</ul>
+                            },
+                            li({node, children, ...props}: any) {
+                              return <li className="flex items-start gap-2 mb-0" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
                             }
                           }}
                         >

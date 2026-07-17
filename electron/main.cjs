@@ -345,6 +345,7 @@ function createWindow() {
   ipcMain.handle('stop-interview-window', (event) => {
     if (mainWindow) {
       mainWindow.setSize(1000, 600);
+      mainWindow.center();
     }
   });
 
