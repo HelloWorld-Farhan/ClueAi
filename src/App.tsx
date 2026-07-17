@@ -2857,7 +2857,7 @@ function App() {
                              components={{
                                code(props: any) {
                                  const {node, className, children, ...rest} = props;
-                                 const match = /language-(w+)/.exec(className || "");
+                                 const match = /language-(\w+)/.exec(className || "");
                                  return match ? (
                                    <div className="w-full flex justify-center my-6">
                                      <div className="relative group/code max-w-3xl w-full">

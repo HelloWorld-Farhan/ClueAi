@@ -344,8 +344,17 @@ function createWindow() {
 
   ipcMain.handle('stop-interview-window', (event) => {
     if (mainWindow) {
-      mainWindow.setSize(1000, 600);
-      mainWindow.center();
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.workAreaSize;
+      const w = 1000;
+      const h = 600;
+      mainWindow.setBounds({
+        width: w,
+        height: h,
+        x: Math.round((width - w) / 2),
+        y: Math.round((height - h) / 2)
+      });
     }
   });
 
