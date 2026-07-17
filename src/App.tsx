@@ -325,9 +325,9 @@ function App() {
   const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
   // Snapshot States
   const [currentSnapshots, setCurrentSnapshots] = useState<string[]>([]);
-  const [snapshotHistory, setSnapshotHistory] = useState<{id: string, image: string, transcriptContext: string}[]>([]);
+  
   const [previewSnapshot, setPreviewSnapshot] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{x: number, y: number, id: string | null}>({x: 0, y: 0, id: null});
+  
 
   // Session History
   const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string, snapshotHistory?: {id: string, image: string, transcriptContext: string}[]}[]>(() => {
@@ -1120,11 +1120,7 @@ function App() {
     }
     
     if (currentSnapshots.length > 0) {
-      setSnapshotHistory(prev => {
-        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshots[currentSnapshots.length-1], transcriptContext: transcript }];
-        if (newHistory.length > 4) return newHistory.slice(newHistory.length - 4);
-        return newHistory;
-      });
+      
     }
 
     setTranscript('');
@@ -1146,7 +1142,7 @@ function App() {
     if (!silent) {
       setIsRecording(false);
       setIsPaused(false);
-      setSnapshotHistory([]);
+      
       setCurrentSnapshots([]);
       setCurrentSessionHistory([]);
     }
@@ -1332,11 +1328,7 @@ function App() {
 
   const resumeListening = () => {
     if (currentSnapshots.length > 0) {
-      setSnapshotHistory(prev => {
-        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshots[currentSnapshots.length-1], transcriptContext: transcript }];
-        if (newHistory.length > 4) return newHistory.slice(newHistory.length - 4);
-        return newHistory;
-      });
+      
     }
     
     setTranscript('');
@@ -1366,10 +1358,7 @@ function App() {
 
   const handleClearAll = () => {
     if (currentSnapshots.length > 0) {
-      setSnapshotHistory(prev => {
-        const newHistory = [...prev, { id: Date.now().toString(), image: currentSnapshots[currentSnapshots.length-1], transcriptContext: transcript }];
-        return newHistory.length > 4 ? newHistory.slice(newHistory.length - 4) : newHistory;
-      });
+      
     }
     setTranscript(''); 
     finalizedTranscriptRef.current = '';
@@ -2883,8 +2872,20 @@ function App() {
                                    </code>
                                  );
                                },
+                               p({children, ...props}: any) {
+                                 return <p className="m-0 mb-1" {...props}>{children}</p>
+                               },
+                               h1({children, ...props}: any) {
+                                 return <h1 className="m-0 mb-1 text-lg font-bold" {...props}>{children}</h1>
+                               },
+                               h2({children, ...props}: any) {
+                                 return <h2 className="m-0 mb-1 text-base font-bold" {...props}>{children}</h2>
+                               },
+                               h3({children, ...props}: any) {
+                                 return <h3 className="m-0 mb-1 text-sm font-bold" {...props}>{children}</h3>
+                               },
                                ul({children, ...props}: any) {
-                                 return <ul className="flex flex-col gap-0 my-2" {...props}>{children}</ul>
+                                 return <ul className="flex flex-col gap-0 my-1" {...props}>{children}</ul>
                                },
                                li({node, children, ...props}: any) {
                                  return <li className="flex items-start gap-2 mb-0" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
@@ -2910,74 +2911,7 @@ function App() {
                </div>
             </div>
 
-          {/* Bottom Snapshot History UI */}
-          {snapshotHistory.length > 0 && (
-            <div className="relative mt-2">
-              <div className="flex justify-between items-center mb-1.5 px-2">
-                <h4 className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                  <Crop size={10} /> Snap Records
-                </h4>
-                <span className="text-[9px] font-bold text-brand-subtext uppercase">Max 4 Snaps (Auto-Rotate)</span>
-              </div>
-              <div className="h-[80px] shrink-0 bg-[#18181b] rounded-2xl border border-white/5 flex items-center p-2 gap-3 overflow-x-auto shadow-inner transition-all duration-300 relative z-10" style={{ 
-                backgroundColor: `rgba(24, 24, 27, ${opacity * 0.95})`,
-                borderColor: `rgba(255, 255, 255, ${opacity * 0.1})`
-              }}>
-                {snapshotHistory.map((snap) => (
-                  <div key={snap.id} className="relative h-full aspect-video group flex-shrink-0">
-                    <div className="w-full h-full rounded-xl overflow-hidden bg-black/50 border border-white/10">
-                      <img src={snap.image} alt="History Snapshot" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    
-                    {/* Hover Overlay */}
-                    <div className={`absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center rounded-xl ${menuPos.id === snap.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      <button className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" onClick={(e) => {
-                        if (menuPos.id === snap.id) {
-                          setMenuPos({ x: 0, y: 0, id: null });
-                        } else {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setMenuPos({ x: rect.left + rect.width / 2, y: rect.top - 10, id: snap.id });
-                        }
-                      }}>
-                        <MoreVertical size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
 
-              {/* Outside Menu Popup to avoid CSS clipping */}
-              {menuPos.id && snapshotHistory.find(s => s.id === menuPos.id) && (() => {
-                const snap = snapshotHistory.find(s => s.id === menuPos.id)!;
-                return (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setMenuPos({x: 0, y: 0, id: null})}></div>
-                    <div style={{ left: menuPos.x + 15, top: menuPos.y - 65, transform: 'translate(0%, -50%)' }} className="fixed bg-[#09090b] border border-brand-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden min-w-[200px] animate-in slide-in-from-left-2 fade-in duration-200">
-                      <div className="text-center px-4 py-3 border-b border-white/5 bg-white/5">
-                        <span className="text-[10px] uppercase font-bold text-brand-subtext tracking-widest">Snapshot Options</span>
-                      </div>
-                      <button onClick={() => { setPreviewSnapshot(snap.image); setMenuPos({x: 0, y: 0, id: null}); }} className="w-full text-left px-4 py-3 text-xs text-white hover:bg-brand-secondary flex items-center gap-3 transition-colors">
-                        <Eye size={14} /> Preview Fullscreen
-                      </button>
-                      <button onClick={() => { 
-                        setTranscript(snap.transcriptContext || ''); 
-                        setCurrentSnapshots([snap.image]); 
-                        setMenuPos({x: 0, y: 0, id: null}); 
-                      }} className="w-full text-left px-4 py-3 text-xs text-cyan-400 hover:bg-brand-secondary flex items-center gap-3 transition-colors border-t border-brand-border">
-                        <Play size={14} fill="currentColor" /> Ask AI Again
-                      </button>
-                      <button onClick={() => { 
-                        setSnapshotHistory(prev => prev.filter(s => s.id !== snap.id)); 
-                        setMenuPos({x: 0, y: 0, id: null}); 
-                      }} className="w-full text-left px-4 py-3 text-xs text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 flex items-center gap-3 transition-colors border-t border-brand-border">
-                        <Trash2 size={14} /> Delete Snapshot
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
         </div>
       )}
       
@@ -3830,8 +3764,20 @@ function App() {
                                 <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
                               )
                             },
+                            p({children, ...props}: any) {
+                              return <p className="m-0 mb-1" {...props}>{children}</p>
+                            },
+                            h1({children, ...props}: any) {
+                              return <h1 className="m-0 mb-1 text-lg font-bold" {...props}>{children}</h1>
+                            },
+                            h2({children, ...props}: any) {
+                              return <h2 className="m-0 mb-1 text-base font-bold" {...props}>{children}</h2>
+                            },
+                            h3({children, ...props}: any) {
+                              return <h3 className="m-0 mb-1 text-sm font-bold" {...props}>{children}</h3>
+                            },
                             ul({children, ...props}: any) {
-                              return <ul className="flex flex-col gap-0 my-2" {...props}>{children}</ul>
+                              return <ul className="flex flex-col gap-0 my-1" {...props}>{children}</ul>
                             },
                             li({node, children, ...props}: any) {
                               return <li className="flex items-start gap-2 mb-0" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
@@ -3855,3 +3801,4 @@ function App() {
 }
 
 export default App;
+

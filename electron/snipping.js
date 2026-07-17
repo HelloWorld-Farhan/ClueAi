@@ -16,6 +16,11 @@ ipcRenderer.on('snip-image', (event, base64Image) => {
 });
 
 window.addEventListener('mousedown', (e) => {
+  if (e.button === 2) {
+    // Right click -> cancel
+    ipcRenderer.send('snip-cancel');
+    return;
+  }
   isDrawing = true;
   document.body.classList.add('drawing');
   startX = e.clientX;
@@ -97,8 +102,7 @@ window.addEventListener('mouseup', (e) => {
   ipcRenderer.send('snip-complete', croppedDataUrl);
 });
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    ipcRenderer.send('snip-cancel');
-  }
-});
+// Cancellation using right-click is handled in mousedown
+// window.addEventListener('keydown') removed to prevent focus stealing
+
+window.addEventListener('contextmenu', e => e.preventDefault());

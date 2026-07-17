@@ -448,22 +448,10 @@ function createWindow() {
         snipWindow.webContents.send('snip-image', base64Image);
       });
       
-      const unregisterEsc = () => {
-        try { globalShortcut.unregister('Escape'); } catch(e) {}
-      };
-      
-      try {
-        globalShortcut.register('Escape', () => {
-          if (snipWindow) { snipWindow.close(); snipWindow = null; }
-          unregisterEsc();
-        });
-      } catch(e) {}
-      
       return new Promise((resolve) => {
         // Auto-abort after 15 seconds to prevent freezing if hidden behind exclusive fullscreen
         const timeout = setTimeout(() => {
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
-          unregisterEsc();
           if (mainWindow) mainWindow.setOpacity(1);
           resolve(null);
         }, 15000);
@@ -471,20 +459,17 @@ function createWindow() {
         ipcMain.once('snip-complete', (e, b64) => {
           clearTimeout(timeout);
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
-          unregisterEsc();
           if (mainWindow) mainWindow.setOpacity(1);
           resolve(b64);
         });
         
         ipcMain.once('snip-cancel', () => {
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
-          unregisterEsc();
           resolve(null);
         });
         
         snipWindow.on('closed', () => {
           snipWindow = null;
-          unregisterEsc();
           if (mainWindow) mainWindow.setOpacity(1);
           resolve(null);
         });
@@ -493,7 +478,6 @@ function createWindow() {
     } catch (err) {
       console.error('Snipping error:', err);
       if (snipWindow) { snipWindow.close(); snipWindow = null; }
-      try { globalShortcut.unregister('Escape'); } catch(e) {}
       if (mainWindow) mainWindow.setOpacity(1);
       return null;
     }
