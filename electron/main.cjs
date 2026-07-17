@@ -439,6 +439,7 @@ function createWindow() {
         }
       });
       
+      snipWindow.setAlwaysOnTop(true, 'screen-saver');
       snipWindow.setContentProtection(isStealthMode);
       snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
       
@@ -459,7 +460,16 @@ function createWindow() {
       } catch(e) {}
       
       return new Promise((resolve) => {
+        // Auto-abort after 15 seconds to prevent freezing if hidden behind exclusive fullscreen
+        const timeout = setTimeout(() => {
+          if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          unregisterEsc();
+          if (mainWindow) mainWindow.setOpacity(1);
+          resolve(null);
+        }, 15000);
+
         ipcMain.once('snip-complete', (e, b64) => {
+          clearTimeout(timeout);
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
           unregisterEsc();
           if (mainWindow) mainWindow.setOpacity(1);
