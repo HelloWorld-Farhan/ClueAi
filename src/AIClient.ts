@@ -2,12 +2,12 @@ import OpenAI from 'openai';
 
 let groqClients: OpenAI[] = [];
 let geminiApiKeys: string[] = [];
-let currentProvider: 'groq' | 'gemini' = 'groq';
+let currentProvider: 'groq' | 'gemini-flash' | 'gemini-pro' = 'groq';
 
 let currentGroqIndex = 0;
 let currentGeminiIndex = 0;
 
-export function initAIClient(provider: 'groq' | 'gemini', groqKeys: string[], geminiKeys: string[]) {
+export function initAIClient(provider: 'groq' | 'gemini-flash' | 'gemini-pro', groqKeys: string[], geminiKeys: string[]) {
   currentProvider = provider;
   
   groqClients = groqKeys.filter(k => k.trim()).map(key => new OpenAI({
@@ -21,7 +21,7 @@ export function initAIClient(provider: 'groq' | 'gemini', groqKeys: string[], ge
   currentGeminiIndex = 0;
 }
 
-export function switchProvider(provider: 'groq' | 'gemini') {
+export function switchProvider(provider: 'groq' | 'gemini-flash' | 'gemini-pro') {
   currentProvider = provider;
 }
 
@@ -37,7 +37,7 @@ export async function getInterviewAnswer(
   onStart: (info: {provider: string, index: number}) => void = () => {}
 ) {
   if (currentProvider === 'groq' && groqClients.length === 0) return;
-  if (currentProvider === 'gemini' && geminiApiKeys.length === 0) return;
+  if (currentProvider.startsWith('gemini') && geminiApiKeys.length === 0) return;
 
   try {
     let contextPrompt = '';
@@ -159,14 +159,16 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         const content = chunk.choices[0]?.delta?.content || '';
         onChunk(content);
       }
-    } else if (currentProvider === 'gemini' && geminiApiKeys.length > 0) {
+    } else if (currentProvider.startsWith('gemini') && geminiApiKeys.length > 0) {
       const key = geminiApiKeys[currentGeminiIndex];
       const usedIndex = currentGeminiIndex;
       currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
       
-      onStart({ provider: 'gemini', index: usedIndex + 1 });
+      const uiProviderName = currentProvider === 'gemini-pro' ? 'Gemini Pro' : 'Gemini Flash';
+      onStart({ provider: uiProviderName, index: usedIndex + 1 });
       
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:streamGenerateContent?alt=sse&key=${key.trim()}`;
+      const modelName = currentProvider === 'gemini-pro' ? 'gemini-1.5-pro-latest' : 'gemini-1.5-flash-latest';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
       if (imageArray && imageArray.length > 0) {

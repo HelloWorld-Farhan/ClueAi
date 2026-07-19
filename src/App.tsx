@@ -134,7 +134,7 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const [provider, setProvider] = useState<'groq' | 'gemini'>('groq');
+  const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'gemini-pro'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
     try { 
       const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]'); 
@@ -1485,10 +1485,10 @@ function App() {
         handleClearAll();
       } else if (key === 's' || key === '5') {
         e.preventDefault();
-        const newProvider = provider === 'groq' ? 'gemini' : 'groq';
+        const newProvider = provider === 'groq' ? 'gemini-flash' : provider === 'gemini-flash' ? 'gemini-pro' : 'groq';
         setProvider(newProvider);
         switchProvider(newProvider);
-        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}`);
+        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : newProvider === 'gemini-flash' ? 'Gemini Flash' : 'Gemini Pro'}`);
         setTimeout(() => setModelChangeMsg(''), 3000);
       } else if (key === 'd' || key === '6') {
         e.preventDefault();
@@ -1528,10 +1528,10 @@ function App() {
       } else if (action === 'snapshot') {
         handleSnipClick();
       } else if (action === 'switch-model') {
-        const newProvider = provider === 'groq' ? 'gemini' : 'groq';
+        const newProvider = provider === 'groq' ? 'gemini-flash' : provider === 'gemini-flash' ? 'gemini-pro' : 'groq';
         setProvider(newProvider);
         switchProvider(newProvider);
-        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini'}`);
+        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : newProvider === 'gemini-flash' ? 'Gemini Flash' : 'Gemini Pro'}`);
         setTimeout(() => setModelChangeMsg(''), 3000);
       } else if (action === 'stop-generation') {
         stopRecording();
@@ -1914,15 +1914,16 @@ function App() {
                     <div className="flex flex-col items-center group">
                       <CustomSelect 
                         value={provider} 
-                        onChange={(val: 'groq' | 'gemini') => {
+                        onChange={(val: 'groq' | 'gemini-flash' | 'gemini-pro') => {
                           setProvider(val);
                           switchProvider(val);
-                          setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini'}`);
+                          setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : val === 'gemini-flash' ? 'Gemini Flash' : 'Gemini Pro'}`);
                           setTimeout(() => setModelChangeMsg(''), 3000);
                         }} 
                         options={[
                           { value: 'groq', label: '⚡ Groq API' },
-                          { value: 'gemini', label: '🧠 Gemini Flash' }
+                          { value: 'gemini-flash', label: '✨ Gemini Flash' },
+                          { value: 'gemini-pro', label: '🧠 Gemini Pro' }
                         ]}
                         className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
                       icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
@@ -2215,7 +2216,8 @@ function App() {
                     onChange={(val: any) => setProvider(val)} 
                     options={[
                       { value: 'groq', label: 'Groq (Llama 3 - Default)' },
-                      { value: 'gemini', label: 'Google Gemini (1.5 Flash)' }
+                      { value: 'gemini-flash', label: 'Google Gemini (1.5 Flash)' },
+                      { value: 'gemini-pro', label: 'Google Gemini (1.5 Pro)' }
                     ]}
                     className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
                   />
