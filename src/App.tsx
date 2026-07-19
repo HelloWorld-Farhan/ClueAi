@@ -1601,8 +1601,26 @@ function App() {
             }}
           >
             {/* Top Bar */}
-            <div className="flex items-start justify-between p-4 border-b border-white/10 shrink-0 gap-4">
-                 <div className="flex-1 min-w-0 pr-4">
+            <div 
+              className="flex items-start justify-between p-4 border-b border-white/10 shrink-0 gap-4 drag-area"
+              onPointerDown={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
+                  ipcRenderer.send('start-drag');
+                  target.setPointerCapture(e.pointerId);
+                }
+              }}
+              onPointerUp={(e) => {
+                ipcRenderer.send('stop-drag');
+                (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+              }}
+            >
+              <div className="flex items-center gap-3 no-drag shrink-0 pt-2">
+                <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
+                  <Move size={16} />
+                </div>
+              </div>
+                 <div className="flex-1 min-w-0 pr-4 no-drag">
                    <div className="text-white/80 font-semibold select-text w-full bg-black/20 p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
@@ -1719,8 +1737,8 @@ function App() {
             </div>
             
             {/* AI Answer Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-transparent">
-               <div className="max-w-4xl mx-auto text-white/90 font-bold whitespace-pre-wrap leading-relaxed" style={{ fontSize: aiAnswerTextSize + "px" }}>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-transparent no-drag">
+               <div className={`max-w-4xl mx-auto font-bold whitespace-pre-wrap leading-relaxed ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
                       components={{
