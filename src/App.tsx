@@ -350,6 +350,31 @@ function App() {
   const [activeAIInfo, setActiveAIInfo] = useState<{provider: string, index: number} | null>(null);
   const [modelChangeMsg, setModelChangeMsg] = useState('');
   const [globalHotkeysEnabled, setGlobalHotkeysEnabled] = useState(true);
+
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        if (globalHotkeysEnabled) {
+          ipcRenderer.invoke('toggle-global-hotkeys', false);
+        }
+      }
+    };
+    const handleFocusOut = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        if (globalHotkeysEnabled) {
+          ipcRenderer.invoke('toggle-global-hotkeys', true);
+        }
+      }
+    };
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('focusout', handleFocusOut);
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('focusout', handleFocusOut);
+    };
+  }, [globalHotkeysEnabled]);
   const [showInfo, setShowInfo] = useState(false);
 
   const groqValidationCache = useRef<Record<string, boolean>>({});
@@ -1584,6 +1609,44 @@ function App() {
                      </div>
                      <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed w-full custom-scrollbar pr-2 max-h-[150px] overflow-y-auto">
                        {transcript || "No transcript provided."}
+                       {currentSnapshots.length > 0 && (
+                         <div className="mt-3 pt-3 border-t border-white/10">
+                           <div className="flex items-center gap-2 flex-wrap">
+                             {currentSnapshots.map((snap, idx) => (
+                               <div key={idx} className="relative group/snap rounded-lg overflow-hidden border border-white/20 w-16 h-12 shrink-0">
+                                 <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
+                                 <button 
+                                   onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))}
+                                   className="absolute top-0 right-0 p-1 bg-rose-500/90 hover:bg-rose-500 text-white rounded-bl-lg opacity-0 group-hover/snap:opacity-100 transition-opacity"
+                                 >
+                                   <X size={10} />
+                                 </button>
+                               </div>
+                             ))}
+                             
+                             <button
+                               onClick={async () => {
+                                 setIsPaused(true);
+                                 isPausedRef.current = true;
+                                 const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
+                                 if (!base64Img) {
+                                   setIsPaused(false);
+                                   isPausedRef.current = false;
+                                   return;
+                                 }
+                                 setCurrentSnapshots(prev => [...prev, base64Img]);
+                                 setIsPaused(false);
+                                 isPausedRef.current = false;
+                               }}
+                               className="w-16 h-12 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg border border-white/20 border-dashed text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+                               title="Add Snapshot"
+                             >
+                               <Plus size={14} />
+                               <span className="text-[8px] uppercase font-bold mt-0.5 tracking-wider">Add</span>
+                             </button>
+                           </div>
+                         </div>
+                       )}
                      </div>
                    </div>
                  </div>
