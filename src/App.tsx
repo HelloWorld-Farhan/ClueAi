@@ -1885,12 +1885,14 @@ function App() {
                   <span className="text-[9px] font-black uppercase text-white/70 mt-1">Hotkeys</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {modelChangeMsg && !isAiFullscreen && (
-                     <span className="text-emerald-400 text-[10px] font-bold animate-in fade-in slide-in-from-right-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20 shadow-sm shrink-0">
-                       <CheckCircle2 size={10} /> {modelChangeMsg}
-                     </span>
-                  )}
                   <div className="relative group">
+                    {modelChangeMsg && !isAiFullscreen && (
+                       <div className="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-max z-50">
+                         <span className="text-emerald-400 text-[10px] font-bold animate-in fade-in slide-in-from-top-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20 shadow-lg whitespace-nowrap">
+                           <CheckCircle2 size={10} /> {modelChangeMsg}
+                         </span>
+                       </div>
+                    )}
                     <div className="flex flex-col items-center group">
                       <CustomSelect 
                         value={provider} 
