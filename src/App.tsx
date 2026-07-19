@@ -3,7 +3,7 @@ import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelT
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
-const { ipcRenderer, shell } = window.require('electron');
+const { ipcRenderer, shell, clipboard } = window.require('electron');
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -22,7 +22,7 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
       setTimeout(() => setEmpty(false), 2000);
       return;
     }
-    navigator.clipboard.writeText(text);
+    clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -1639,7 +1639,7 @@ function App() {
                     <button
                       onClick={() => {
                         if (!aiAnswer) return;
-                        navigator.clipboard.writeText(aiAnswer);
+                        clipboard.writeText(aiAnswer);
                         setAiCopied(true);
                         setTimeout(() => setAiCopied(false), 2000);
                       }}
