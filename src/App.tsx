@@ -564,6 +564,9 @@ function App() {
     
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAiFullscreen, setIsAiFullscreen] = useState(false);
+  const [aiCopied, setAiCopied] = useState(false);
+
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<any>(null);
 
@@ -1055,20 +1058,22 @@ function App() {
   
   processAudioRef.current = processAudio;
 
-  const manualTriggerAI = async (overrideSnapshots?: string[]) => {
+  const manualTriggerAI = async (overrideSnapshots?: string[], overrideTranscript?: string) => {
     const snaps = overrideSnapshots || currentSnapshots;
+    const currentTranscript = overrideTranscript !== undefined ? overrideTranscript : transcript;
     
-    if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !transcript && snaps.length === 0) {
+    if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !currentTranscript && snaps.length === 0) {
       return;
     }
     
     setIsPaused(true);
     isPausedRef.current = true;
     setIsGenerating(true);
+    setIsAiFullscreen(true);
     
-    if (transcript.trim() || aiAnswer.trim() || snaps.length > 0) {
+    if (currentTranscript.trim() || aiAnswer.trim() || snaps.length > 0) {
       // Create a temporary history item to show the question immediately, we'll update it with the answer later
-      setCurrentSessionHistory(prev => [...prev, { question: transcript, answer: '', images: [...snaps] }]);
+      setCurrentSessionHistory(prev => [...prev, { question: currentTranscript, answer: '', images: [...snaps] }]);
     }
     
     setAiAnswer('');
@@ -1076,7 +1081,7 @@ function App() {
     let currentProviderInfo = '';
 
     await getInterviewAnswer(
-      transcript, 
+      currentTranscript, 
       resumeText,
       resumeText2,
       resumePriority,
@@ -1142,6 +1147,7 @@ function App() {
     if (!silent) {
       setIsRecording(false);
       setIsPaused(false);
+      setIsAiFullscreen(false);
       
       setCurrentSnapshots([]);
       setCurrentSessionHistory([]);
@@ -1437,7 +1443,18 @@ function App() {
         if (!isGenerating) manualTriggerAI();
       } else if (key === 'z' || key === '1') {
         e.preventDefault();
-        handlePauseToggle();
+        if (isAiFullscreen) {
+          setIsAiFullscreen(false);
+          setTranscript('');
+          finalizedTranscriptRef.current = '';
+          interimTranscriptRef.current = '';
+          setAiAnswer('');
+          setCurrentSnapshots([]);
+          setIsPaused(false);
+          isPausedRef.current = false;
+        } else {
+          handlePauseToggle();
+        }
       } else if (key === 'c' || key === '3') {
         e.preventDefault();
         handleClearAll();
@@ -1461,11 +1478,26 @@ function App() {
       if (action === 'toggle-color') {
         setAltColor(prev => !prev);
       } else if (action === 'toggle-pause') {
-        handlePauseToggle();
+        if (isAiFullscreen) {
+          setIsAiFullscreen(false);
+          setTranscript('');
+          finalizedTranscriptRef.current = '';
+          interimTranscriptRef.current = '';
+          setAiAnswer('');
+          setCurrentSnapshots([]);
+          setIsPaused(false);
+          isPausedRef.current = false;
+        } else {
+          handlePauseToggle();
+        }
       } else if (action === 'force-ai') {
         if (!isGenerating) manualTriggerAI();
       } else if (action === 'clear-all') {
-        handleClearAll();
+        if (isAiFullscreen) {
+          stopRecording();
+        } else {
+          handleClearAll();
+        }
       } else if (action === 'show-size-warning') {
         setShowMinSizeWarning(true);
       } else if (action === 'snapshot') {
@@ -1494,7 +1526,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown);
       ipcRenderer.off('trigger-hotkey', handleIPCHotkey);
     };
-  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider]);
+  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider, isAiFullscreen]);
 
   const closeApp = () => window.close();
   const minimizeApp = () => {
@@ -1528,10 +1560,168 @@ function App() {
         </div>
       )}
       
-      <div 
-        className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
-        style={{ backgroundColor: !isRecording ? '#09090b' : 'transparent', transition: 'none' }}
-      >
+        <div 
+          className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
+          style={{ backgroundColor: (!isRecording && !isAiFullscreen) ? '#09090b' : 'transparent', transition: 'none' }}
+        >
+        {isAiFullscreen ? (
+          <div 
+            className="flex flex-col w-full h-full overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto"
+            style={{ 
+              backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
+              backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
+              borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
+              borderWidth: "1px",
+              boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"
+            }}
+          >
+            {/* Top Bar */}
+            <div className="flex items-start justify-between p-4 border-b border-white/10 shrink-0 gap-4">
+                 <div className="flex-1 min-w-0 pr-4">
+                   <div className="text-white/80 font-semibold select-text w-full bg-black/20 p-3 rounded-xl border border-white/5 shadow-inner">
+                     <div className="flex items-center justify-between mb-2">
+                       <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
+                     </div>
+                     <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed w-full custom-scrollbar pr-2 max-h-[150px] overflow-y-auto">
+                       {transcript || "No transcript provided."}
+                     </div>
+                   </div>
+                 </div>
+               
+               <div className="flex items-center gap-3 shrink-0 mt-1">
+                  {modelChangeMsg && (
+                     <span className="text-emerald-400 text-xs font-bold animate-in fade-in slide-in-from-right-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1.5 rounded-md border border-emerald-400/20">
+                        <CheckCircle2 size={12} /> {modelChangeMsg}
+                     </span>
+                  )}
+                  <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
+                     <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
+                  </div>
+                  <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
+                     <button onClick={() => {
+                       const next = Math.max(10, aiAnswerTextSize - 1);
+                       setAiAnswerTextSize(next);
+                       localStorage.setItem('clueai_answer_size', next.toString());
+                     }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Decrease Text Size">A-</button>
+                     <span className="text-[11px] text-white/50 font-mono w-4 text-center select-none font-black">{aiAnswerTextSize}</span>
+                     <button onClick={() => {
+                       const next = Math.min(40, aiAnswerTextSize + 1);
+                       setAiAnswerTextSize(next);
+                       localStorage.setItem('clueai_answer_size', next.toString());
+                     }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsAiFullscreen(false);
+                      setTranscript('');
+                      finalizedTranscriptRef.current = '';
+                      interimTranscriptRef.current = '';
+                      setAiAnswer('');
+                      setCurrentSnapshots([]);
+                      setIsPaused(false);
+                      isPausedRef.current = false;
+                    }} 
+                    title="Next Question (Press Z or 1)"
+                    className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0"
+                  >
+                    <Play size={12} fill="currentColor" /> NEXT Q. <span className="opacity-70 text-[8px] bg-black/20 px-1 rounded ml-0.5">1</span>
+                  </button>
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    <button 
+                      onClick={() => {
+                        stopRecording();
+                      }}
+                      title="Stop Session (Press C or 3)"
+                      className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
+                    >
+                      <Square size={12} fill="currentColor" /> STOP <span className="opacity-70 text-[8px] border border-rose-500/30 px-1 rounded ml-0.5">3</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!aiAnswer) return;
+                        navigator.clipboard.writeText(aiAnswer);
+                        setAiCopied(true);
+                        setTimeout(() => setAiCopied(false), 2000);
+                      }}
+                      className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
+                    >
+                      {aiCopied ? (
+                        <><CheckCircle2 size={12} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
+                      ) : (
+                        <><FileText size={12} /> COPY</>
+                      )}
+                    </button>
+                  </div>
+               </div>
+            </div>
+            
+            {/* AI Answer Content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-transparent">
+               <div className="max-w-4xl mx-auto text-white/90 font-bold whitespace-pre-wrap leading-relaxed" style={{ fontSize: aiAnswerTextSize + "px" }}>
+                  {aiAnswer ? (
+                    <ReactMarkdown
+                      components={{
+                        code(props: any) {
+                          const {node, className, children, ...rest} = props;
+                          const match = /language-(\w+)/.exec(className || "");
+                          return match ? (
+                            <div className="w-full flex justify-center my-6">
+                              <div className="relative group/code max-w-4xl w-full">
+                                <CopyButton 
+                                  text={String(children).replace(/\n$/, "")}
+                                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                                  tooltip="Copy code"
+                                />
+                                <SyntaxHighlighter
+                                  {...rest}
+                                  children={String(children).replace(/\n$/, "")}
+                                  style={vscDarkPlus}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px] !bg-black`}
+                                  customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[13px] font-bold">
+                              {children}
+                            </code>
+                          );
+                        },
+                        p({children, ...props}: any) {
+                          return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
+                        },
+                        h1({children, ...props}: any) {
+                          return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
+                        },
+                        h2({children, ...props}: any) {
+                          return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
+                        },
+                        h3({children, ...props}: any) {
+                          return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
+                        },
+                        ul({children, ...props}: any) {
+                          return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
+                        },
+                        li({node, children, ...props}: any) {
+                          return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
+                        }
+                      }}
+                    >
+                      {aiAnswer}
+                    </ReactMarkdown>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
+                       <Loader2 size={48} className="animate-spin text-cyan-500 mb-4" />
+                       <p className="text-lg animate-pulse">Generating response...</p>
+                    </div>
+                  )}
+               </div>
+            </div>
+          </div>
+        ) : (
+          <>
       <datalist id="saved-emails">
         {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
       </datalist>
@@ -1631,29 +1821,34 @@ function App() {
                   </button>
                   <span className="text-[9px] font-black uppercase text-white/70 mt-1">Hotkeys</span>
                 </div>
-                <div className="relative group">
-                  <div className="flex flex-col items-center group">
-                    <CustomSelect 
-                      value={provider} 
-                      onChange={(val: 'groq' | 'gemini') => {
-                        setProvider(val);
-                        switchProvider(val);
-                        setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini'}`);
-                        setTimeout(() => setModelChangeMsg(''), 3000);
-                      }} 
-                      options={[
-                        { value: 'groq', label: '⚡ Groq API' },
-                        { value: 'gemini', label: '🧠 Gemini Flash' }
-                      ]}
-                      className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
+                <div className="flex items-center gap-3 shrink-0">
+                  {modelChangeMsg && !isAiFullscreen && (
+                     <span className="text-emerald-400 text-[10px] font-bold animate-in fade-in slide-in-from-right-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20 shadow-sm shrink-0">
+                       <CheckCircle2 size={10} /> {modelChangeMsg}
+                     </span>
+                  )}
+                  <div className="relative group">
+                    <div className="flex flex-col items-center group">
+                      <CustomSelect 
+                        value={provider} 
+                        onChange={(val: 'groq' | 'gemini') => {
+                          setProvider(val);
+                          switchProvider(val);
+                          setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini'}`);
+                          setTimeout(() => setModelChangeMsg(''), 3000);
+                        }} 
+                        options={[
+                          { value: 'groq', label: '⚡ Groq API' },
+                          { value: 'gemini', label: '🧠 Gemini Flash' }
+                        ]}
+                        className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
                       icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
                     />
                     <span className="text-[8px] font-medium text-white/50 mt-0.5 absolute -bottom-3.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Press S or 5</span>
                   </div>
-                  
-
                 </div>
               </div>
+            </div>
               
               {isPaused ? (
                 <button onClick={handlePauseToggle} title="Next Question (Press Z or 1)" className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0">
@@ -2004,28 +2199,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* AI Answer Size */}
-                  <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center mb-3">
-                      <Cpu size={16} />
-                    </div>
-                    <label className="block text-xs font-bold text-white uppercase mb-2">AI Answer Font Size</label>
-                    <div className="flex items-center gap-2 mt-auto">
-                      <input 
-                        type="range" 
-                        min="10" 
-                        max="40"
-                        value={aiAnswerTextSize}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 15;
-                          setAiAnswerTextSize(val);
-                          localStorage.setItem('clueai_answer_size', val.toString());
-                        }}
-                        className="flex-1 accent-brand-accent h-1.5 bg-brand-bg rounded-lg appearance-none cursor-pointer"
-                      />
-                      <span className="text-sm font-mono font-bold text-fuchsia-400 bg-brand-bg px-2 py-1 rounded-md border border-brand-border">{aiAnswerTextSize}px</span>
-                    </div>
-                  </div>
+
                 </div>
             </section>
 
@@ -2725,9 +2899,9 @@ function App() {
                </button>
 
                {/* Center: Fake Search Bar / Status */}
-               <div className="flex-1 mx-6 relative group max-w-2xl">
-                  <div className="w-full rounded-full py-3 px-6 text-[13px] text-white/50 font-semibold flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden" style={{ backgroundColor: `rgba(24, 24, 27, ${Math.max(0, opacity)})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
-                     <span className={`tracking-wide truncate block max-w-[85%] ${altColor ? 'text-black/40' : 'text-white'}`}>
+               <div className="flex-1 mx-6">
+                  <div className="w-full rounded-[2rem] py-3 px-6 text-[13px] text-white/50 font-semibold flex items-start justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden min-h-[46px]" style={{ backgroundColor: `rgba(24, 24, 27, ${Math.max(0, opacity)})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
+                     <span className={`tracking-wide whitespace-pre-wrap break-words flex-1 leading-relaxed mt-0.5 ${altColor ? 'text-black/40' : 'text-white'}`}>
                        {!isRecording 
                          ? "Ask me anything..." 
                          : (transcript 
@@ -2779,139 +2953,21 @@ function App() {
                </div>
             </div>
 
-            {/* 2. Main Conversation Window */}
-            <div 
-              className="flex-1 flex flex-col min-h-0 rounded-[2.5rem] overflow-hidden w-full mx-auto relative z-10"
-              style={{ 
-                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
-                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
-                borderWidth: "1px",
-                boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"
-              }}
-            >
-               {/* Header */}
-               <div className="px-8 py-5 flex justify-between items-center border-b backdrop-blur-md" style={{ backgroundColor: `rgba(0, 0, 0, ${0.4 * opacity})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})` }}>
-                  <div className="flex items-center gap-3">
-                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-sm">AI Answer</h2>
-                     <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5">
-                        <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
-                     </div>
-                     {aiAnswer && <CopyButton text={aiAnswer} className="bg-white/10 hover:bg-white/20 hover:scale-105 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-white/60 hover:text-white shadow-sm transition-all" tooltip="Copy Answer" size={12} />}
-                     {modelChangeMsg && (
-                        <span className="text-emerald-400 text-xs font-bold animate-in fade-in slide-in-from-right-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20">
-                           <CheckCircle2 size={12} /> {modelChangeMsg}
-                        </span>
-                     )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                     <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
-                        <button onClick={() => {
-                          const next = Math.max(10, transcriptTextSize - 1);
-                          setTranscriptTextSize(next);
-                          setAiAnswerTextSize(next);
-                        }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Decrease Text Size">A-</button>
-                        <span className="text-[11px] text-white/50 font-mono w-4 text-center select-none font-black">{transcriptTextSize}</span>
-                        <button onClick={() => {
-                          const next = Math.min(40, transcriptTextSize + 1);
-                          setTranscriptTextSize(next);
-                          setAiAnswerTextSize(next);
-                        }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
-                     </div>
-                     <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
-                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
-                          <div className="flex items-center gap-2">
-                            <span>Generate Answer</span>
-                            <div className="flex items-center gap-1 opacity-70 ml-1">
-                              <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
-                              <span className="text-[9px]">/</span>
-                              <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">X</span>
-                            </div>
-                          </div>
-                        )}
-                     </button>
-                  </div>
-               </div>
-
-               <div className="flex-1 flex flex-col min-h-0">
-                 {/* Generate Area (Bottom) */}
-                 <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-8 pt-0 relative" style={{ backgroundColor: altColor ? `rgba(107, 114, 128, ${0.1 * opacity})` : `rgba(0, 0, 0, ${0.1 * opacity})` }} ref={aiAnswerScrollRef}>
-
-                      {aiAnswer ? (
-                         <div 
-                           className={`leading-relaxed whitespace-pre-wrap font-semibold drop-shadow-sm px-2 ${altColor ? 'text-black/40' : 'text-white'}`}
-                           style={{ fontSize: aiAnswerTextSize + "px" }}
-                         >
-                           <ReactMarkdown
-                             components={{
-                               code(props: any) {
-                                 const {node, className, children, ...rest} = props;
-                                 const match = /language-(\w+)/.exec(className || "");
-                                 return match ? (
-                                   <div className="w-full flex justify-center my-6">
-                                     <div className="relative group/code max-w-3xl w-full">
-                                       <CopyButton 
-                                         text={String(children).replace(/\n$/, "")}
-                                         className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                                         tooltip="Copy code"
-                                       />
-                                       <SyntaxHighlighter
-                                         {...rest}
-                                         children={String(children).replace(/\n$/, "")}
-                                         style={vscDarkPlus}
-                                         language={match[1]}
-                                         PreTag="div"
-                                         className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px]`}
-                                         customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
-                                       />
-                                     </div>
-                                   </div>
-                                 ) : (
-                                   <code {...rest} className={`${className || ''} bg-white/10 text-fuchsia-300 font-bold rounded-lg px-2 py-1 text-[15px]`}>
-                                     {children}
-                                   </code>
-                                 );
-                               },
-                               p({children, ...props}: any) {
-                                 return <p className="m-0 mb-1" {...props}>{children}</p>
-                               },
-                               h1({children, ...props}: any) {
-                                 return <h1 className="m-0 mb-1 text-lg font-bold" {...props}>{children}</h1>
-                               },
-                               h2({children, ...props}: any) {
-                                 return <h2 className="m-0 mb-1 text-base font-bold" {...props}>{children}</h2>
-                               },
-                               h3({children, ...props}: any) {
-                                 return <h3 className="m-0 mb-1 text-sm font-bold" {...props}>{children}</h3>
-                               },
-                               ul({children, ...props}: any) {
-                                 return <ul className="flex flex-col gap-0 my-1" {...props}>{children}</ul>
-                               },
-                               li({node, children, ...props}: any) {
-                                 return <li className="flex items-start gap-2 mb-0" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
-                               }
-                             }}
-                           >
-                             {aiAnswer}
-                           </ReactMarkdown>
-                         </div>
-                      ) : (
-                        isGenerating ? (
-                          <div className="flex flex-col items-center justify-center text-white/50 text-xs font-bold tracking-wide mt-10 p-12 border-2 border-white/5 border-dashed rounded-[2rem] bg-white/[0.02]">
-                            <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-cyan-400 animate-spin mb-4"></div>
-                            Drafting response...
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center text-white/30 text-xs font-bold tracking-wide mt-10 p-12 h-full">
-                            Waiting for context...
-                          </div>
-                        )
-                      )}
-                 </div>
-               </div>
+            {/* 2. Generate Answer Button */}
+            <div className="flex justify-center mt-2 shrink-0 relative z-20">
+                 <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
+                    {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
+                      <div className="flex items-center gap-2">
+                        <span>Generate Answer</span>
+                        <div className="flex items-center gap-1 opacity-70 ml-1">
+                          <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
+                          <span className="text-[9px]">/</span>
+                          <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">X</span>
+                        </div>
+                      </div>
+                    )}
+                 </button>
             </div>
-
-
         </div>
       )}
       
@@ -3738,12 +3794,12 @@ function App() {
                           }
                           setShowPreviousQuestions(false);
                           if (!isGenerating) {
-                            manualTriggerAI(snaps);
+                            manualTriggerAI(snaps, item.question);
                           }
                         }}
                         className="px-4 py-2 bg-brand-accent hover:bg-cyan-400 text-white rounded-lg font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2"
                       >
-                        <RefreshCw size={14} /> Ask AI Again
+                        <RefreshCw size={14} /> Generate Answer
                       </button>
                     </div>
                   </div>
@@ -3765,22 +3821,22 @@ function App() {
                               )
                             },
                             p({children, ...props}: any) {
-                              return <p className="m-0 mb-1" {...props}>{children}</p>
+                              return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
                             },
                             h1({children, ...props}: any) {
-                              return <h1 className="m-0 mb-1 text-lg font-bold" {...props}>{children}</h1>
+                              return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
                             },
                             h2({children, ...props}: any) {
-                              return <h2 className="m-0 mb-1 text-base font-bold" {...props}>{children}</h2>
+                              return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
                             },
                             h3({children, ...props}: any) {
-                              return <h3 className="m-0 mb-1 text-sm font-bold" {...props}>{children}</h3>
+                              return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
                             },
                             ul({children, ...props}: any) {
-                              return <ul className="flex flex-col gap-0 my-1" {...props}>{children}</ul>
+                              return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
                             },
                             li({node, children, ...props}: any) {
-                              return <li className="flex items-start gap-2 mb-0" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
+                              return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
                             }
                           }}
                         >
@@ -3794,6 +3850,8 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
       </div>
     </>
