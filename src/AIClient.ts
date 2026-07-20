@@ -167,7 +167,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       const uiProviderName = currentProvider === 'gemini-pro' ? 'Gemini Pro' : 'Gemini Flash';
       onStart({ provider: uiProviderName, index: usedIndex + 1 });
       
-      const modelName = currentProvider === 'gemini-pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+      const modelName = currentProvider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
