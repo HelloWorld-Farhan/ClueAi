@@ -2,12 +2,12 @@ import OpenAI from 'openai';
 
 let groqClients: OpenAI[] = [];
 let geminiApiKeys: string[] = [];
-let currentProvider: 'groq' | 'gemini-flash' | 'gemini-pro' = 'groq';
+let currentProvider: 'groq' | 'gemini-flash' = 'groq';
 
 let currentGroqIndex = 0;
 let currentGeminiIndex = 0;
 
-export function initAIClient(provider: 'groq' | 'gemini-flash' | 'gemini-pro', groqKeys: string[], geminiKeys: string[]) {
+export function initAIClient(provider: 'groq' | 'gemini-flash', groqKeys: string[], geminiKeys: string[]) {
   currentProvider = provider;
   
   groqClients = groqKeys.filter(k => k.trim()).map(key => new OpenAI({
@@ -21,7 +21,7 @@ export function initAIClient(provider: 'groq' | 'gemini-flash' | 'gemini-pro', g
   currentGeminiIndex = 0;
 }
 
-export function switchProvider(provider: 'groq' | 'gemini-flash' | 'gemini-pro') {
+export function switchProvider(provider: 'groq' | 'gemini-flash') {
   currentProvider = provider;
 }
 
@@ -164,11 +164,9 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       const usedIndex = currentGeminiIndex;
       currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
       
-      const uiProviderName = currentProvider === 'gemini-pro' ? 'Gemini Pro' : 'Gemini Flash';
-      onStart({ provider: uiProviderName, index: usedIndex + 1 });
+      onStart({ provider: 'Gemini Flash', index: usedIndex + 1 });
       
-      const modelName = currentProvider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${key.trim()}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
       if (imageArray && imageArray.length > 0) {
