@@ -2459,7 +2459,7 @@ function App() {
                       <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Claude Keys (Best for Coding)</h4>
                       <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
                         <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://console.anthropic.com/settings/keys'); }} className="text-blue-400 hover:underline">console.anthropic.com/settings/keys</a> and log in.</li>
-                        <li><strong>Important:</strong> Use a new phone number to get $5 in free credits!</li>
+                        <li><strong>Important:</strong> You must verify a <strong>brand new phone number</strong> (not just an email) to get $5 free. If it doesn't give you $5, Anthropic may have stopped the free promotion in your region.</li>
                         <li>Click <strong>Create Key</strong> and copy it (starts with `sk-ant-`).</li>
                         <li>Paste it into the Claude API Key field in ClueAI Settings.</li>
                         <li><em>Note: Free credits expire in 14 days, so add your keys one-by-one!</em></li>
