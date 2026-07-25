@@ -1,13 +1,29 @@
 import OpenAI from 'openai';
 
+export interface TimedApiKey { key: string; addedAt: number; }
+
 let groqClients: OpenAI[] = [];
 let geminiApiKeys: string[] = [];
-let currentProvider: 'groq' | 'gemini-flash' = 'groq';
+let claudeApiKeys: string[] = [];
+let chatgptClients: OpenAI[] = [];
+let deepseekClients: OpenAI[] = [];
+
+let currentProvider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek' = 'groq';
 
 let currentGroqIndex = 0;
 let currentGeminiIndex = 0;
+let currentClaudeIndex = 0;
+let currentChatgptIndex = 0;
+let currentDeepseekIndex = 0;
 
-export function initAIClient(provider: 'groq' | 'gemini-flash', groqKeys: string[], geminiKeys: string[]) {
+export function initAIClient(
+  provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek', 
+  groqKeys: string[], 
+  geminiKeys: string[],
+  claudeKeys?: TimedApiKey[],
+  chatgptKeys?: TimedApiKey[],
+  deepseekKeys?: TimedApiKey[]
+) {
   currentProvider = provider;
   
   groqClients = groqKeys.filter(k => k.trim()).map(key => new OpenAI({
@@ -19,9 +35,25 @@ export function initAIClient(provider: 'groq' | 'gemini-flash', groqKeys: string
 
   geminiApiKeys = geminiKeys.filter(k => k.trim());
   currentGeminiIndex = 0;
+  
+  claudeApiKeys = (claudeKeys || []).map(k => k.key.trim()).filter(Boolean);
+  currentClaudeIndex = 0;
+  
+  chatgptClients = (chatgptKeys || []).map(k => k.key.trim()).filter(Boolean).map(key => new OpenAI({
+    apiKey: key,
+    dangerouslyAllowBrowser: true,
+  }));
+  currentChatgptIndex = 0;
+  
+  deepseekClients = (deepseekKeys || []).map(k => k.key.trim()).filter(Boolean).map(key => new OpenAI({
+    apiKey: key,
+    baseURL: 'https://api.deepseek.com',
+    dangerouslyAllowBrowser: true,
+  }));
+  currentDeepseekIndex = 0;
 }
 
-export function switchProvider(provider: 'groq' | 'gemini-flash') {
+export function switchProvider(provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') {
   currentProvider = provider;
 }
 
@@ -37,7 +69,10 @@ export async function getInterviewAnswer(
   onStart: (info: {provider: string, index: number}) => void = () => {}
 ) {
   if (currentProvider === 'groq' && groqClients.length === 0) return;
-  if (currentProvider.startsWith('gemini') && geminiApiKeys.length === 0) return;
+  if (currentProvider === 'gemini-flash' && geminiApiKeys.length === 0) return;
+  if (currentProvider === 'claude' && claudeApiKeys.length === 0) return;
+  if (currentProvider === 'chatgpt' && chatgptClients.length === 0) return;
+  if (currentProvider === 'deepseek' && deepseekClients.length === 0) return;
 
   try {
     let contextPrompt = '';
@@ -60,9 +95,10 @@ export async function getInterviewAnswer(
 
     const systemPrompt = `You are a job candidate in a live interview${interviewTitle ? ` for the role of ${interviewTitle}` : ''}. 
 CRITICAL RULE: You MUST speak EXACTLY like a real, casual human being talking out loud. 100% human-like.
+- You MUST provide a perfectly human-like, 100% complete, and extremely detailed long answer. Ensure maximum accuracy.
 - Give direct, conversational answers. DO NOT use robotic filler words like "Certainly!", "Here is...", or "As an AI...".
 - DO NOT use conversational filler like "Yeah, this is a pretty standard utility function..." or "Looking at the logic here...". Just provide the direct, correct, and accurate answer immediately.
-- Give highly detailed, technically impressive, and highly accurate explanations without rambling.
+- Give highly detailed, technically impressive, and highly accurate explanations.
 - Use Markdown formatting for your output. If you are writing code, ALWAYS wrap it in \`\`\` language blocks.
 - **Rule 1 (Lists/Points):** If you are listing points, ALWAYS use standard Markdown bullet points (using the \`-\` symbol). Do NOT use \`>\` or blockquotes. Ensure there are NO blank lines between the bullet points.
 - **Rule 2 (Code Questions):** If the question is about code, you MUST structure your answer exactly like this: First, provide about 30% of the explanation at the top. Second, provide the code block in the center. Finally, provide the remaining 70% of the explanation at the bottom.
@@ -106,8 +142,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         'llama-3.2-11b-vision-instruct', 'llama-3.2-90b-vision-instruct',
         'llama-3.2-11b-vision', 'llama-3.2-90b-vision',
         'llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-scout-17b-16e-instruct',
-        'qwen-2.5-vl', 'qwen-vl-max', 'qwen/qwen3.6-27b', 'qwen3.6-27b', 
-        'llava-v1.5-7b-4096-preview'
+        'qwen-2.5-vl', 'qwen-vl-max', 'qwen/qwen3.6-27b', 'qwen3.6-27b'
       ];
       const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama3-70b-8192'];
       
@@ -160,13 +195,6 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         onChunk(content);
       }
     } else if (currentProvider.startsWith('gemini') && geminiApiKeys.length > 0) {
-      const key = geminiApiKeys[currentGeminiIndex];
-      const usedIndex = currentGeminiIndex;
-      currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
-      
-      onStart({ provider: 'Gemini Flash', index: usedIndex + 1 });
-      
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
       const geminiContents: any[] = [];
       let geminiParts: any[] = [{ text: userPrompt }];
       if (imageArray && imageArray.length > 0) {
@@ -180,21 +208,118 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       }
       geminiContents.push({ parts: geminiParts });
 
-      const response = await fetch(url, {
+      const maxGeminiAttempts = Math.min(15, geminiApiKeys.length);
+      let geminiSuccess = false;
+      let lastGeminiError: any = null;
+
+      for (let attempt = 0; attempt < maxGeminiAttempts; attempt++) {
+        const key = geminiApiKeys[currentGeminiIndex];
+        const usedIndex = currentGeminiIndex;
+        currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
+        
+        onStart({ provider: 'Gemini Flash', index: usedIndex + 1 });
+        
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key.trim()}`;
+        
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: geminiContents,
+              generationConfig: { temperature: 0.4, maxOutputTokens: 2000 }
+            })
+          });
+
+          if (!response.ok) {
+             const errText = await response.text();
+             throw new Error(`${response.status} ${errText}`);
+          }
+
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let buffer = '';
+          
+          while (reader) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            
+            let nlIndex;
+            while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+              const line = buffer.slice(0, nlIndex);
+              buffer = buffer.slice(nlIndex + 1);
+              
+              if (line.startsWith('data: ')) {
+                const dataStr = line.slice(6).trim();
+                if (dataStr === '[DONE]') continue;
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.candidates && data.candidates[0]?.content?.parts) {
+                    const text = data.candidates[0].content.parts[0].text;
+                    if (text) {
+                      console.log('--- GEMINI LOG CHUNK ---', text);
+                      onChunk(text);
+                    }
+                  }
+                } catch (e) {
+                  // Ignore partial JSON parse errors if still fragmented
+                }
+              }
+            }
+          }
+          geminiSuccess = true;
+          break;
+        } catch (err: any) {
+          lastGeminiError = err;
+          console.warn(`Gemini API Key #${usedIndex + 1} failed. Rotating...`, err?.message);
+        }
+      }
+
+      if (!geminiSuccess) {
+        throw new Error(`Gemini API Error: All keys failed. Last error: ${lastGeminiError?.message || lastGeminiError}`);
+      }
+    } else if (currentProvider === 'claude' && claudeApiKeys.length > 0) {
+      const key = claudeApiKeys[currentClaudeIndex];
+      const usedIndex = currentClaudeIndex;
+      currentClaudeIndex = (currentClaudeIndex + 1) % claudeApiKeys.length;
+      onStart({ provider: 'Claude 3.5 Sonnet', index: usedIndex + 1 });
+      
+      const claudeMessages: any[] = [];
+      if (imageArray && imageArray.length > 0) {
+        const contentArr: any[] = [{ type: 'text', text: userPrompt }];
+        imageArray.forEach(img => {
+          const mimeType = img.split(';')[0].split(':')[1] || 'image/jpeg';
+          const base64Data = img.split(',')[1] || img;
+          contentArr.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } });
+        });
+        claudeMessages.push({ role: 'user', content: contentArr });
+      } else {
+        claudeMessages.push({ role: 'user', content: userPrompt });
+      }
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: geminiContents,
-          generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
+          model: 'claude-3-5-sonnet-20240620',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: claudeMessages,
+          stream: true
         })
       });
 
       if (!response.ok) {
-         const errText = await response.text();
-         throw new Error(`Gemini API Error: ${response.status} ${errText}`);
+        throw new Error(`Claude API Error: ${response.status} ${await response.text()}`);
       }
 
       const reader = response.body?.getReader();
@@ -216,18 +341,52 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
             if (dataStr === '[DONE]') continue;
             try {
               const data = JSON.parse(dataStr);
-              if (data.candidates && data.candidates[0]?.content?.parts) {
-                const text = data.candidates[0].content.parts[0].text;
-                if (text) {
-                  console.log('--- GEMINI LOG CHUNK ---', text);
-                  onChunk(text);
-                }
+              if (data.type === 'content_block_delta' && data.delta?.text) {
+                onChunk(data.delta.text);
               }
-            } catch (e) {
-              // Ignore partial JSON parse errors if still fragmented
-            }
+            } catch (e) {}
           }
         }
+      }
+    } else if ((currentProvider === 'chatgpt' && chatgptClients.length > 0) || (currentProvider === 'deepseek' && deepseekClients.length > 0)) {
+      const isChatGPT = currentProvider === 'chatgpt';
+      const clients = isChatGPT ? chatgptClients : deepseekClients;
+      let currentIndex = isChatGPT ? currentChatgptIndex : currentDeepseekIndex;
+      
+      const client = clients[currentIndex];
+      const usedIndex = currentIndex;
+      
+      if (isChatGPT) currentChatgptIndex = (currentChatgptIndex + 1) % clients.length;
+      else currentDeepseekIndex = (currentDeepseekIndex + 1) % clients.length;
+      
+      onStart({ provider: isChatGPT ? 'ChatGPT (GPT-4o)' : 'DeepSeek Coder', index: usedIndex + 1 });
+
+      const messages: any[] = [
+        { role: 'system', content: systemPrompt },
+      ];
+      
+      if (imageArray && imageArray.length > 0) {
+        const contentArr: any[] = [{ type: 'text', text: userPrompt }];
+        imageArray.forEach(img => {
+          contentArr.push({ type: 'image_url', image_url: { url: img } });
+        });
+        messages.push({ role: 'user', content: contentArr });
+      } else {
+        messages.push({ role: 'user', content: userPrompt });
+      }
+      
+      const modelName = isChatGPT ? 'gpt-4o' : 'deepseek-coder';
+      
+      const stream = await client.chat.completions.create({
+        model: modelName,
+        messages,
+        stream: true,
+        temperature: 0.4,
+      });
+      
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        onChunk(content);
       }
     }
   } catch (error: any) {

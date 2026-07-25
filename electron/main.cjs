@@ -27,6 +27,12 @@ function createWindow() {
       contextIsolation: false,
     },
   });
+  
+  // Force the window to the absolute highest z-level, above all fullscreen apps
+  // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  mainWindow.setIgnoreMouseEvents(false);
 
   mainWindow.on('minimize', () => {
     if (hotkeysActive) {
@@ -67,13 +73,14 @@ function createWindow() {
   });
 
 
-  // Stealth Mode: Hide window from screen sharing software
+  // Stealth Mode: Hide window from screen sharing software - always on by default
   let isStealthMode = true;
-  mainWindow.setContentProtection(true);
+  mainWindow.setContentProtection(true); // Hide from OBS, screen sharing, etc.
 
   ipcMain.handle('focus-window', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.focus();
     }
   });
@@ -85,9 +92,32 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('set-ignore-mouse-events', (event, ignore) => {
+    if (mainWindow) {
+      if (ignore) {
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      } else {
+        mainWindow.setIgnoreMouseEvents(false);
+      }
+    }
+  });
+  
+  // Also support ipcRenderer.send (fire-and-forget variant)
+  ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
+    if (mainWindow) {
+      if (ignore) {
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      } else {
+        mainWindow.setIgnoreMouseEvents(false);
+      }
+    }
+  });
+
   ipcMain.handle('set-focusable', (event, focusable) => {
     if (mainWindow) {
       mainWindow.setFocusable(focusable);
+      // Always re-assert screen-saver level so we stay above fullscreen apps
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
     }
   });
 
@@ -339,6 +369,10 @@ function createWindow() {
         x: Math.round((width - w) / 2),
         y: 0
       });
+      
+      // Re-assert the highest possible always-on-top level to punch through fullscreen apps
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     }
   });
 

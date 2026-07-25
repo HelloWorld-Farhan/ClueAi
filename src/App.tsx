@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
+import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
 const { ipcRenderer, shell, clipboard } = window.require('electron');
@@ -87,6 +88,47 @@ const validateGeminiKey = async (key: string): Promise<boolean> => {
 
 type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
 
+
+const getDaysLeft = (addedAt: number, limit: number) => {
+  if (!addedAt) return null;
+  const daysPassed = (Date.now() - addedAt) / (1000 * 60 * 60 * 24);
+  return Math.max(0, limit - Math.floor(daysPassed));
+};
+
+const validateClaudeKey = async (key: string): Promise<boolean> => {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-3-5-sonnet-20240620', max_tokens: 1, messages: [{role: 'user', content: 'test'}]})
+    });
+    return res.status !== 401;
+  } catch { return false; }
+};
+
+const validateChatgptKey = async (key: string): Promise<boolean> => {
+  try {
+    const res = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${key}` }
+    });
+    return res.ok;
+  } catch { return false; }
+};
+
+const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
+  try {
+    const res = await fetch('https://api.deepseek.com/user/balance', {
+      headers: { Authorization: `Bearer ${key}` }
+    });
+    if (!res.ok) return {valid: false, balance: ''};
+    const data = await res.json();
+    return {
+      valid: true, 
+      balance: data.balance_infos?.[0]?.total_balance || '?'
+    };
+  } catch { return {valid: false, balance: ''}; }
+};
+
 const CustomSelect = ({ value, onChange, options, className, icon, listClassName }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find((o: any) => o.value === value) || options[0];
@@ -128,13 +170,12 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
-
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
+    const timer = setTimeout(() => setShowSplash(false), 2800);
     return () => clearTimeout(timer);
   }, []);
 
-  const [provider, setProvider] = useState<'groq' | 'gemini-flash'>('groq');
+  const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
     try { 
       const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]'); 
@@ -153,10 +194,57 @@ function App() {
   const [showGroqKeys, setShowGroqKeys] = useState<boolean[]>(Array(15).fill(false));
   const [showGeminiKeys, setShowGeminiKeys] = useState<boolean[]>(Array(15).fill(false));
 
+  const [claudeKeys, setClaudeKeys] = useState<TimedApiKey[]>(() => {
+    try { 
+      const keys = JSON.parse(localStorage.getItem('claude_api_keys') || '[]'); 
+      return keys.length === 2 ? keys : [...keys, ...Array(2).fill({key: '', addedAt: 0})].slice(0, 2);
+    } catch { return Array(2).fill({key: '', addedAt: 0}); }
+  });
+  const [chatgptKeys, setChatgptKeys] = useState<TimedApiKey[]>(() => {
+    try { 
+      const keys = JSON.parse(localStorage.getItem('chatgpt_api_keys') || '[]'); 
+      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
+    } catch { return Array(3).fill({key: '', addedAt: 0}); }
+  });
+  const [deepseekKeys, setDeepseekKeys] = useState<TimedApiKey[]>(() => {
+    try { 
+      const keys = JSON.parse(localStorage.getItem('deepseek_api_keys') || '[]'); 
+      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
+    } catch { return Array(3).fill({key: '', addedAt: 0}); }
+  });
+
+  const [claudeKeyStatus, setClaudeKeyStatus] = useState<KeyValidationState[]>(Array(2).fill('idle'));
+  const [chatgptKeyStatus, setChatgptKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
+  const [deepseekKeyStatus, setDeepseekKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
+  
+  const [showClaudeKeys, setShowClaudeKeys] = useState<boolean[]>(Array(2).fill(false));
+  const [showChatgptKeys, setShowChatgptKeys] = useState<boolean[]>(Array(3).fill(false));
+  const [showDeepseekKeys, setShowDeepseekKeys] = useState<boolean[]>(Array(3).fill(false));
+  const [deepseekBalances, setDeepseekBalances] = useState<string[]>(Array(3).fill(''));
+
+
   const [sysMicVolume, setSysMicVolume] = useState(100);
   const [sysMicMuted, setSysMicMuted] = useState(false);
   const [showAudioErrorModal, setShowAudioErrorModal] = useState(false);
   const [activeMicName, setActiveMicName] = useState('Default Microphone');
+
+  
+  const cleanKeys = (keys: TimedApiKey[], limitDays: number) => {
+    return keys.map(k => {
+      if (!k.addedAt) return k;
+      const daysPassed = (Date.now() - k.addedAt) / (1000 * 60 * 60 * 24);
+      return daysPassed >= limitDays ? { key: '', addedAt: 0 } : k;
+    });
+  };
+
+  
+
+
+  useEffect(() => {
+    setClaudeKeys(prev => cleanKeys(prev, 14));
+    setChatgptKeys(prev => cleanKeys(prev, 90));
+    setDeepseekKeys(prev => cleanKeys(prev, 90));
+  }, []);
 
   const handleMicVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
@@ -170,7 +258,7 @@ function App() {
     ipcRenderer.invoke('toggle-mic-mute', newState);
   };
 
-  const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini'>('none');
+  const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini' | 'claude' | 'chatgpt' | 'deepseek'>('none');
 
   const [isRecording, setIsRecording] = useState(false);
   // const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
@@ -380,19 +468,30 @@ function App() {
   const groqValidationCache = useRef<Record<string, boolean>>({});
   const geminiValidationCache = useRef<Record<string, boolean>>({});
 
+  const claudeValidationCache = useRef<Record<string, boolean>>({});
+  const chatgptValidationCache = useRef<Record<string, boolean>>({});
+  const deepseekValidationCache = useRef<Record<string, {valid: boolean, balance: string}>>({});
+
+
   const saveApiKeys = () => {
     const dupGroq = groqKeyStatus.map((s, i) => s === 'duplicate' ? i + 1 : -1).filter(i => i !== -1);
     const dupGem = geminiKeyStatus.map((s, i) => s === 'duplicate' ? i + 1 : -1).filter(i => i !== -1);
     const invGroq = groqKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     const invGem = geminiKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
+    const invClaude = claudeKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
+    const invChatgpt = chatgptKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
+    const invDeepseek = deepseekKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     
     let msgs: {type: 'success' | 'invalid' | 'duplicate', text: string}[] = [];
     if (dupGroq.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Groq Key ${dupGroq.join(' and ')} are duplicates.` });
     if (dupGem.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates.` });
     if (invGroq.length > 0) msgs.push({ type: 'invalid', text: `Error: Groq Key ${invGroq.join(' and ')} are invalid.` });
     if (invGem.length > 0) msgs.push({ type: 'invalid', text: `Error: Gemini Key ${invGem.join(' and ')} are invalid.` });
+    if (invClaude.length > 0) msgs.push({ type: 'invalid', text: `Error: Claude Key ${invClaude.join(' and ')} are invalid.` });
+    if (invChatgpt.length > 0) msgs.push({ type: 'invalid', text: `Error: ChatGPT Key ${invChatgpt.join(' and ')} are invalid.` });
+    if (invDeepseek.length > 0) msgs.push({ type: 'invalid', text: `Error: DeepSeek Key ${invDeepseek.join(' and ')} are invalid.` });
 
-    if (invGroq.length > 0 || invGem.length > 0) {
+    if (invGroq.length > 0 || invGem.length > 0 || invClaude.length > 0 || invChatgpt.length > 0 || invDeepseek.length > 0) {
       setSaveMessages(msgs);
       setTimeout(() => setSaveMessages([]), 8000);
       return;
@@ -400,7 +499,10 @@ function App() {
 
     localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys));
     localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys));
-    initAIClient(provider, groqKeys, geminiKeys);
+    localStorage.setItem('claude_api_keys', JSON.stringify(claudeKeys));
+    localStorage.setItem('chatgpt_api_keys', JSON.stringify(chatgptKeys));
+    localStorage.setItem('deepseek_api_keys', JSON.stringify(deepseekKeys));
+    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys);
     setSTTApiKey(groqKeys.filter(k => k.trim()));
     
     if (msgs.length === 0) {
@@ -515,6 +617,143 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [geminiKeys]);
 
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const keysToValidate = new Set<string>();
+      
+      setClaudeKeyStatus(prev => {
+        const next = [...prev];
+        for (let i = 0; i < 2; i++) {
+          const key = claudeKeys[i].key.trim();
+          if (!key) {
+            next[i] = 'idle';
+          } else {
+            if (claudeValidationCache.current[key] === undefined) {
+              next[i] = 'validating';
+              keysToValidate.add(key);
+            } else {
+              next[i] = claudeValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+        }
+        return next;
+      });
+
+      if (keysToValidate.size > 0) {
+        await Promise.all(Array.from(keysToValidate).map(async (key) => {
+          claudeValidationCache.current[key] = await validateClaudeKey(key);
+        }));
+        setClaudeKeyStatus(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 2; i++) {
+            const key = claudeKeys[i].key.trim();
+            if (key) {
+              next[i] = claudeValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+          return next;
+        });
+      }
+    }, 800);
+    return () => clearTimeout(timeoutId);
+  }, [claudeKeys]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const keysToValidate = new Set<string>();
+      
+      setChatgptKeyStatus(prev => {
+        const next = [...prev];
+        for (let i = 0; i < 3; i++) {
+          const key = chatgptKeys[i].key.trim();
+          if (!key) {
+            next[i] = 'idle';
+          } else {
+            if (chatgptValidationCache.current[key] === undefined) {
+              next[i] = 'validating';
+              keysToValidate.add(key);
+            } else {
+              next[i] = chatgptValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+        }
+        return next;
+      });
+
+      if (keysToValidate.size > 0) {
+        await Promise.all(Array.from(keysToValidate).map(async (key) => {
+          chatgptValidationCache.current[key] = await validateChatgptKey(key);
+        }));
+        setChatgptKeyStatus(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 3; i++) {
+            const key = chatgptKeys[i].key.trim();
+            if (key) {
+              next[i] = chatgptValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+          return next;
+        });
+      }
+    }, 800);
+    return () => clearTimeout(timeoutId);
+  }, [chatgptKeys]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const keysToValidate = new Set<string>();
+      
+      setDeepseekKeyStatus(prev => {
+        const next = [...prev];
+        for (let i = 0; i < 3; i++) {
+          const key = deepseekKeys[i].key.trim();
+          if (!key) {
+            next[i] = 'idle';
+          } else {
+            if (deepseekValidationCache.current[key] === undefined) {
+              next[i] = 'validating';
+              keysToValidate.add(key);
+            } else {
+              next[i] = deepseekValidationCache.current[key].valid ? 'valid' : 'invalid';
+            }
+          }
+        }
+        return next;
+      });
+
+      if (keysToValidate.size > 0) {
+        await Promise.all(Array.from(keysToValidate).map(async (key) => {
+          deepseekValidationCache.current[key] = await validateDeepseekKey(key);
+        }));
+        
+        setDeepseekKeyStatus(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 3; i++) {
+            const key = deepseekKeys[i].key.trim();
+            if (key) {
+              next[i] = deepseekValidationCache.current[key].valid ? 'valid' : 'invalid';
+            }
+          }
+          return next;
+        });
+        
+        setDeepseekBalances(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 3; i++) {
+            const key = deepseekKeys[i].key.trim();
+            if (key && deepseekValidationCache.current[key]) {
+              next[i] = deepseekValidationCache.current[key].balance;
+            }
+          }
+          return next;
+        });
+      }
+    }, 800);
+    return () => clearTimeout(timeoutId);
+  }, [deepseekKeys]);
+
+
   useEffect(() => {
     const fetchMicName = async () => {
       try {
@@ -600,6 +839,28 @@ function App() {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Float32Array>(new Float32Array(0));
   const intervalRef = useRef<any>(null);
+
+  // Stealth Mode click-through handler
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      // Only active during interview
+      if (!isAiFullscreen && !isRecording) {
+        ipcRenderer.send('set-ignore-mouse-events', false);
+        return;
+      }
+      
+      const target = e.target as HTMLElement;
+      const shouldPassThrough = target.classList.contains('click-through-bg') || target === document.body || target === document.documentElement || target.id === 'root';
+      
+      if (shouldPassThrough) {
+        ipcRenderer.send('set-ignore-mouse-events', true);
+      } else {
+        ipcRenderer.send('set-ignore-mouse-events', false);
+      }
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, [isAiFullscreen, isRecording]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -860,7 +1121,7 @@ function App() {
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
     
-    initAIClient(provider, groqKeys, geminiKeys);
+    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys);
     setSTTApiKey(validGroqKeys);
 
     await initSTT(() => {});
@@ -1149,15 +1410,13 @@ function App() {
       return; // User cancelled
     }
     
-    if (currentSnapshots.length > 0) {
-      
-    }
-
-    setTranscript('');
-    finalizedTranscriptRef.current = '';
-    interimTranscriptRef.current = '';
-    setAiAnswer('');
-    setCurrentSnapshots(prev => [...prev.slice(-2), base64Img]);
+    const screenshotMarker = `\n[Screenshot ${currentSnapshots.length + 1} Captured]\n`;
+    setTranscript(prev => prev + screenshotMarker);
+    finalizedTranscriptRef.current += screenshotMarker;
+    
+    setCurrentSnapshots(prev => [...prev, base64Img]);
+    setIsPaused(false);
+    isPausedRef.current = false;
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
@@ -1586,12 +1845,12 @@ function App() {
       )}
       
         <div 
-          className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-1000 delay-[1500ms] fill-mode-both"
+          className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-300 fill-mode-both click-through-bg"
           style={{ backgroundColor: (!isRecording && !isAiFullscreen) ? '#09090b' : 'transparent', transition: 'none' }}
         >
         {isAiFullscreen ? (
           <div 
-            className="flex flex-col w-full h-full overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto"
+            className="flex flex-col w-full h-full overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto click-through-bg"
             style={{ 
               backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
               backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
@@ -1914,15 +2173,45 @@ function App() {
                     <div className="flex flex-col items-center group">
                       <CustomSelect 
                         value={provider} 
-                        onChange={(val: 'groq' | 'gemini-flash') => {
+                        onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
+                          if (val === 'groq' && !groqKeys.some(k => k.trim())) {
+                            setModelChangeMsg('No API key found in Groq');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'gemini-flash' && !geminiKeys.some(k => k.trim())) {
+                            setModelChangeMsg('No API key found in Gemini Flash');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'claude' && !claudeKeys.some(k => k.key.trim())) {
+                            setModelChangeMsg('No API key found in Claude');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'chatgpt' && !chatgptKeys.some(k => k.key.trim())) {
+                            setModelChangeMsg('No API key found in ChatGPT');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'deepseek' && !deepseekKeys.some(k => k.key.trim())) {
+                            setModelChangeMsg('No API key found in DeepSeek');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          
                           setProvider(val);
                           switchProvider(val);
-                          setModelChangeMsg(`Switched to ${val === 'groq' ? 'Groq' : 'Gemini Flash'}`);
+                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek' };
+                          setModelChangeMsg(`Switched to ${nameMap[val]}`);
                           setTimeout(() => setModelChangeMsg(''), 3000);
-                        }} 
+                        }}
                         options={[
-                          { value: 'groq', label: '⚡ Groq API' },
-                          { value: 'gemini-flash', label: '✨ Gemini Flash' }
+                          { value: 'groq', label: 'Groq (Llama 3 70B)' },
+                          { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
+                          { value: 'claude', label: 'Claude 3.5 Sonnet' },
+                          { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
+                          { value: 'deepseek', label: 'DeepSeek Coder' }
                         ]}
                         className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
                       icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
@@ -2156,28 +2445,58 @@ function App() {
                   <Key size={20} />
                 </div>
                 <h3 className="text-lg font-bold text-white">How to get API Keys (Free)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                  <div className="space-y-2">
-                    <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Groq Keys (For Audio & Fast Text)</h4>
-                    <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                      <li>Go to <a href="https://console.groq.com/keys" target="_blank" className="text-blue-400 hover:underline">console.groq.com/keys</a> and log in.</li>
-                      <li>Click on <strong>Create API Key</strong> in the top right.</li>
-                      <li>Copy the key (it starts with `gsk_`).</li>
-                      <li>Paste it into the Groq API Key field in ClueAI Settings.</li>
-                      <li><em>Note: Groq is free but rate-limited. Add multiple keys to avoid interruptions!</em></li>
-                    </ol>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
+                    <div className="space-y-2">
+                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Groq Keys (For Audio & Fast Text)</h4>
+                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                        <li>Go to <a href="https://console.groq.com/keys" target="_blank" className="text-blue-400 hover:underline">console.groq.com/keys</a> and log in.</li>
+                        <li>Click on <strong>Create API Key</strong> in the top right.</li>
+                        <li>Copy the key (it starts with `gsk_`).</li>
+                        <li>Paste it into the Groq API Key field in ClueAI Settings.</li>
+                        <li><em>Note: Groq is free but rate-limited. Add multiple keys to avoid interruptions!</em></li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Gemini Keys (For Snapshots)</h4>
+                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                        <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-400 hover:underline">aistudio.google.com/app/apikey</a> and log in.</li>
+                        <li>Click <strong>Create API Key</strong> and select an existing project or create a new one.</li>
+                        <li>Copy the generated key (it starts with `AIzaSy` or `AQ.`).</li>
+                        <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
+                        <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Claude Keys (Best for Coding)</h4>
+                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                        <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" className="text-blue-400 hover:underline">console.anthropic.com/settings/keys</a> and log in.</li>
+                        <li><strong>Important:</strong> Use a new phone number to get $5 in free credits!</li>
+                        <li>Click <strong>Create Key</strong> and copy it (starts with `sk-ant-`).</li>
+                        <li>Paste it into the Claude API Key field in ClueAI Settings.</li>
+                        <li><em>Note: Free credits expire in 14 days, so add your keys one-by-one!</em></li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting ChatGPT Keys (Smart All-Rounder)</h4>
+                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                        <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank" className="text-blue-400 hover:underline">platform.openai.com/api-keys</a> and log in.</li>
+                        <li>Create a new account with a unique phone number for free credits.</li>
+                        <li>Click <strong>Create new secret key</strong> and copy it (starts with `sk-`).</li>
+                        <li>Paste it into the ChatGPT API Key fields (up to 3 for rotation).</li>
+                        <li><em>Note: ChatGPT keys automatically rotate during use to bypass limits.</em></li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting DeepSeek Keys (Lightning Fast Code)</h4>
+                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                        <li>Go to <a href="https://platform.deepseek.com/api_keys" target="_blank" className="text-blue-400 hover:underline">platform.deepseek.com/api_keys</a> and log in.</li>
+                        <li>Click <strong>Create new API key</strong> and copy it.</li>
+                        <li>DeepSeek is extremely cheap but requires adding a small balance (Top-up).</li>
+                        <li>Paste it into the DeepSeek API Key fields (up to 3 for rotation).</li>
+                        <li><em>Note: Your DeepSeek account balance is automatically checked and shown!</em></li>
+                      </ol>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Gemini Keys (For Snapshots)</h4>
-                    <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                      <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-400 hover:underline">aistudio.google.com/app/apikey</a> and log in.</li>
-                      <li>Click <strong>Create API Key</strong> and select an existing project or create a new one.</li>
-                      <li>Copy the generated key (it starts with `AIzaSy` or `AQ.`).</li>
-                      <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
-                      <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
-                    </ol>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -2211,12 +2530,47 @@ function App() {
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Default AI Provider</label>
                   <CustomSelect 
-                    value={provider} 
-                    onChange={(val: any) => setProvider(val)} 
-                    options={[
-                      { value: 'groq', label: 'Groq (Llama 3 - Default)' },
-                      { value: 'gemini-flash', label: 'Google Gemini (2.5 Flash)' }
-                    ]}
+                        value={provider} 
+                        onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
+                          if (val === 'groq' && !groqKeys.some(k => k.trim())) {
+                            setModelChangeMsg('No API key found in Groq');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'gemini-flash' && !geminiKeys.some(k => k.trim())) {
+                            setModelChangeMsg('No API key found in Gemini Flash');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'claude' && !claudeKeys.some(k => k.key.trim())) {
+                            setModelChangeMsg('No API key found in Claude');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'chatgpt' && !chatgptKeys.some(k => k.key.trim())) {
+                            setModelChangeMsg('No API key found in ChatGPT');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          if (val === 'deepseek' && !deepseekKeys.some(k => k.key.trim())) {
+                            setModelChangeMsg('No API key found in DeepSeek');
+                            setTimeout(() => setModelChangeMsg(''), 3000);
+                            return;
+                          }
+                          
+                          setProvider(val);
+                          switchProvider(val);
+                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek' };
+                          setModelChangeMsg(`Switched to ${nameMap[val]}`);
+                          setTimeout(() => setModelChangeMsg(''), 3000);
+                        }}
+                        options={[
+                          { value: 'groq', label: 'Groq (Llama 3 70B)' },
+                          { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
+                          { value: 'claude', label: 'Claude 3.5 Sonnet' },
+                          { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
+                          { value: 'deepseek', label: 'DeepSeek Coder' }
+                        ]}
                     className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
                   />
                 </div>
@@ -2434,7 +2788,195 @@ function App() {
                     </div>
                   )}
                 </div>
-              </div>
+              
+                  {/* Claude Accordion */}
+                  <div className="border-b border-brand-border last:border-b-0">
+                    <button onClick={() => setApiAccordion(apiAccordion === 'claude' ? 'none' : 'claude')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">Claude Keys (Anthropic)</h4>
+                        <p className="text-xs text-brand-subtext mt-1">{claudeKeys.filter(k=>k.key.trim()).length} key loaded (14 Day Limit)</p>
+                      </div>
+                      {apiAccordion === 'claude' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                    </button>
+                    {apiAccordion === 'claude' && (
+                      <div className="p-5 bg-brand-card space-y-3">
+                        {Array.from({ length: 1 }).map((_, i) => {
+                          const daysLeft = getDaysLeft(claudeKeys[i].addedAt, 14);
+                          return (
+                          <div key={`claude-${i}`}>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} (Mandatory)</label>
+                              {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
+                            </div>
+                            <div className="relative">
+                              <input 
+                                type={showClaudeKeys[i] ? "text" : "password"} 
+                                value={claudeKeys[i].key} 
+                                onChange={e => {
+                                  const newKeys = [...claudeKeys];
+                                  newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                  setClaudeKeys(newKeys);
+                                }}
+                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                placeholder={`sk-ant-...`}
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                {claudeKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                {claudeKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                {claudeKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                <button onClick={() => {
+                                  const newShow = [...showClaudeKeys];
+                                  newShow[i] = !newShow[i];
+                                  setShowClaudeKeys(newShow);
+                                }} className="text-brand-subtext hover:text-white transition-colors">
+                                  {showClaudeKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </button>
+                                <button onClick={() => {
+                                  const newKeys = [...claudeKeys];
+                                  newKeys[i] = { key: '', addedAt: 0 };
+                                  setClaudeKeys(newKeys);
+                                  setDeleteMessage({ provider: 'claude', index: i });
+                                  setTimeout(() => setDeleteMessage(null), 3000);
+                                }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                            {deleteMessage?.provider === 'claude' && deleteMessage?.index === i && (
+                              <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
+                            )}
+                          </div>
+                        )})}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ChatGPT Accordion */}
+                  <div className="border-b border-brand-border last:border-b-0">
+                    <button onClick={() => setApiAccordion(apiAccordion === 'chatgpt' ? 'none' : 'chatgpt')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">ChatGPT Keys (OpenAI)</h4>
+                        <p className="text-xs text-brand-subtext mt-1">{chatgptKeys.filter(k=>k.key.trim()).length} keys loaded (90 Day Limit)</p>
+                      </div>
+                      {apiAccordion === 'chatgpt' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                    </button>
+                    {apiAccordion === 'chatgpt' && (
+                      <div className="p-5 bg-brand-card space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => {
+                          const daysLeft = getDaysLeft(chatgptKeys[i].addedAt, 90);
+                          return (
+                          <div key={`chatgpt-${i}`}>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                              {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
+                            </div>
+                            <div className="relative">
+                              <input 
+                                type={showChatgptKeys[i] ? "text" : "password"} 
+                                value={chatgptKeys[i].key} 
+                                onChange={e => {
+                                  const newKeys = [...chatgptKeys];
+                                  newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                  setChatgptKeys(newKeys);
+                                }}
+                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                placeholder={`sk-...`}
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                {chatgptKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                {chatgptKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                {chatgptKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                <button onClick={() => {
+                                  const newShow = [...showChatgptKeys];
+                                  newShow[i] = !newShow[i];
+                                  setShowChatgptKeys(newShow);
+                                }} className="text-brand-subtext hover:text-white transition-colors">
+                                  {showChatgptKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </button>
+                                <button onClick={() => {
+                                  const newKeys = [...chatgptKeys];
+                                  newKeys[i] = { key: '', addedAt: 0 };
+                                  setChatgptKeys(newKeys);
+                                  setDeleteMessage({ provider: 'chatgpt', index: i });
+                                  setTimeout(() => setDeleteMessage(null), 3000);
+                                }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )})}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* DeepSeek Accordion */}
+                  <div className="border-b border-brand-border last:border-b-0">
+                    <button onClick={() => setApiAccordion(apiAccordion === 'deepseek' ? 'none' : 'deepseek')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">DeepSeek Keys</h4>
+                        <p className="text-xs text-brand-subtext mt-1">{deepseekKeys.filter(k=>k.key.trim()).length} keys loaded</p>
+                      </div>
+                      {apiAccordion === 'deepseek' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                    </button>
+                    {apiAccordion === 'deepseek' && (
+                      <div className="p-5 bg-brand-card space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => {
+                          const daysLeft = getDaysLeft(deepseekKeys[i].addedAt, 90);
+                          return (
+                          <div key={`deepseek-${i}`}>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                              <div className="flex gap-2">
+                                {deepseekBalances[i] && <span className="text-[10px] font-bold text-green-400">Bal: ${deepseekBalances[i]}</span>}
+                                {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
+                              </div>
+                            </div>
+                            <div className="relative">
+                              <input 
+                                type={showDeepseekKeys[i] ? "text" : "password"} 
+                                value={deepseekKeys[i].key} 
+                                onChange={e => {
+                                  const newKeys = [...deepseekKeys];
+                                  newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                  setDeepseekKeys(newKeys);
+                                }}
+                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                placeholder={`sk-...`}
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                {deepseekKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                {deepseekKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                {deepseekKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                <button onClick={() => {
+                                  const newShow = [...showDeepseekKeys];
+                                  newShow[i] = !newShow[i];
+                                  setShowDeepseekKeys(newShow);
+                                }} className="text-brand-subtext hover:text-white transition-colors">
+                                  {showDeepseekKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </button>
+                                <button onClick={() => {
+                                  const newKeys = [...deepseekKeys];
+                                  newKeys[i] = { key: '', addedAt: 0 };
+                                  setDeepseekKeys(newKeys);
+                                  
+                                  const newBals = [...deepseekBalances];
+                                  newBals[i] = '';
+                                  setDeepseekBalances(newBals);
+                                  
+                                  setDeleteMessage({ provider: 'deepseek', index: i });
+                                  setTimeout(() => setDeleteMessage(null), 3000);
+                                }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )})}
+                      </div>
+                    )}
+                  </div>
+</div>
             </section>
 
             {/* Interview Context */}
@@ -3751,7 +4293,7 @@ function App() {
         </div>
       )}
       
-      {!showSplash && showUsernamePrompt && (
+      {showUsernamePrompt && (
         <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
           <div className="w-full max-w-sm bg-brand-secondary border border-brand-border rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             <div className="px-6 py-6 flex flex-col gap-4">
