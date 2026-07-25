@@ -208,14 +208,23 @@ function App() {
       return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
     } catch { return Array(3).fill({key: '', addedAt: 0}); }
   });
+  
+  const [glmKeys, setGlmKeys] = useState<TimedApiKey[]>(() => {
+    try { 
+      const keys = JSON.parse(localStorage.getItem('glm_api_keys') || '[]'); 
+      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
+    } catch { return Array(3).fill({key: '', addedAt: 0}); }
+  });
 
   const [claudeKeyStatus, setClaudeKeyStatus] = useState<KeyValidationState[]>(Array(2).fill('idle'));
   const [chatgptKeyStatus, setChatgptKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
   const [deepseekKeyStatus, setDeepseekKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
+  const [glmKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
   
   const [showClaudeKeys, setShowClaudeKeys] = useState<boolean[]>(Array(2).fill(false));
   const [showChatgptKeys, setShowChatgptKeys] = useState<boolean[]>(Array(3).fill(false));
   const [showDeepseekKeys, setShowDeepseekKeys] = useState<boolean[]>(Array(3).fill(false));
+  const [showGlmKeys, setShowGlmKeys] = useState<boolean[]>(Array(3).fill(false));
   const [deepseekBalances, setDeepseekBalances] = useState<string[]>(Array(3).fill(''));
 
 
@@ -254,7 +263,7 @@ function App() {
     ipcRenderer.invoke('toggle-mic-mute', newState);
   };
 
-  const [apiAccordion, setApiAccordion] = useState<'none' | 'groq' | 'gemini' | 'claude' | 'chatgpt' | 'deepseek'>('none');
+  const [apiAccordion, setApiAccordion] = useState<'groq'|'gemini'|'claude'|'chatgpt'|'deepseek'|'glm'|'none'>('none');
 
   const [isRecording, setIsRecording] = useState(false);
   // const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
@@ -498,7 +507,8 @@ function App() {
     localStorage.setItem('claude_api_keys', JSON.stringify(claudeKeys));
     localStorage.setItem('chatgpt_api_keys', JSON.stringify(chatgptKeys));
     localStorage.setItem('deepseek_api_keys', JSON.stringify(deepseekKeys));
-    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys);
+    localStorage.setItem('glm_api_keys', JSON.stringify(glmKeys));
+    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
     setSTTApiKey(groqKeys.filter(k => k.trim()));
     
     if (msgs.length === 0) {
@@ -1117,7 +1127,7 @@ function App() {
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
     
-    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys);
+    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
     setSTTApiKey(validGroqKeys);
 
     await initSTT(() => {});
@@ -2191,7 +2201,7 @@ function App() {
                           
                           setProvider(val);
                           switchProvider(val);
-                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek' };
+                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
                           setModelChangeMsg(`Switched to ${nameMap[val]}`);
                           setTimeout(() => setModelChangeMsg(''), 3000);
                         }}
@@ -2554,7 +2564,7 @@ function App() {
                           
                           setProvider(val);
                           switchProvider(val);
-                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek' };
+                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
                           setModelChangeMsg(`Switched to ${nameMap[val]}`);
                           setTimeout(() => setModelChangeMsg(''), 3000);
                         }}
@@ -2844,6 +2854,77 @@ function App() {
                       </div>
                     )}
                   </div>
+                  {/* GLM Accordion */}
+                  <div className="border-b border-brand-border last:border-b-0">
+                    <button onClick={() => setApiAccordion(apiAccordion === 'glm' ? 'none' : 'glm')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">GLM / NVIDIA Keys</h4>
+                        <p className="text-xs text-brand-subtext mt-1">{glmKeys.filter(k=>k.key.trim()).length} keys loaded (Used for LLM)</p>
+                      </div>
+                      {apiAccordion === 'glm' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                    </button>
+                    
+                    {apiAccordion === 'glm' && (
+                      <div className="p-5 bg-brand-card space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={`glm-${i}`}>
+                            <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                            <div className="relative">
+                                <input 
+                                  type={showGlmKeys[i] ? "text" : "password"} 
+                                  value={glmKeys[i].key} 
+                                  onChange={e => {
+                                    const newKeys = [...glmKeys];
+                                    newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                    setGlmKeys(newKeys);
+                                  }}
+                                  onClick={async () => {
+                                    if (!glmKeys[i].key) {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...glmKeys];
+                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                          setGlmKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }
+                                  }}
+                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                  placeholder={`nvapi- or Zhipu key`}
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                  {glmKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                  {glmKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                  {glmKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                  {glmKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
+                                  <button onClick={() => {
+                                    const newShow = [...showGlmKeys];
+                                    newShow[i] = !newShow[i];
+                                    setShowGlmKeys(newShow);
+                                  }} className="text-brand-subtext hover:text-white transition-colors">
+                                    {showGlmKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                  </button>
+                                  <button onClick={() => {
+                                    const newKeys = [...glmKeys];
+                                    newKeys[i] = { key: '', addedAt: 0 };
+                                    setGlmKeys(newKeys);
+                                    setDeleteMessage({ provider: 'glm', index: i });
+                                    setTimeout(() => setDeleteMessage(null), 3000);
+                                  }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                            </div>
+                            {deleteMessage?.provider === 'glm' && deleteMessage?.index === i && (
+                              <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
 
                   {/* ChatGPT Accordion */}
                   <div className="border-b border-brand-border last:border-b-0">

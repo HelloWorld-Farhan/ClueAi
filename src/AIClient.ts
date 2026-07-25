@@ -7,22 +7,25 @@ let geminiApiKeys: string[] = [];
 let claudeApiKeys: string[] = [];
 let chatgptClients: OpenAI[] = [];
 let deepseekClients: OpenAI[] = [];
+let glmClients: { client: OpenAI, model: string }[] = [];
 
-let currentProvider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek' = 'groq';
+let currentProvider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek' | 'glm' = 'groq';
 
 let currentGroqIndex = 0;
 let currentGeminiIndex = 0;
 let currentClaudeIndex = 0;
 let currentChatgptIndex = 0;
 let currentDeepseekIndex = 0;
+let currentGlmIndex = 0;
 
 export function initAIClient(
-  provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek', 
+  provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek' | 'glm', 
   groqKeys: string[], 
   geminiKeys: string[],
   claudeKeys?: TimedApiKey[],
   chatgptKeys?: TimedApiKey[],
-  deepseekKeys?: TimedApiKey[]
+  deepseekKeys?: TimedApiKey[],
+  glmKeys?: TimedApiKey[]
 ) {
   currentProvider = provider;
   
@@ -51,6 +54,19 @@ export function initAIClient(
     dangerouslyAllowBrowser: true,
   }));
   currentDeepseekIndex = 0;
+
+  glmClients = (glmKeys || []).map(k => k.key.trim()).filter(Boolean).map(key => {
+    const isNvidia = key.startsWith('nvapi-');
+    return {
+      client: new OpenAI({
+        apiKey: key,
+        baseURL: isNvidia ? 'https://integrate.api.nvidia.com/v1' : 'https://open.bigmodel.cn/api/paas/v4',
+        dangerouslyAllowBrowser: true,
+      }),
+      model: isNvidia ? 'meta/llama-3.1-70b-instruct' : 'glm-4'
+    };
+  });
+  currentGlmIndex = 0;
 }
 
 export function switchProvider(provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') {
@@ -348,6 +364,39 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
           }
         }
       }
+    } else if (currentProvider === 'glm' && glmClients.length > 0) {
+        const clientObj = glmClients[currentGlmIndex];
+        const usedIndex = currentGlmIndex;
+        currentGlmIndex = (currentGlmIndex + 1) % glmClients.length;
+        
+        onStart({ provider: clientObj.model === 'glm-4' ? 'GLM-4 (Zhipu)' : 'Llama 3 70B (NVIDIA)', index: usedIndex + 1 });
+  
+        const messages: any[] = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ];
+        
+        if (imageArray && imageArray.length > 0) {
+            messages[1].content = [{ type: 'text', text: userPrompt }];
+            imageArray.forEach(img => {
+                messages[1].content.push({ type: 'image_url', image_url: { url: img } });
+            });
+        }
+  
+        const stream = await clientObj.client.chat.completions.create({
+          model: clientObj.model,
+          messages,
+          stream: true,
+          temperature: 0.1,
+          max_tokens: 1024
+        });
+  
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            onChunk(content);
+          }
+        }
     } else if ((currentProvider === 'chatgpt' && chatgptClients.length > 0) || (currentProvider === 'deepseek' && deepseekClients.length > 0)) {
       const isChatGPT = currentProvider === 'chatgpt';
       const clients = isChatGPT ? chatgptClients : deepseekClients;
