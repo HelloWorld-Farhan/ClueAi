@@ -2783,12 +2783,12 @@ function App() {
                     </button>
                     {apiAccordion === 'claude' && (
                       <div className="p-5 bg-brand-card space-y-3">
-                        {Array.from({ length: 1 }).map((_, i) => {
+                        {Array.from({ length: 2 }).map((_, i) => {
                           const daysLeft = getDaysLeft(claudeKeys[i].addedAt, 14);
                           return (
                           <div key={`claude-${i}`}>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} (Mandatory)</label>
+                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
                               {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
                             </div>
                             <div className="relative">
