@@ -169,11 +169,7 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 };
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2800);
-    return () => clearTimeout(timer);
-  }, []);
+
 
   const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>('groq');
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
@@ -1830,19 +1826,6 @@ function App() {
 
   return (
     <>
-      {showSplash && (
-        <div className="fixed inset-0 z-[9999] bg-[#09090b] flex flex-col items-center justify-center animate-out fade-out duration-500 delay-[1500ms] fill-mode-forwards rounded-3xl overflow-hidden border border-white/10">
-           <div className="relative flex flex-col items-center animate-in zoom-in-95 fade-in duration-1000">
-              <img src="./logo.png" alt="ClueAI Logo" className="w-24 h-24 object-cover rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.5)] mb-6 animate-pulse border border-white/10" />
-              <h1 className="text-4xl font-black text-white tracking-tight mb-2">Clue<span className="text-cyan-400">AI</span></h1>
-              <p className="text-brand-subtext text-[10px] font-bold tracking-[0.2em] uppercase">The Ultimate Interview Assistant</p>
-              
-              <div className="w-48 h-1 bg-white/10 rounded-full mt-12 overflow-hidden relative">
-                 <div className="absolute inset-y-0 left-0 bg-cyan-400 w-1/2 rounded-full animate-ping" />
-              </div>
-           </div>
-        </div>
-      )}
       
         <div 
           className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-300 fill-mode-both click-through-bg"
