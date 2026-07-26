@@ -332,6 +332,7 @@ function App() {
   const [altColor, setAltColor] = useState(false);
   
   const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number, width: number} | null>(null);
+
   const [stealthMode, setStealthMode] = useState(() => {
     try {
       const saved = localStorage.getItem('appStealthMode');
@@ -363,6 +364,7 @@ function App() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
 
+
   const [username, setUsername] = useState(() => {
     try { return localStorage.getItem('clueai_username') || ''; } catch { return ''; }
   });
@@ -377,6 +379,7 @@ function App() {
   const [showReminderErrors, setShowReminderErrors] = useState(false);
   
   const [showNotesPopup, setShowNotesPopup] = useState(false);
+
   const [showNotesErrors, setShowNotesErrors] = useState(false);
   const [notesForm, setNotesForm] = useState({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
   const [notesProfiles, setNotesProfiles] = useState<{id: string, notes: string, email: string, date: string, time: string, ampm: string}[]>(() => {
@@ -986,7 +989,7 @@ function App() {
           e.preventDefault();
           e.stopPropagation();
           const rect = target.getBoundingClientRect();
-          setStealthWarningToast({ x: rect.left, y: rect.top - 40, width: rect.width });
+          setStealthWarningToast({ x: rect.left, y: rect.bottom + 8, width: rect.width });
           
           if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
           (window as any).stealthToastTimeout = setTimeout(() => setStealthWarningToast(null), 2500);
