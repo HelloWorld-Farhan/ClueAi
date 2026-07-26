@@ -941,6 +941,31 @@ function App() {
     localStorage.setItem('sessions', JSON.stringify(sessions));
   }, [sessions]);
 
+  // Emergency save on app close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isRecording) {
+         const finalLog = sessionLog + `\n\n[APP_CLOSED_AT:${new Date().toLocaleTimeString()}]\n\n`;
+         if (finalLog.trim()) {
+           const newSession = {
+             id: currentSessionId || Date.now().toString(),
+             name: sessionNameInput || 'Untitled Session',
+             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             date: new Date().toLocaleDateString(),
+             transcript: finalLog.trim(),
+             aiAnswer: '',
+             history: [...currentSessionHistory]
+           };
+           const newSessions = [newSession, ...sessions.filter(s => s.id !== newSession.id)];
+           localStorage.setItem('sessions', JSON.stringify(newSessions));
+         }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isRecording, sessionLog, currentSessionId, sessionNameInput, currentSessionHistory, sessions]);
+
+
   useEffect(() => {
     localStorage.setItem('interview_title', interviewTitle);
   }, [interviewTitle]);
@@ -1558,7 +1583,11 @@ function App() {
       return; // User cancelled
     }
     
-    setCurrentSnapshots(prev => [...prev, base64Img]);
+    setCurrentSnapshots(prev => {
+        const next = [...prev, base64Img];
+        if (next.length > 5) return next.slice(next.length - 5);
+        return next;
+      });
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
@@ -2044,7 +2073,11 @@ function App() {
                                    isPausedRef.current = false;
                                    return;
                                  }
-                                 setCurrentSnapshots(prev => [...prev, base64Img]);
+                                 setCurrentSnapshots(prev => {
+        const next = [...prev, base64Img];
+        if (next.length > 5) return next.slice(next.length - 5);
+        return next;
+      });
                                  setIsPaused(false);
                                  isPausedRef.current = false;
                                }}
