@@ -211,6 +211,7 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
             ))}
           </div>
         )}
+      
       </div>
     </>
   );
@@ -2098,7 +2099,7 @@ function App() {
                                  isPausedRef.current = false;
                                }}
                                className="w-16 h-12 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg border border-white/20 border-dashed text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
-                               title="Add Snapshot"
+                               
                              >
                                <Plus size={14} />
                                <span className="text-[8px] uppercase font-bold mt-0.5 tracking-wider">Add</span>
@@ -2111,11 +2112,7 @@ function App() {
                  </div>
                
                <div className="flex items-center gap-3 shrink-0 mt-1">
-                  {modelChangeMsg && (
-                     <span className="text-emerald-400 text-xs font-bold animate-in fade-in slide-in-from-right-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1.5 rounded-md border border-emerald-400/20">
-                        <CheckCircle2 size={12} /> {modelChangeMsg}
-                     </span>
-                  )}
+                  
                   <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
                      <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
                   </div>
@@ -2349,13 +2346,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="relative group">
-                    {modelChangeMsg && !isAiFullscreen && (
-                       <div className="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-max z-50">
-                         <span className="text-emerald-400 text-[10px] font-bold animate-in fade-in slide-in-from-top-2 duration-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20 shadow-lg whitespace-nowrap">
-                           <CheckCircle2 size={10} /> {modelChangeMsg}
-                         </span>
-                       </div>
-                    )}
+                    
                     <div className="flex flex-col items-center group">
                       <CustomSelect 
                         value={provider} 
@@ -4967,6 +4958,14 @@ function App() {
       )}
       </>
       )}
+      {modelChangeMsg && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+          <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-300 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
+             <CheckCircle2 size={16} /> {modelChangeMsg}
+          </span>
+        </div>
+      )}
+      
       </div>
     </>
   );
