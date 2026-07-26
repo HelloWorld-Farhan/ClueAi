@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
@@ -2724,6 +2724,18 @@ function App() {
                               }} className="text-brand-subtext hover:text-white transition-colors">
                                 {showGroqKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                               </button>
+                                    <button onClick={async () => {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...groqKeys];
+                                          newKeys[i] = text.trim();
+                                          setGroqKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                      <ClipboardPaste size={14} />
+                                    </button>
                               <button onClick={() => {
                                 const newKeys = [...groqKeys];
                                 newKeys[i] = '';
@@ -2783,6 +2795,18 @@ function App() {
                               }} className="text-brand-subtext hover:text-white transition-colors">
                                 {showGeminiKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                               </button>
+                                    <button onClick={async () => {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...geminiKeys];
+                                          newKeys[i] = text.trim();
+                                          setGeminiKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                      <ClipboardPaste size={14} />
+                                    </button>
                               <button onClick={() => {
                                 const newKeys = [...geminiKeys];
                                 newKeys[i] = '';
@@ -2845,6 +2869,18 @@ function App() {
                                 }} className="text-brand-subtext hover:text-white transition-colors">
                                   {showClaudeKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                                 </button>
+                                    <button onClick={async () => {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...claudeKeys];
+                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                          setClaudeKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                      <ClipboardPaste size={14} />
+                                    </button>
                                 <button onClick={() => {
                                   const newKeys = [...claudeKeys];
                                   newKeys[i] = { key: '', addedAt: 0 };
@@ -2888,18 +2924,7 @@ function App() {
                                     newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
                                     setGlmKeys(newKeys);
                                   }}
-                                  onClick={async () => {
-                                    if (!glmKeys[i].key) {
-                                      try {
-                                        const text = await navigator.clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...glmKeys];
-                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
-                                          setGlmKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }
-                                  }}
+                                  
                                   className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                                   placeholder={`nvapi- or Zhipu key`}
                                 />
@@ -2915,6 +2940,18 @@ function App() {
                                   }} className="text-brand-subtext hover:text-white transition-colors">
                                     {showGlmKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                                   </button>
+                                    <button onClick={async () => {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...glmKeys];
+                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                          setGlmKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                      <ClipboardPaste size={14} />
+                                    </button>
                                   <button onClick={() => {
                                     const newKeys = [...glmKeys];
                                     newKeys[i] = { key: '', addedAt: 0 };
@@ -2978,6 +3015,18 @@ function App() {
                                 }} className="text-brand-subtext hover:text-white transition-colors">
                                   {showChatgptKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                                 </button>
+                                    <button onClick={async () => {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...chatgptKeys];
+                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                          setChatgptKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                      <ClipboardPaste size={14} />
+                                    </button>
                                 <button onClick={() => {
                                   const newKeys = [...chatgptKeys];
                                   newKeys[i] = { key: '', addedAt: 0 };
@@ -3040,6 +3089,18 @@ function App() {
                                 }} className="text-brand-subtext hover:text-white transition-colors">
                                   {showDeepseekKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                                 </button>
+                                    <button onClick={async () => {
+                                      try {
+                                        const text = await navigator.clipboard.readText();
+                                        if (text && text.trim()) {
+                                          const newKeys = [...deepseekKeys];
+                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                          setDeepseekKeys(newKeys);
+                                        }
+                                      } catch(e) {}
+                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                      <ClipboardPaste size={14} />
+                                    </button>
                                 <button onClick={() => {
                                   const newKeys = [...deepseekKeys];
                                   newKeys[i] = { key: '', addedAt: 0 };
