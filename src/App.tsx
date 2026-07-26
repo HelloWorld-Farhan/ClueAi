@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert} from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
@@ -2380,7 +2380,14 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2 no-drag">
-            <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+            <button onClick={() => {
+                const newStealth = !stealthMode;
+                setStealthMode(newStealth);
+                ipcRenderer.invoke('set-stealth', newStealth);
+              }} title={stealthMode ? "Stealth Mode ON" : "Stealth Mode OFF"} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${stealthMode ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
+                {stealthMode ? <Shield size={16} /> : <ShieldAlert size={16} />}
+              </button>
+              <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
               <Info size={16} />
             </button>
             <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
@@ -2834,6 +2841,13 @@ function App() {
                               }} className="text-brand-subtext hover:text-white transition-colors">
                                 {showGroqKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                               </button>
+                                    <button onClick={() => {
+                                      if (groqKeys[i]) {
+                                        clipboard.writeText(groqKeys[i]);
+                                      }
+                                    }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
+                                      <Copy size={14} />
+                                    </button>
                                     <button onClick={async () => {
                                       try {
                                         const text = clipboard.readText();
@@ -2905,6 +2919,13 @@ function App() {
                               }} className="text-brand-subtext hover:text-white transition-colors">
                                 {showGeminiKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
                               </button>
+                                    <button onClick={() => {
+                                      if (geminiKeys[i]) {
+                                        clipboard.writeText(geminiKeys[i]);
+                                      }
+                                    }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
+                                      <Copy size={14} />
+                                    </button>
                                     <button onClick={async () => {
                                       try {
                                         const text = clipboard.readText();
