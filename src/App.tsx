@@ -63,34 +63,13 @@ const logEvent = (msg: string) => {
 };
 
 const validateGroqKey = async (key: string): Promise<boolean> => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch('https://api.groq.com/openai/v1/models', {
-      headers: { Authorization: `Bearer ${key}` },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return res.ok;
-  } catch {
-    return false;
-  }
+  const trimmed = key.trim();
+  return trimmed.startsWith('gsk_') && trimmed.length > 40;
 };
 
 const validateGeminiKey = async (key: string): Promise<boolean> => {
   const trimmed = key.trim();
-  if (trimmed.startsWith('AQ.') && trimmed.length === 39) {
-    return true;
-  }
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    return res.ok;
-  } catch {
-    return false;
-  }
+  return trimmed.startsWith('AIza') && trimmed.length === 39;
 };
 
 type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
@@ -103,78 +82,24 @@ const getDaysLeft = (addedAt: number, limit: number) => {
 };
 
 const validateClaudeKey = async (key: string): Promise<boolean> => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-3-5-sonnet-20240620', max_tokens: 1, messages: [{role: 'user', content: 'test'}]}),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return res.status !== 401;
-  } catch { return false; }
+  const trimmed = key.trim();
+  return trimmed.startsWith('sk-ant-') && trimmed.length > 80;
 };
 
 const validateChatgptKey = async (key: string): Promise<boolean> => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${key}` },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return res.ok;
-  } catch { return false; }
+  const trimmed = key.trim();
+  return (trimmed.startsWith('sk-') || trimmed.startsWith('sk-proj-')) && trimmed.length > 40;
 };
 
 const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch('https://api.deepseek.com/user/balance', {
-      headers: { Authorization: `Bearer ${key}` },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (!res.ok) return {valid: false, balance: ''};
-    const data = await res.json();
-    return {
-      valid: true, 
-      balance: data.balance_infos?.[0]?.total_balance || '?'
-    };
-  } catch { return {valid: false, balance: ''}; }
+  const trimmed = key.trim();
+  const valid = trimmed.startsWith('sk-') && trimmed.length > 30;
+  return { valid, balance: '' };
 };
 
 const validateGlmKey = async (key: string): Promise<boolean> => {
-  try {
-    const isNvidia = key.startsWith('nvapi-');
-    if (isNvidia) {
-      // NVIDIA keys are typically 69 chars long and start with nvapi-
-      return key.length > 50;
-    }
-    
-    // For Zhipu GLM, try standard completion
-    const url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-    const reqInit: RequestInit = {
-      method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ model: 'glm-4', messages: [{role: 'user', content: 'hi'}], max_tokens: 1 })
-    };
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(url, { ...reqInit, signal: controller.signal });
-    clearTimeout(timeoutId);
-    return res.ok;
-  } catch {
-    return false;
-  }
+  const trimmed = key.trim();
+  return trimmed.length > 30;
 };
 
 const CustomSelect = ({ value, onChange, options, className, icon, listClassName }: any) => {
