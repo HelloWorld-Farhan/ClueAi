@@ -3822,23 +3822,10 @@ function App() {
                       className="flex justify-between items-center py-3 px-4 hover:bg-brand-secondary/80 cursor-pointer"
                       onClick={() => setExpandedSessionId(expandedSessionId === session.id ? null : session.id)}
                     >
-                      {editingSessionId === session.id ? (
-                        <input 
-                          type="text" 
-                          value={editingSessionName}
-                          onChange={(e) => setEditingSessionName(e.target.value)}
-                          onBlur={() => handleRenameSession(session.id)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleRenameSession(session.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          autoFocus
-                          className="stealth-exempt bg-[#090909] text-white px-2 py-1 rounded-md text-sm border border-brand-accent outline-none flex-1 mr-4"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          {expandedSessionId === session.id ? <ChevronDown size={16} className="text-brand-subtext"/> : <ChevronRight size={16} className="text-brand-subtext"/>}
-                          <span className="text-brand-text font-bold text-sm truncate">{session.name}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {expandedSessionId === session.id ? <ChevronDown size={16} className="text-brand-subtext shrink-0"/> : <ChevronRight size={16} className="text-brand-subtext shrink-0"/>}
+                        <span className="text-brand-text font-bold text-sm truncate">{session.name}</span>
+                      </div>
                       
                       <div className="flex items-center gap-6 text-brand-subtext text-xs font-mono shrink-0">
                         <span>{session.time}</span>
@@ -3851,7 +3838,7 @@ function App() {
                         <>
                           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); }}></div>
                           <div className="absolute right-4 top-10 bg-brand-secondary border border-brand-border rounded-lg shadow-xl z-50 overflow-hidden min-w-[120px]">
-                            <button onClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); setEditingSessionName(session.name); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors">
+                            <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingSessionId(session.id); setEditingSessionName(session.name); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors">
                               <FileText size={14} /> Rename
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); exportSession(session); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors border-t border-brand-border">
@@ -4126,7 +4113,44 @@ function App() {
         </div>
       )}
 
-      {/* Session Name Prompt Modal Redesign */}
+              {/* Rename Session Modal */}
+        {editingSessionId !== null && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-300">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
+              
+              <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full shadow-[0_0_80px_rgba(0,0,0,1)]">
+                <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                  <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Rename Session</h3>
+                  <button onClick={() => setEditingSessionId(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
+                </div>
+                
+                <div className="p-8 space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">New Session Name</label>
+                    <input 
+                      type="text"
+                      autoFocus
+                      value={editingSessionName}
+                      onChange={e => setEditingSessionName(e.target.value)}
+                      onKeyDown={e => { if(e.key === 'Enter') handleRenameSession(editingSessionId); }}
+                      className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
+                    />
+                  </div>
+                </div>
+                
+                <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md rounded-b-3xl">
+                  <button onClick={() => setEditingSessionId(null)} className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                  <button onClick={() => handleRenameSession(editingSessionId)} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]">
+                    Save Name
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Session Name Prompt Modal Redesign */}
       {showSessionPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
           <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
