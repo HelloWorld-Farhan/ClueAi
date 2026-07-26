@@ -1196,6 +1196,7 @@ function App() {
     }
 
     if (!silent) {
+      setProvider('groq');
       if (showSessionPrompt || isStealthBypass) {
         if (!currentSessionId) {
           const name = isStealthBypass ? ('Stealth Session ' + new Date().toLocaleTimeString()) : sessionNameInput.trim();
@@ -1569,6 +1570,7 @@ function App() {
     ipcRenderer.invoke('stop-interview-window');
 
     if (!silent) {
+      setProvider('groq');
       setIsRecording(false);
       setIsPaused(false);
       setIsAiFullscreen(false);
@@ -2220,10 +2222,10 @@ function App() {
                                 ) : null}
                                 <CopyButton 
                                   text={codeText}
-                                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
                                   tooltip="Copy code"
                                 />
-                                <div className="absolute top-4 right-14 z-10 opacity-0 group-hover/code:opacity-100 transition-opacity">
+                                <div className="absolute top-4 right-14 z-10 opacity-100 transition-opacity">
                                   <select
                                     className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs rounded-lg px-2 py-2 outline-none cursor-pointer backdrop-blur-md font-medium"
                                     value=""
