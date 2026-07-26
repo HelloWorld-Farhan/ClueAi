@@ -2726,7 +2726,7 @@ function App() {
                               </button>
                                     <button onClick={async () => {
                                       try {
-                                        const text = await navigator.clipboard.readText();
+                                        const text = clipboard.readText();
                                         if (text && text.trim()) {
                                           const newKeys = [...groqKeys];
                                           newKeys[i] = text.trim();
@@ -2797,7 +2797,7 @@ function App() {
                               </button>
                                     <button onClick={async () => {
                                       try {
-                                        const text = await navigator.clipboard.readText();
+                                        const text = clipboard.readText();
                                         if (text && text.trim()) {
                                           const newKeys = [...geminiKeys];
                                           newKeys[i] = text.trim();
@@ -2871,7 +2871,7 @@ function App() {
                                 </button>
                                     <button onClick={async () => {
                                       try {
-                                        const text = await navigator.clipboard.readText();
+                                        const text = clipboard.readText();
                                         if (text && text.trim()) {
                                           const newKeys = [...claudeKeys];
                                           newKeys[i] = { key: text.trim(), addedAt: Date.now() };
@@ -2942,7 +2942,7 @@ function App() {
                                   </button>
                                     <button onClick={async () => {
                                       try {
-                                        const text = await navigator.clipboard.readText();
+                                        const text = clipboard.readText();
                                         if (text && text.trim()) {
                                           const newKeys = [...glmKeys];
                                           newKeys[i] = { key: text.trim(), addedAt: Date.now() };
@@ -3017,7 +3017,7 @@ function App() {
                                 </button>
                                     <button onClick={async () => {
                                       try {
-                                        const text = await navigator.clipboard.readText();
+                                        const text = clipboard.readText();
                                         if (text && text.trim()) {
                                           const newKeys = [...chatgptKeys];
                                           newKeys[i] = { key: text.trim(), addedAt: Date.now() };
@@ -3091,7 +3091,7 @@ function App() {
                                 </button>
                                     <button onClick={async () => {
                                       try {
-                                        const text = await navigator.clipboard.readText();
+                                        const text = clipboard.readText();
                                         if (text && text.trim()) {
                                           const newKeys = [...deepseekKeys];
                                           newKeys[i] = { key: text.trim(), addedAt: Date.now() };
