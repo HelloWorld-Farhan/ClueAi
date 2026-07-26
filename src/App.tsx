@@ -2249,7 +2249,7 @@ function App() {
             <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
               <Move size={16} />
             </div>
-            <div className="flex flex-col justify-center shrink-0">
+            <div className="flex items-center">
               <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
                 <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
                 <span>ClueAI</span>
@@ -2266,6 +2266,9 @@ function App() {
                   </span>
                 )}
               </h1>
+              <span className="hidden md:flex ml-4 px-2.5 py-1 rounded-md border border-brand-accent/20 bg-brand-accent/5 text-[10px] font-bold text-brand-accent tracking-wider uppercase items-center gap-1.5 pointer-events-none select-none shrink-0 self-center">
+                <Keyboard size={12} /> Ctrl+Shift+K to minimize/restore
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2 no-drag">
