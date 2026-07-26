@@ -29,7 +29,7 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
   };
   
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {copied && <span className="text-green-500 text-[10px] font-bold animate-pulse">Copied!</span>}
       {empty && <span className="text-rose-500 text-[10px] font-bold animate-pulse">No Text</span>}
       <button 
@@ -134,7 +134,7 @@ const validateGlmKey = async (key: string): Promise<boolean> => {
     const isNvidia = key.startsWith('nvapi-');
     if (isNvidia) {
       // NVIDIA keys are typically 69 chars long and start with nvapi-
-      return key.length === 69;
+      return key.length > 50;
     }
     
     // For Zhipu GLM, try standard completion
@@ -166,7 +166,7 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
       )}
       <div className={`relative ${className || ''}`} onClick={() => setIsOpen(!isOpen)}>
         <div className="flex items-center justify-between h-full cursor-pointer select-none">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {icon && icon}
             <span className="truncate">{selectedOption?.label || value}</span>
           </div>
@@ -2160,7 +2160,7 @@ function App() {
           
           {/* ROW 1: Status Tags and Window Controls */}
           <div className="flex items-center justify-between w-full no-drag">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {stealthMode ? (
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
                   Stealth: ON
@@ -2222,7 +2222,7 @@ function App() {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <div className="flex items-center gap-3 mr-2 relative">
                 <div className="flex flex-col items-center justify-center mr-2">
                   <button 
@@ -2288,8 +2288,7 @@ function App() {
                           { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
                           { value: 'claude', label: 'Claude 3.5 Sonnet' },
                           { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
-                          { value: 'deepseek', label: 'DeepSeek Coder' }
-                        ]}
+                          { value: 'deepseek', label: 'DeepSeek Coder' }, { value: 'glm', label: 'GLM / NVIDIA' }]}
                         className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
                       icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
                     />
@@ -2661,8 +2660,7 @@ function App() {
                           { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
                           { value: 'claude', label: 'Claude 3.5 Sonnet' },
                           { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
-                          { value: 'deepseek', label: 'DeepSeek Coder' }
-                        ]}
+                          { value: 'deepseek', label: 'DeepSeek Coder' }, { value: 'glm', label: 'GLM / NVIDIA' }]}
                     className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
                   />
                 </div>
@@ -3631,7 +3629,7 @@ function App() {
                             <span className="text-[10px] text-blue-200 font-bold truncate">Reminder <span className="opacity-70 font-normal">• {prof.jobTitle}</span></span>
                           </div>
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
                               <button 
                                 onClick={(e) => { 
@@ -3664,7 +3662,7 @@ function App() {
                             <span className="text-[10px] text-teal-200 font-bold truncate">Note <span className="opacity-70 font-normal">• {prof.email}</span></span>
                           </div>
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
                               <button 
                                 onClick={(e) => { 
@@ -3792,7 +3790,7 @@ function App() {
                </div>
 
                {/* Right: Icons */}
-               <div className="flex items-center gap-2">
+               <div className="flex flex-wrap items-center justify-end gap-2">
                   <button onClick={() => setShowPreviousQuestions(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
                      <Clock size={20} />
                   </button>
@@ -3806,7 +3804,7 @@ function App() {
             <div className="flex justify-center mt-2 shrink-0 relative z-20">
                  <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
                     {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <span>Generate Answer</span>
                         <div className="flex items-center gap-1 opacity-70 ml-1">
                           <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
