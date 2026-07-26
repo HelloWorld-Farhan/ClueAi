@@ -1881,7 +1881,7 @@ function App() {
         return;
       }
 
-      if (!isRecording) return;
+      if (!isRecording && !isAiFullscreen) return;
       
       if (key === '7' || key === 'q') {
         e.preventDefault();
@@ -1931,6 +1931,7 @@ function App() {
     };
 
     const handleIPCHotkey = (_event: any, action: string) => {
+      if (!isRecording && !isAiFullscreen) return;
       if (action === 'toggle-color') {
         setAltColor(prev => !prev);
       } else if (action === 'toggle-pause') {
@@ -3798,7 +3799,7 @@ function App() {
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto mt-4 pb-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-3 mt-4 pb-4">
             <h3 className="text-brand-subtext font-bold mb-3 text-sm px-2">Yesterday</h3>
                           <div className="space-y-3">
                 {sessions.length === 0 ? (
