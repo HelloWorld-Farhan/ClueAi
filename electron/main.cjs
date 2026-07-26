@@ -268,7 +268,7 @@ function createWindow() {
           height: dragSize.height
         });
       }
-    }, 10);
+    }, 16); // ~60fps cap
   });
 
   ipcMain.on('stop-drag', () => {
@@ -566,7 +566,6 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     createWindow();
   
-  const { globalShortcut } = require('electron');
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
@@ -579,7 +578,6 @@ if (!gotTheLock) {
 });
 
 app.on('will-quit', () => {
-  const { globalShortcut } = require('electron');
   globalShortcut.unregisterAll();
 });
 

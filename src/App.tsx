@@ -818,16 +818,20 @@ function App() {
       } catch (e) {}
     };
     fetchMicName();
-    
+  }, []);
+
+  // Only sync mic state while actively recording — avoids wasted IPC calls on the main menu
+  useEffect(() => {
+    if (!isRecording) return;
     const audioSyncInterval = setInterval(async () => {
       try {
         const state = await ipcRenderer.invoke('get-mic-state');
         setSysMicVolume(state.volume);
         setSysMicMuted(state.muted);
       } catch (e) {}
-    }, 500);
+    }, 1000);
     return () => clearInterval(audioSyncInterval);
-  }, []);
+  }, [isRecording]);
 
   useEffect(() => {
     localStorage.setItem('resume_text', resumeText);
@@ -858,9 +862,7 @@ function App() {
   }, [personalContextFileName]);
 
 
-  useEffect(() => {
-    localStorage.setItem('reminder_profiles', JSON.stringify(reminderProfiles));
-  }, [reminderProfiles]);
+  // reminder_profiles already persisted by the effect at line ~320; duplicate removed
 
   useEffect(() => {
     if (isRecording) {
@@ -945,9 +947,14 @@ function App() {
   const audioDataRef = useRef<Float32Array>(new Float32Array(0));
   const intervalRef = useRef<any>(null);
 
-  // Stealth Mode click-through handler
+  // Stealth Mode click-through handler — throttled to ~20Hz to avoid flooding Electron IPC
+  const lastMouseSendRef = useRef<number>(0);
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
+      const now = Date.now();
+      if (now - lastMouseSendRef.current < 50) return; // 20Hz throttle
+      lastMouseSendRef.current = now;
+
       // Only active during interview
       if (!isAiFullscreen && !isRecording) {
         ipcRenderer.send('set-ignore-mouse-events', false);
@@ -1458,12 +1465,16 @@ function App() {
   
   processAudioRef.current = processAudio;
 
+  // Use a stable ref so the keyboard useEffect never needs to re-register due to this function changing
+  const manualTriggerAIRef = useRef<(overrideSnapshots?: string[], overrideTranscript?: string) => Promise<void>>(async () => {});
+
   const manualTriggerAI = async (overrideSnapshots?: string[], overrideTranscript?: string) => {
     const snaps = overrideSnapshots || currentSnapshots;
-      if (aiAbortControllerRef.current) {
-        aiAbortControllerRef.current.abort();
-      }
-      aiAbortControllerRef.current = new AbortController();
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+    }
+    aiAbortControllerRef.current = new AbortController();
+    const signal = aiAbortControllerRef.current.signal;
     const currentTranscript = overrideTranscript !== undefined ? overrideTranscript : transcript;
     
     if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !currentTranscript && snaps.length === 0) {
@@ -1475,8 +1486,8 @@ function App() {
     setIsGenerating(true);
     setIsAiFullscreen(true);
     
-    if (currentTranscript.trim() || aiAnswer.trim() || snaps.length > 0) {
-      // Create a temporary history item to show the question immediately, we'll update it with the answer later
+    if (currentTranscript.trim() || snaps.length > 0) {
+      // Create a temporary history item to show the question immediately
       setCurrentSessionHistory(prev => [...prev, { question: currentTranscript, answer: '', images: [...snaps] }]);
     }
     
@@ -1484,27 +1495,38 @@ function App() {
     let finalAnswer = '';
     let currentProviderInfo = '';
 
-    await getInterviewAnswer(
-      currentTranscript, 
-      resumeText,
-      resumeText2,
-      resumePriority,
-      personalContextText,
-      interviewTitle, 
-      snaps,
-      (chunk) => {
-        finalAnswer += chunk;
-        setAiAnswer(prev => prev + chunk);
-      },
-      (info) => {
-        currentProviderInfo = `${info.provider.toUpperCase()} (Key ${info.index})`;
-        setActiveAIInfo(info);
-        if (activeAITimeoutRef.current) clearTimeout(activeAITimeoutRef.current);
-        activeAITimeoutRef.current = setTimeout(() => setActiveAIInfo(null), 5000);
+    try {
+      await getInterviewAnswer(
+        currentTranscript, 
+        resumeText,
+        resumeText2,
+        resumePriority,
+        personalContextText,
+        interviewTitle, 
+        snaps,
+        (chunk) => {
+          finalAnswer += chunk;
+          setAiAnswer(prev => prev + chunk);
+        },
+        (info) => {
+          currentProviderInfo = `${info.provider.toUpperCase()} (Key ${info.index})`;
+          setActiveAIInfo(info);
+          if (activeAITimeoutRef.current) clearTimeout(activeAITimeoutRef.current);
+          activeAITimeoutRef.current = setTimeout(() => setActiveAIInfo(null), 5000);
+        },
+        signal
+      );
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.error('AI generation error:', err);
       }
-    );
+    } finally {
+      // ALWAYS reset generating state even if aborted or errored — prevents UI freeze
+      setIsGenerating(false);
+    }
     
-    if (finalAnswer.trim()) {
+    // Only save to history/log if we got a real answer AND request was not aborted
+    if (finalAnswer.trim() && !signal.aborted) {
       setCurrentSessionHistory(prev => {
         const newHistory = [...prev];
         if (newHistory.length > 0) {
@@ -1512,11 +1534,16 @@ function App() {
         }
         return newHistory;
       });
-      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${currentSnapshots.length > 0 ? `[IMAGE_BASE64: MULTIPLE_IMAGES]\n` : ''}${transcript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
+      // Use currentTranscript (local var) not stale transcript state for accurate log
+      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${snaps.length > 0 ? '[IMAGE_BASE64: MULTIPLE_IMAGES]\n' : ''}${currentTranscript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
+    } else if (signal.aborted) {
+      // Remove the unanswered placeholder history item if generation was cancelled
+      setCurrentSessionHistory(prev => prev.filter((_, idx) => idx !== prev.length - 1 || prev[prev.length - 1]?.answer !== ''));
     }
-
-    setIsGenerating(false);
   };
+
+  // Keep the ref always pointing to the latest version
+  manualTriggerAIRef.current = manualTriggerAI;
 
   const handleSnipClick = async () => {
     setIsPaused(true);
@@ -1843,10 +1870,13 @@ function App() {
         e.preventDefault();
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
-        if (!isGenerating) manualTriggerAI();
+        if (!isGenerating) manualTriggerAIRef.current();
       } else if (key === 'z' || key === '1') {
         e.preventDefault();
         if (isAiFullscreen) {
+          // Abort any in-progress generation immediately
+          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+          setIsGenerating(false);
           setIsAiFullscreen(false);
           setTranscript('');
           finalizedTranscriptRef.current = '';
@@ -1899,6 +1929,9 @@ function App() {
         setAltColor(prev => !prev);
       } else if (action === 'toggle-pause') {
         if (isAiFullscreen) {
+          // Abort any in-progress generation immediately
+          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+          setIsGenerating(false);
           setIsAiFullscreen(false);
           setTranscript('');
           finalizedTranscriptRef.current = '';
@@ -1911,7 +1944,7 @@ function App() {
           handlePauseToggle();
         }
       } else if (action === 'force-ai') {
-        if (!isGenerating) manualTriggerAI();
+        if (!isGenerating) manualTriggerAIRef.current();
       } else if (action === 'clear-all') {
         if (isAiFullscreen) {
           stopRecording();
@@ -1923,11 +1956,24 @@ function App() {
       } else if (action === 'snapshot') {
         handleSnipClick();
       } else if (action === 'switch-model') {
-        const newProvider = provider === 'groq' ? 'gemini-flash' : 'groq';
-        setProvider(newProvider);
-        switchProvider(newProvider);
-        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini Flash'}`);
-        setTimeout(() => setModelChangeMsg(''), 3000);
+        // Cycle through ALL providers that have at least one configured API key
+        const availableProviders: string[] = [];
+        if (groqKeys.some((k: any) => k.trim())) availableProviders.push('groq');
+        if (geminiKeys.some((k: any) => k.trim())) availableProviders.push('gemini-flash');
+        if (claudeKeys.some((k: any) => k.key.trim())) availableProviders.push('claude');
+        if (chatgptKeys.some((k: any) => k.key.trim())) availableProviders.push('chatgpt');
+        if (deepseekKeys.some((k: any) => k.key.trim())) availableProviders.push('deepseek');
+        if (glmKeys.some((k: any) => k.key.trim())) availableProviders.push('glm');
+        if (availableProviders.length > 0) {
+          const currentIndex = availableProviders.indexOf(provider);
+          const nextIndex = currentIndex !== -1 ? (currentIndex + 1) % availableProviders.length : 0;
+          const newProvider = availableProviders[nextIndex] as any;
+          setProvider(newProvider);
+          switchProvider(newProvider);
+          const nameMap: any = { groq: 'Groq', 'gemini-flash': 'Gemini Flash', claude: 'Claude', chatgpt: 'ChatGPT', deepseek: 'DeepSeek', glm: 'GLM / NVIDIA' };
+          setModelChangeMsg(`Switched to ${nameMap[newProvider]}`);
+          setTimeout(() => setModelChangeMsg(''), 3000);
+        }
       } else if (action === 'stop-generation') {
         stopRecording();
       } else if (action === 'edit-transcript') {
@@ -1946,7 +1992,9 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown);
       ipcRenderer.off('trigger-hotkey', handleIPCHotkey);
     };
-  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
+  // manualTriggerAI intentionally excluded — we use manualTriggerAIRef.current to avoid
+  // re-registering this expensive listener on every render during AI streaming
+  }, [isRecording, isPaused, isGenerating, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
 
   const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
@@ -2078,21 +2126,24 @@ function App() {
                      }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
                   </div>
                   <button 
-                    onClick={() => {
-                      setIsAiFullscreen(false);
-                      setTranscript('');
-                      finalizedTranscriptRef.current = '';
-                      interimTranscriptRef.current = '';
-                      setAiAnswer('');
-                      setCurrentSnapshots([]);
-                      setIsPaused(false);
-                      isPausedRef.current = false;
-                    }} 
-                    title="Next Question (Press Z or 1)"
-                    className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0"
-                  >
-                    <Play size={12} fill="currentColor" /> NEXT Q. <span className="opacity-70 text-[8px] bg-black/20 px-1 rounded ml-0.5">1</span>
-                  </button>
+                     onClick={() => {
+                       // Abort any in-progress generation immediately
+                       if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+                       setIsGenerating(false);
+                       setIsAiFullscreen(false);
+                       setTranscript('');
+                       finalizedTranscriptRef.current = '';
+                       interimTranscriptRef.current = '';
+                       setAiAnswer('');
+                       setCurrentSnapshots([]);
+                       setIsPaused(false);
+                       isPausedRef.current = false;
+                     }} 
+                     title="Next Question (Press Z or 1)"
+                     className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0"
+                   >
+                     <Play size={12} fill="currentColor" /> NEXT Q. <span className="opacity-70 text-[8px] bg-black/20 px-1 rounded ml-0.5">1</span>
+                   </button>
                   <div className="flex flex-col gap-1.5 shrink-0">
                     <button 
                       onClick={() => {
@@ -2124,7 +2175,7 @@ function App() {
             
             {/* AI Answer Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-transparent no-drag">
-               <div className={`max-w-4xl mx-auto font-bold whitespace-pre-wrap leading-relaxed ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
+               <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
                       components={{
@@ -4847,7 +4898,7 @@ function App() {
                           }
                           setShowPreviousQuestions(false);
                           if (!isGenerating) {
-                            manualTriggerAI(snaps, item.question);
+                            manualTriggerAIRef.current(snaps, item.question);
                           }
                         }}
                         className="px-4 py-2 bg-brand-accent hover:bg-cyan-400 text-white rounded-lg font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2"

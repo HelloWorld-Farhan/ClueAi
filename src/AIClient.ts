@@ -69,7 +69,7 @@ export function initAIClient(
   currentGlmIndex = 0;
 }
 
-export function switchProvider(provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') {
+export function switchProvider(provider: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek' | 'glm') {
   currentProvider = provider;
 }
 
@@ -83,7 +83,7 @@ export async function getInterviewAnswer(
   imageArray: string[],
   onChunk: (chunk: string) => void, 
   onStart: (info: {provider: string, index: number}) => void = () => {},
-    abortSignal?: AbortSignal
+  abortSignal?: AbortSignal
 ) {
   if (currentProvider === 'groq' && groqClients.length === 0) return;
   if (currentProvider === 'gemini-flash' && geminiApiKeys.length === 0) return;
@@ -120,14 +120,11 @@ CRITICAL RULE: You MUST speak EXACTLY like a real, casual human being talking ou
 ${explanationLength}
 - Give direct, conversational answers. DO NOT use robotic filler words like "Certainly!", "Here is...", or "As an AI...".
 - DO NOT use conversational filler like "Yeah, this is a pretty standard utility function..." or "Looking at the logic here...". Just provide the direct, correct, and accurate answer immediately.
+- PARAGRAPH RULE: Structure your answer using SHORT paragraphs of 4-5 lines each. Each paragraph MUST start on a new line with NO blank line between paragraphs. Use markdown formatting.
 - Use Markdown formatting for your output. If you are writing code, ALWAYS wrap it in \`\`\` language blocks.
 - **Rule 1 (Lists/Points):** If you are listing points, ALWAYS use standard Markdown bullet points (using the \`-\` symbol). Do NOT use \`>\` or blockquotes. Ensure there are NO blank lines between the bullet points.
 - **Rule 2 (Code Questions):** If the question is about code, you MUST output the exact correct code FIRST, wrapped in a standard markdown \`\`\` code block. Follow it with your explanation below.
-- **Rule 3 (QUIZ/MCQ):** If the image or transcript contains a multiple-choice question or a quiz, you MUST explicitly output ONLY the correct answer(s) FIRST, wrapped exactly like this: \`\`\`exact-answer
-[Your Answer Here]
-\`\`\`. For example: \`\`\`exact-answer
-A - True
-\`\`\`. You MUST ensure 100% accuracy and provide a human-like explanation below it.
+- **Rule 3 (QUIZ/MCQ):** If the image or transcript contains a multiple-choice question or a quiz, you MUST explicitly output ONLY the correct answer(s) FIRST, wrapped exactly like this: \`\`\`exact-answer\n[Your Answer Here]\n\`\`\`. For example: \`\`\`exact-answer\nA - True\n\`\`\`. You MUST ensure 100% accuracy and provide a human-like explanation below it.
 - **Rule 4:** If asked for differences or comparisons, you MUST output a short bulleted list. Put both sides of the comparison into the SAME bullet point.
 - **Rule 5:** If asked to describe multiple things, you MUST create bold \`## Headlines\` for each item.
 - If asked about Strengths and Weaknesses, you MUST explicitly use the keywords "Strength:" and "Weakness:" to divide the answer clearly.
@@ -161,12 +158,12 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
 
+      // Prioritize fastest-known working vision models first, then fall back to text models
       const groqVisionModels = [
-        'llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 
-        'llama-3.2-11b-vision-instruct', 'llama-3.2-90b-vision-instruct',
-        'llama-3.2-11b-vision', 'llama-3.2-90b-vision',
-        'llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-scout-17b-16e-instruct',
-        'qwen-2.5-vl', 'qwen-vl-max', 'qwen/qwen3.6-27b', 'qwen3.6-27b'
+        'meta-llama/llama-4-scout-17b-16e-instruct',
+        'llama-3.2-11b-vision-preview',
+        'llama-3.2-90b-vision-preview',
+        'llama-3.2-11b-vision-instruct',
       ];
       const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192'];
       
@@ -174,10 +171,10 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       let stream: any = null;
       let lastGroqError: any = null;
 
-      // Try up to `groqClients.length` keys
       const maxKeyAttempts = Math.min(15, groqClients.length);
       
       for (let attempt = 0; attempt < maxKeyAttempts; attempt++) {
+        if (abortSignal?.aborted) return;
         const client = groqClients[currentGroqIndex];
         const usedIndex = currentGroqIndex;
         currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
@@ -186,6 +183,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         let keySuccess = false;
 
         for (const modelName of modelsToTry) {
+          if (abortSignal?.aborted) return;
           try {
             stream = await client.chat.completions.create({
               model: modelName,
@@ -193,15 +191,14 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
               stream: true,
               temperature: 0.5,
             });
-            console.log(`Successfully connected to Groq model: ${modelName} using Key #${usedIndex + 1}`);
+            console.log(`Groq connected: ${modelName} Key #${usedIndex + 1}`);
             keySuccess = true;
-            break; // Successfully connected
+            break;
           } catch (err: any) {
             lastGroqError = err;
-            console.warn(`Groq model ${modelName} on Key #${usedIndex + 1} failed.`, err?.message);
-            // If it's a 429 Too Many Requests, break out of model loop and try next key immediately
+            console.warn(`Groq model ${modelName} Key #${usedIndex + 1} failed.`, err?.message);
             if (err?.status === 429 || err?.message?.includes('429')) {
-              console.warn(`Rate limit hit on Key #${usedIndex + 1}. Rotating to next API key...`);
+              console.warn(`Rate limit on Key #${usedIndex + 1}. Rotating...`);
               break; 
             }
           }
@@ -215,12 +212,13 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       }
 
       for await (const chunk of stream) {
+        if (abortSignal?.aborted) return;
         const content = chunk.choices[0]?.delta?.content || '';
         onChunk(content);
       }
     } else if (currentProvider.startsWith('gemini') && geminiApiKeys.length > 0) {
       const geminiContents: any[] = [];
-      let geminiParts: any[] = [{ text: userPrompt }];
+      const geminiParts: any[] = [{ text: userPrompt }];
       if (imageArray && imageArray.length > 0) {
         imageArray.forEach(img => {
           const mimeType = img.split(';')[0].split(':')[1] || 'image/png';
@@ -237,6 +235,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       let lastGeminiError: any = null;
 
       for (let attempt = 0; attempt < maxGeminiAttempts; attempt++) {
+        if (abortSignal?.aborted) return;
         const key = geminiApiKeys[currentGeminiIndex];
         const usedIndex = currentGeminiIndex;
         currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
@@ -247,11 +246,9 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         
         try {
           const response = await fetch(url, {
-        signal: abortSignal,
+            signal: abortSignal,
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: systemPrompt }] },
               contents: geminiContents,
@@ -260,15 +257,19 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
           });
 
           if (!response.ok) {
-             const errText = await response.text();
-             throw new Error(`${response.status} ${errText}`);
+            const errText = await response.text();
+            throw new Error(`${response.status} ${errText}`);
           }
 
           const reader = response.body?.getReader();
-          const decoder = new TextDecoder("utf-8");
+          const decoder = new TextDecoder('utf-8');
           let buffer = '';
           
           while (reader) {
+            if (abortSignal?.aborted) {
+              reader.cancel();
+              return;
+            }
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
@@ -285,13 +286,10 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
                   const data = JSON.parse(dataStr);
                   if (data.candidates && data.candidates[0]?.content?.parts) {
                     const text = data.candidates[0].content.parts[0].text;
-                    if (text) {
-                      console.log('--- GEMINI LOG CHUNK ---', text);
-                      onChunk(text);
-                    }
+                    if (text) onChunk(text);
                   }
                 } catch (e) {
-                  // Ignore partial JSON parse errors if still fragmented
+                  // Ignore partial JSON parse errors during fragmented chunks
                 }
               }
             }
@@ -300,7 +298,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
           break;
         } catch (err: any) {
           lastGeminiError = err;
-          console.warn(`Gemini API Key #${usedIndex + 1} failed. Rotating...`, err?.message);
+          console.warn(`Gemini Key #${usedIndex + 1} failed. Rotating...`, err?.message);
         }
       }
 
@@ -308,109 +306,146 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         throw new Error(`Gemini API Error: All keys failed. Last error: ${lastGeminiError?.message || lastGeminiError}`);
       }
     } else if (currentProvider === 'claude' && claudeApiKeys.length > 0) {
-      const key = claudeApiKeys[currentClaudeIndex];
-      const usedIndex = currentClaudeIndex;
-      currentClaudeIndex = (currentClaudeIndex + 1) % claudeApiKeys.length;
-      onStart({ provider: 'Claude 3.5 Sonnet', index: usedIndex + 1 });
-      
-      const claudeMessages: any[] = [];
-      if (imageArray && imageArray.length > 0) {
-        const contentArr: any[] = [{ type: 'text', text: userPrompt }];
-        imageArray.forEach(img => {
-          const mimeType = img.split(';')[0].split(':')[1] || 'image/jpeg';
-          const base64Data = img.split(',')[1] || img;
-          contentArr.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } });
-        });
-        claudeMessages.push({ role: 'user', content: contentArr });
-      } else {
-        claudeMessages.push({ role: 'user', content: userPrompt });
-      }
+      // Try Claude models in cascade until one works (handles model deprecations)
+      const claudeModelsToTry = [
+        'claude-sonnet-4-5',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-haiku-20240307',
+      ];
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        signal: abortSignal,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
-          max_tokens: 1024,
-          system: systemPrompt,
-          messages: claudeMessages,
-          stream: true
-        })
-      });
+      let claudeSuccess = false;
+      let lastClaudeError: any = null;
 
-      if (!response.ok) {
-        throw new Error(`Claude API Error: ${response.status} ${await response.text()}`);
-      }
+      for (const claudeModel of claudeModelsToTry) {
+        if (abortSignal?.aborted) return;
+        const key = claudeApiKeys[currentClaudeIndex];
+        const usedIndex = currentClaudeIndex;
+        currentClaudeIndex = (currentClaudeIndex + 1) % claudeApiKeys.length;
+        onStart({ provider: 'Claude', index: usedIndex + 1 });
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = '';
-      
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        
-        let nlIndex;
-        while ((nlIndex = buffer.indexOf('\n')) !== -1) {
-          const line = buffer.slice(0, nlIndex);
-          buffer = buffer.slice(nlIndex + 1);
-          
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim();
-            if (dataStr === '[DONE]') continue;
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.type === 'content_block_delta' && data.delta?.text) {
-                onChunk(data.delta.text);
-              }
-            } catch (e) {}
-          }
+        const claudeMessages: any[] = [];
+        if (imageArray && imageArray.length > 0) {
+          const contentArr: any[] = [{ type: 'text', text: userPrompt }];
+          imageArray.forEach(img => {
+            const mimeType = img.split(';')[0].split(':')[1] || 'image/jpeg';
+            const base64Data = img.split(',')[1] || img;
+            contentArr.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } });
+          });
+          claudeMessages.push({ role: 'user', content: contentArr });
+        } else {
+          claudeMessages.push({ role: 'user', content: userPrompt });
         }
+
+        try {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            signal: abortSignal,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': key,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: claudeModel,
+              max_tokens: 2048,
+              system: systemPrompt,
+              messages: claudeMessages,
+              stream: true
+            })
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            // If 404 (model not found), try next model in cascade
+            if (response.status === 404) {
+              console.warn(`Claude model ${claudeModel} not found, trying next...`);
+              lastClaudeError = new Error(`Claude API Error: ${response.status} ${errText}`);
+              continue;
+            }
+            throw new Error(`Claude API Error: ${response.status} ${errText}`);
+          }
+
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+          
+          while (reader) {
+            if (abortSignal?.aborted) {
+              reader.cancel();
+              return;
+            }
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            
+            let nlIndex;
+            while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+              const line = buffer.slice(0, nlIndex);
+              buffer = buffer.slice(nlIndex + 1);
+              
+              if (line.startsWith('data: ')) {
+                const dataStr = line.slice(6).trim();
+                if (dataStr === '[DONE]') continue;
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.type === 'content_block_delta' && data.delta?.text) {
+                    onChunk(data.delta.text);
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+          claudeSuccess = true;
+          break; // Successfully streamed from this model, done
+        } catch (err: any) {
+          if (err?.name === 'AbortError' || abortSignal?.aborted) return;
+          lastClaudeError = err;
+          console.warn(`Claude model ${claudeModel} failed:`, err?.message);
+        }
+      }
+
+      if (!claudeSuccess && lastClaudeError) {
+        throw lastClaudeError;
       }
     } else if (currentProvider === 'glm' && glmClients.length > 0) {
-        const clientObj = glmClients[currentGlmIndex];
-        const usedIndex = currentGlmIndex;
-        currentGlmIndex = (currentGlmIndex + 1) % glmClients.length;
-        
-        onStart({ provider: clientObj.model === 'glm-4' ? 'GLM-4 (Zhipu)' : 'Llama 3 70B (NVIDIA)', index: usedIndex + 1 });
-  
-        const messages: any[] = [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ];
-        
-        if (imageArray && imageArray.length > 0) {
-            messages[1].content = [{ type: 'text', text: userPrompt }];
-            imageArray.forEach(img => {
-                messages[1].content.push({ type: 'image_url', image_url: { url: img } });
-            });
-        }
-  
-        const stream = await clientObj.client.chat.completions.create({
-          model: clientObj.model,
-          messages,
-          stream: true,
-          temperature: 0.1,
-          max_tokens: 1024
+      if (abortSignal?.aborted) return;
+      const clientObj = glmClients[currentGlmIndex];
+      const usedIndex = currentGlmIndex;
+      currentGlmIndex = (currentGlmIndex + 1) % glmClients.length;
+      
+      onStart({ provider: clientObj.model === 'glm-4' ? 'GLM-4 (Zhipu)' : 'Llama 3 70B (NVIDIA)', index: usedIndex + 1 });
+
+      const messages: any[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ];
+      
+      if (imageArray && imageArray.length > 0) {
+        messages[1].content = [{ type: 'text', text: userPrompt }];
+        imageArray.forEach(img => {
+          messages[1].content.push({ type: 'image_url', image_url: { url: img } });
         });
-  
-        for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            onChunk(content);
-          }
-        }
+      }
+
+      const stream = await clientObj.client.chat.completions.create({
+        model: clientObj.model,
+        messages,
+        stream: true,
+        temperature: 0.1,
+        max_tokens: 1024
+      });
+
+      for await (const chunk of stream) {
+        if (abortSignal?.aborted) return;
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) onChunk(content);
+      }
     } else if ((currentProvider === 'chatgpt' && chatgptClients.length > 0) || (currentProvider === 'deepseek' && deepseekClients.length > 0)) {
+      if (abortSignal?.aborted) return;
       const isChatGPT = currentProvider === 'chatgpt';
       const clients = isChatGPT ? chatgptClients : deepseekClients;
-      let currentIndex = isChatGPT ? currentChatgptIndex : currentDeepseekIndex;
+      const currentIndex = isChatGPT ? currentChatgptIndex : currentDeepseekIndex;
       
       const client = clients[currentIndex];
       const usedIndex = currentIndex;
@@ -434,7 +469,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
       
-      const modelName = isChatGPT ? 'gpt-4o' : 'deepseek-coder';
+      const modelName = isChatGPT ? 'gpt-4o' : 'deepseek-chat';
       
       const stream = await client.chat.completions.create({
         model: modelName,
@@ -444,12 +479,13 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       });
       
       for await (const chunk of stream) {
+        if (abortSignal?.aborted) return;
         const content = chunk.choices[0]?.delta?.content || '';
         onChunk(content);
       }
     }
   } catch (error: any) {
-    if (error.name === 'AbortError') {
+    if (error.name === 'AbortError' || abortSignal?.aborted) {
       console.log('AI generation aborted.');
       return;
     }
