@@ -330,6 +330,8 @@ function App() {
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
+  
+  const [stealthWarningToast, setStealthWarningToast] = useState(false);
   const [stealthMode, setStealthMode] = useState(() => {
     try {
       const saved = localStorage.getItem('appStealthMode');
@@ -636,7 +638,7 @@ function App() {
           return next;
         });
       }
-    }, 300);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [groqKeys]);
 
@@ -688,7 +690,7 @@ function App() {
           return next;
         });
       }
-    }, 300);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [geminiKeys]);
 
@@ -730,7 +732,7 @@ function App() {
           return next;
         });
       }
-    }, 300);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [claudeKeys]);
 
@@ -771,7 +773,7 @@ function App() {
           return next;
         });
       }
-    }, 300);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [chatgptKeys]);
 
@@ -815,7 +817,7 @@ function App() {
           return next;
         });
       }
-    }, 300);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [glmKeys]);
 
@@ -868,7 +870,7 @@ function App() {
           return next;
         });
       }
-    }, 300);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [deepseekKeys]);
 
@@ -945,6 +947,29 @@ function App() {
   
   
     
+
+  
+  // Block typing if stealth mode is ON
+  useEffect(() => {
+    const handleInputAttempt = (e: Event) => {
+      if (stealthMode) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox')) {
+          e.preventDefault();
+          e.stopPropagation();
+          setStealthWarningToast(true);
+          setTimeout(() => setStealthWarningToast(false), 3000);
+        }
+      }
+    };
+    
+    document.addEventListener('mousedown', handleInputAttempt, true);
+    document.addEventListener('keydown', handleInputAttempt, true);
+    return () => {
+      document.removeEventListener('mousedown', handleInputAttempt, true);
+      document.removeEventListener('keydown', handleInputAttempt, true);
+    };
+  }, [stealthMode]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAiFullscreen, setIsAiFullscreen] = useState(false);
@@ -4645,7 +4670,15 @@ function App() {
         </div>
       )}
       {/* Alert Message Modal */}
-      {alertMessage && (
+      
+        {stealthWarningToast && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] bg-rose-500 text-white px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(244,63,94,0.5)] font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-10">
+            <ShieldAlert size={20} />
+            Turn off Stealth Mode (Shield) to type!
+          </div>
+        )}
+
+        {alertMessage && (
         <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
           <div className={`w-full max-w-md bg-brand-secondary border ${alertMessage.type === 'error' ? 'border-rose-500/50' : alertMessage.type === 'success' ? 'border-green-500/50' : 'border-brand-accent/50'} rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
             <div className="px-6 py-4 flex flex-col gap-3 mt-2">
