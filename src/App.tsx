@@ -65,7 +65,7 @@ const logEvent = (msg: string) => {
 const validateGroqKey = async (key: string): Promise<boolean> => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch('https://api.groq.com/openai/v1/models', {
       headers: { Authorization: `Bearer ${key}` },
       signal: controller.signal
@@ -84,7 +84,7 @@ const validateGeminiKey = async (key: string): Promise<boolean> => {
   }
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, { signal: controller.signal });
     clearTimeout(timeoutId);
     return res.ok;
@@ -105,7 +105,7 @@ const getDaysLeft = (addedAt: number, limit: number) => {
 const validateClaudeKey = async (key: string): Promise<boolean> => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -120,7 +120,7 @@ const validateClaudeKey = async (key: string): Promise<boolean> => {
 const validateChatgptKey = async (key: string): Promise<boolean> => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch('https://api.openai.com/v1/models', {
       headers: { Authorization: `Bearer ${key}` },
       signal: controller.signal
@@ -133,7 +133,7 @@ const validateChatgptKey = async (key: string): Promise<boolean> => {
 const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch('https://api.deepseek.com/user/balance', {
       headers: { Authorization: `Bearer ${key}` },
       signal: controller.signal
@@ -168,7 +168,7 @@ const validateGlmKey = async (key: string): Promise<boolean> => {
     };
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(url, { ...reqInit, signal: controller.signal });
     clearTimeout(timeoutId);
     return res.ok;
@@ -636,7 +636,7 @@ function App() {
           return next;
         });
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [groqKeys]);
 
@@ -688,7 +688,7 @@ function App() {
           return next;
         });
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [geminiKeys]);
 
@@ -730,7 +730,7 @@ function App() {
           return next;
         });
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [claudeKeys]);
 
@@ -771,7 +771,7 @@ function App() {
           return next;
         });
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [chatgptKeys]);
 
@@ -815,7 +815,7 @@ function App() {
           return next;
         });
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [glmKeys]);
 
@@ -868,7 +868,7 @@ function App() {
           return next;
         });
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [deepseekKeys]);
 
