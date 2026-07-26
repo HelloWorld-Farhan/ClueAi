@@ -46,6 +46,18 @@ function createWindow() {
     }
   });
 
+  mainWindow.on('hide', () => {
+    if (hotkeysActive) {
+      unregisterAllHotkeys();
+    }
+  });
+
+  mainWindow.on('show', () => {
+    if (hotkeysActive) {
+      registerAllHotkeys();
+    }
+  });
+
   // --- AUDIO API IPC HANDLERS ---
   ipcMain.handle('get-mic-state', () => {
     try {
