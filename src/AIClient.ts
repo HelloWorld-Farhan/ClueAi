@@ -82,7 +82,8 @@ export async function getInterviewAnswer(
   interviewTitle: string, 
   imageArray: string[],
   onChunk: (chunk: string) => void, 
-  onStart: (info: {provider: string, index: number}) => void = () => {}
+  onStart: (info: {provider: string, index: number}) => void = () => {},
+    abortSignal?: AbortSignal
 ) {
   if (currentProvider === 'groq' && groqClients.length === 0) return;
   if (currentProvider === 'gemini-flash' && geminiApiKeys.length === 0) return;
@@ -246,6 +247,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         
         try {
           const response = await fetch(url, {
+        signal: abortSignal,
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -325,6 +327,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       }
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
+        signal: abortSignal,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -446,6 +449,10 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       }
     }
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('AI generation aborted.');
+      return;
+    }
     console.error('AI Error:', error);
     onChunk(`\n[AI Error: ${error.message || error}]`);
   }

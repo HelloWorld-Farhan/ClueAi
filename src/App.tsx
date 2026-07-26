@@ -937,6 +937,7 @@ function App() {
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<any>(null);
+    const aiAbortControllerRef = useRef<AbortController | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -1459,6 +1460,10 @@ function App() {
 
   const manualTriggerAI = async (overrideSnapshots?: string[], overrideTranscript?: string) => {
     const snaps = overrideSnapshots || currentSnapshots;
+      if (aiAbortControllerRef.current) {
+        aiAbortControllerRef.current.abort();
+      }
+      aiAbortControllerRef.current = new AbortController();
     const currentTranscript = overrideTranscript !== undefined ? overrideTranscript : transcript;
     
     if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !currentTranscript && snaps.length === 0) {
@@ -1531,6 +1536,8 @@ function App() {
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
+      if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+      setIsGenerating(false);
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
     
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -1856,11 +1863,27 @@ function App() {
         handleClearAll();
       } else if (key === 's' || key === '5') {
         e.preventDefault();
-        const newProvider = provider === 'groq' ? 'gemini-flash' : 'groq';
-        setProvider(newProvider);
-        switchProvider(newProvider);
-        setModelChangeMsg(`Switched to ${newProvider === 'groq' ? 'Groq' : 'Gemini Flash'}`);
-        setTimeout(() => setModelChangeMsg(''), 3000);
+        const availableProviders = [];
+        if (groqKeys.some((k: any) => k.trim())) availableProviders.push('groq');
+        if (geminiKeys.some((k: any) => k.trim())) availableProviders.push('gemini-flash');
+        if (claudeKeys.some((k: any) => k.key.trim())) availableProviders.push('claude');
+        if (chatgptKeys.some((k: any) => k.key.trim())) availableProviders.push('chatgpt');
+        if (deepseekKeys.some((k: any) => k.key.trim())) availableProviders.push('deepseek');
+        if (glmKeys.some((k: any) => k.key.trim())) availableProviders.push('glm');
+        
+        if (availableProviders.length === 0) {
+          setModelChangeMsg('No API keys configured');
+          setTimeout(() => setModelChangeMsg(''), 3000);
+        } else {
+          const currentIndex = availableProviders.indexOf(provider);
+          const nextIndex = currentIndex !== -1 ? (currentIndex + 1) % availableProviders.length : 0;
+          const newProvider = availableProviders[nextIndex] as any;
+          setProvider(newProvider);
+          switchProvider(newProvider);
+          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
+          setModelChangeMsg(`Switched to ${nameMap[newProvider]}`);
+          setTimeout(() => setModelChangeMsg(''), 3000);
+        }
       } else if (key === 'd' || key === '6') {
         e.preventDefault();
         stopRecording();
@@ -2153,7 +2176,7 @@ function App() {
                         }
                       }}
                     >
-                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\n{2,}/g, '\n').trim()}
+                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
                     </ReactMarkdown>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
@@ -3850,7 +3873,7 @@ function App() {
                                       }
                                     }}
                                   >
-                                    {item.answer ? item.answer.replace(/\n{2,}/g, '\n').trim() : "No answer generated"}
+                                    {item.answer ? item.answer.replace(/(?:\r?\n)+/g, '\n').trim() : "No answer generated"}
                                   </ReactMarkdown>
                                 </div>
                               )}
@@ -4838,7 +4861,7 @@ function App() {
                     <div className="pt-6 border-t border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-[11px] font-black text-fuchsia-400 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
-                        <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\n{2,}/g, '\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
+                        <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
                       </div>
                       <div className="text-white/90 font-bold text-sm whitespace-pre-wrap leading-relaxed">
                         <ReactMarkdown
@@ -4870,7 +4893,7 @@ function App() {
                             }
                           }}
                         >
-                            {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\n{2,}/g, '\n').trim()}
+                            {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
                         </ReactMarkdown>
                       </div>
                     </div>
