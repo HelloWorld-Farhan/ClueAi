@@ -2297,12 +2297,6 @@ function App() {
               </button>
             </div>
           </div>
-          
-          <div className="w-full flex justify-center pt-2 pb-1 border-b border-brand-border/30 bg-black/20">
-            <span className="hidden md:flex px-2.5 py-0.5 rounded-md border border-brand-accent/10 bg-brand-accent/5 text-[10px] font-bold text-brand-accent tracking-widest uppercase items-center gap-1.5 pointer-events-none select-none shrink-0 opacity-70">
-              <Keyboard size={12} /> Ctrl+Shift+K to minimize or restore
-            </span>
-          </div>
         </div>
       )}
       </div>
