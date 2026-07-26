@@ -120,7 +120,7 @@ CRITICAL RULE: You MUST speak EXACTLY like a real, casual human being talking ou
 ${explanationLength}
 - Give direct, conversational answers. DO NOT use robotic filler words like "Certainly!", "Here is...", or "As an AI...".
 - DO NOT use conversational filler like "Yeah, this is a pretty standard utility function..." or "Looking at the logic here...". Just provide the direct, correct, and accurate answer immediately.
-- PARAGRAPH RULE: Structure your answer using SHORT paragraphs of 4-5 lines each. Each paragraph MUST start on a new line with NO blank line between paragraphs. Use markdown formatting.
+- CRITICAL PARAGRAPH FORMAT: You MUST write your answer in compact, dense paragraphs of 4-5 lines. Do NOT leave any blank lines between paragraphs. Each paragraph flows directly into the next with only a single line break. This rule applies to ALL responses — no blank lines ever.
 - Use Markdown formatting for your output. If you are writing code, ALWAYS wrap it in \`\`\` language blocks.
 - **Rule 1 (Lists/Points):** If you are listing points, ALWAYS use standard Markdown bullet points (using the \`-\` symbol). Do NOT use \`>\` or blockquotes. Ensure there are NO blank lines between the bullet points.
 - **Rule 2 (Code Questions):** If the question is about code, you MUST output the exact correct code FIRST, wrapped in a standard markdown \`\`\` code block. Follow it with your explanation below.
@@ -143,12 +143,20 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
 
     let userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
 
-    if (currentProvider === 'groq' && groqClients.length > 0) {
+    // SNAPSHOT SPEED OPTIMIZATION: When images are present and provider is Groq,
+    // auto-route to Gemini Flash because it handles vision much faster than Groq's vision models.
+    // Only do this if Gemini keys are configured.
+    const hasImages = imageArray && imageArray.length > 0;
+    const effectiveProvider = (currentProvider === 'groq' && hasImages && geminiApiKeys.length > 0)
+      ? 'gemini-flash'
+      : currentProvider;
+
+    if (effectiveProvider === 'groq' && groqClients.length > 0) {
       const messages: any[] = [
         { role: 'system', content: systemPrompt },
       ];
       
-      if (imageArray && imageArray.length > 0) {
+      if (hasImages) {
         const contentArr: any[] = [{ type: 'text', text: userPrompt }];
         imageArray.forEach(img => {
           contentArr.push({ type: 'image_url', image_url: { url: img } });
@@ -167,7 +175,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       ];
       const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192'];
       
-      const modelsToTry = (imageArray && imageArray.length > 0) ? groqVisionModels : groqTextModels;
+      const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
       let stream: any = null;
       let lastGroqError: any = null;
 
@@ -179,22 +187,27 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         const usedIndex = currentGroqIndex;
         currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
         
-        onStart({ provider: 'groq', index: usedIndex + 1 });
+        onStart({ provider: 'Groq', index: usedIndex + 1 });
         let keySuccess = false;
 
         for (const modelName of modelsToTry) {
           if (abortSignal?.aborted) return;
           try {
+            // Add an 8-second per-model timeout for vision requests to fail fast
+            const modelSignal = hasImages && abortSignal
+              ? AbortSignal.any([abortSignal, AbortSignal.timeout(8000)])
+              : abortSignal;
             stream = await client.chat.completions.create({
               model: modelName,
               messages,
               stream: true,
               temperature: 0.5,
-            });
+            } as any, modelSignal ? { signal: modelSignal } : undefined);
             console.log(`Groq connected: ${modelName} Key #${usedIndex + 1}`);
             keySuccess = true;
             break;
           } catch (err: any) {
+            if (abortSignal?.aborted) return;
             lastGroqError = err;
             console.warn(`Groq model ${modelName} Key #${usedIndex + 1} failed.`, err?.message);
             if (err?.status === 429 || err?.message?.includes('429')) {
@@ -216,7 +229,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         const content = chunk.choices[0]?.delta?.content || '';
         onChunk(content);
       }
-    } else if (currentProvider.startsWith('gemini') && geminiApiKeys.length > 0) {
+    } else if (effectiveProvider.startsWith('gemini') && geminiApiKeys.length > 0) {
       const geminiContents: any[] = [];
       const geminiParts: any[] = [{ text: userPrompt }];
       if (imageArray && imageArray.length > 0) {
@@ -305,7 +318,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       if (!geminiSuccess) {
         throw new Error(`Gemini API Error: All keys failed. Last error: ${lastGeminiError?.message || lastGeminiError}`);
       }
-    } else if (currentProvider === 'claude' && claudeApiKeys.length > 0) {
+    } else if (effectiveProvider === 'claude' && claudeApiKeys.length > 0) {
       // Try Claude models in cascade until one works (handles model deprecations)
       const claudeModelsToTry = [
         'claude-sonnet-4-5',
@@ -408,7 +421,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       if (!claudeSuccess && lastClaudeError) {
         throw lastClaudeError;
       }
-    } else if (currentProvider === 'glm' && glmClients.length > 0) {
+    } else if (effectiveProvider === 'glm' && glmClients.length > 0) {
       if (abortSignal?.aborted) return;
       const clientObj = glmClients[currentGlmIndex];
       const usedIndex = currentGlmIndex;
@@ -441,9 +454,9 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) onChunk(content);
       }
-    } else if ((currentProvider === 'chatgpt' && chatgptClients.length > 0) || (currentProvider === 'deepseek' && deepseekClients.length > 0)) {
+    } else if ((effectiveProvider === 'chatgpt' && chatgptClients.length > 0) || (effectiveProvider === 'deepseek' && deepseekClients.length > 0)) {
       if (abortSignal?.aborted) return;
-      const isChatGPT = currentProvider === 'chatgpt';
+      const isChatGPT = effectiveProvider === 'chatgpt';
       const clients = isChatGPT ? chatgptClients : deepseekClients;
       const currentIndex = isChatGPT ? currentChatgptIndex : currentDeepseekIndex;
       
