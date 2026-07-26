@@ -3746,7 +3746,7 @@ function App() {
                 {sessions.length === 0 ? (
                   <div className="text-brand-subtext text-sm italic px-2 py-4">No sessions saved yet. Start capturing to see history here!</div>
                 ) : sessions.map((session) => (
-                  <div key={session.id} className="flex flex-col bg-brand-secondary/30 rounded-xl transition-colors border border-brand-border group relative overflow-hidden">
+                  <div key={session.id} className={`flex flex-col bg-brand-secondary/30 rounded-xl transition-colors border border-brand-border group relative ${openMenuId === session.id ? "z-50 overflow-visible" : "z-10 overflow-hidden"}`}>
                     <div 
                       className="flex justify-between items-center py-3 px-4 hover:bg-brand-secondary/80 cursor-pointer"
                       onClick={() => setExpandedSessionId(expandedSessionId === session.id ? null : session.id)}
