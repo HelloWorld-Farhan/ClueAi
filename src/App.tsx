@@ -1531,13 +1531,7 @@ function App() {
       return; // User cancelled
     }
     
-    const screenshotMarker = `\n[Screenshot ${currentSnapshots.length + 1} Captured]\n`;
-    setTranscript(prev => prev + screenshotMarker);
-    finalizedTranscriptRef.current += screenshotMarker;
-    
     setCurrentSnapshots(prev => [...prev, base64Img]);
-    setIsPaused(false);
-    isPausedRef.current = false;
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
@@ -2345,7 +2339,7 @@ function App() {
                   <Pause size={12} fill="currentColor" /> PAUSE <span className="opacity-70 text-[8px] border border-yellow-500/30 px-1 rounded ml-0.5">1</span>
                 </button>
               )}
-              <button onClick={handleSnipClick} title="Snip UI (Press A or 4)" className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
+              <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
                 <Crop size={12} /> SNIP <span className="opacity-70 text-[8px] border border-cyan-500/30 px-1 rounded ml-0.5">4</span>
               </button>
               <button onClick={handleClearAll} title="Clear Transcript (Press C or 3)" className="flex items-center gap-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
