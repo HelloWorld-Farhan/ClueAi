@@ -63,13 +63,11 @@ const logEvent = (msg: string) => {
 };
 
 const validateGroqKey = async (key: string): Promise<boolean> => {
-  const trimmed = key.trim();
-  return trimmed.startsWith('gsk_') && trimmed.length >= 40;
+  return key.trim().length > 0;
 };
 
 const validateGeminiKey = async (key: string): Promise<boolean> => {
-  const trimmed = key.trim();
-  return trimmed.startsWith('AIza') && trimmed.length >= 39;
+  return key.trim().length > 0;
 };
 
 type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
@@ -82,24 +80,19 @@ const getDaysLeft = (addedAt: number, limit: number) => {
 };
 
 const validateClaudeKey = async (key: string): Promise<boolean> => {
-  const trimmed = key.trim();
-  return trimmed.startsWith('sk-ant-') && trimmed.length >= 60;
+  return key.trim().length > 0;
 };
 
 const validateChatgptKey = async (key: string): Promise<boolean> => {
-  const trimmed = key.trim();
-  return (trimmed.startsWith('sk-') || trimmed.startsWith('sk-proj-')) && trimmed.length >= 40;
+  return key.trim().length > 0;
 };
 
 const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
-  const trimmed = key.trim();
-  const valid = trimmed.startsWith('sk-') && trimmed.length > 30;
-  return { valid, balance: '' };
+  return { valid: key.trim().length > 0, balance: '' };
 };
 
 const validateGlmKey = async (key: string): Promise<boolean> => {
-  const trimmed = key.trim();
-  return trimmed.length > 30;
+  return key.trim().length > 0;
 };
 
 const CustomSelect = ({ value, onChange, options, className, icon, listClassName }: any) => {
@@ -2051,7 +2044,7 @@ function App() {
         >
         {isAiFullscreen ? (
           <div 
-            className="flex flex-col w-full h-full overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto click-through-bg"
+            className="flex flex-col w-full max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto click-through-bg"
             style={{ 
               backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
               backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
@@ -2204,7 +2197,7 @@ function App() {
             </div>
             
             {/* AI Answer Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 bg-transparent no-drag">
+            <div className="overflow-y-auto custom-scrollbar p-8 bg-transparent no-drag">
                <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
