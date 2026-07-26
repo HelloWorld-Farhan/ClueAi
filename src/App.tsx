@@ -331,7 +331,7 @@ function App() {
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
   
-  const [stealthWarningToast, setStealthWarningToast] = useState(false);
+  const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number, width: number} | null>(null);
   const [stealthMode, setStealthMode] = useState(() => {
     try {
       const saved = localStorage.getItem('appStealthMode');
@@ -985,8 +985,11 @@ function App() {
         if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox')) {
           e.preventDefault();
           e.stopPropagation();
-          setStealthWarningToast(true);
-          setTimeout(() => setStealthWarningToast(false), 3000);
+          const rect = target.getBoundingClientRect();
+          setStealthWarningToast({ x: rect.left, y: rect.top - 40, width: rect.width });
+          
+          if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
+          (window as any).stealthToastTimeout = setTimeout(() => setStealthWarningToast(null), 2500);
         }
       }
     };
@@ -4712,9 +4715,15 @@ function App() {
       {/* Alert Message Modal */}
       
         {stealthWarningToast && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] bg-rose-500 text-white px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(244,63,94,0.5)] font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-10">
-            <ShieldAlert size={20} />
-            Turn off Stealth Mode (Shield) to type!
+          <div 
+            className="fixed z-[9999] bg-rose-500/90 text-white px-3 py-1.5 rounded-lg shadow-xl font-bold flex items-center justify-center gap-2 text-[11px] animate-in zoom-in duration-200 backdrop-blur-md pointer-events-none whitespace-nowrap"
+            style={{ 
+              top: Math.max(10, stealthWarningToast.y) + 'px', 
+              left: stealthWarningToast.x + 'px', 
+              minWidth: stealthWarningToast.width + 'px' 
+            }}
+          >
+            <ShieldAlert size={14} /> Shield is ON. Cannot type here.
           </div>
         )}
 
