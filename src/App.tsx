@@ -2094,11 +2094,21 @@ function App() {
                     });
                     const data = await res.json();
                     if (data.choices && data.choices[0]) {
-                      let newCodeBlock = data.choices[0].message.content;
+                      let newCodeBlock = data.choices[0].message.content.trim();
+                      if (!newCodeBlock.startsWith('```')) {
+                        newCodeBlock = `\`\`\`${targetLang}\n${newCodeBlock}\n\`\`\``;
+                      }
                       setAiAnswer(prev => {
-                        const escapedOld = codeText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`\`\`\`[a-z]*\\n?${escapedOld}\\n?\`\`\``, 'g');
-                        if (regex.test(prev)) return prev.replace(regex, newCodeBlock);
+                        const startIdx = prev.indexOf(codeText);
+                        if (startIdx === -1) return prev;
+                        
+                        const blockStart = prev.lastIndexOf('```', startIdx);
+                        const blockEnd = prev.indexOf('```', startIdx + codeText.length);
+                        
+                        if (blockStart !== -1 && blockEnd !== -1) {
+                           return prev.substring(0, blockStart) + newCodeBlock + prev.substring(blockEnd + 3);
+                        }
+                        
                         return prev.replace(codeText, newCodeBlock.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim());
                       });
                     }

@@ -143,13 +143,8 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
 
     let userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
 
-    // SNAPSHOT SPEED OPTIMIZATION: When images are present and provider is Groq,
-    // auto-route to Gemini Flash because it handles vision much faster than Groq's vision models.
-    // Only do this if Gemini keys are configured.
     const hasImages = imageArray && imageArray.length > 0;
-    const effectiveProvider = (currentProvider === 'groq' && hasImages && geminiApiKeys.length > 0)
-      ? 'gemini-flash'
-      : currentProvider;
+    const effectiveProvider = currentProvider;
 
     if (effectiveProvider === 'groq' && groqClients.length > 0) {
       const messages: any[] = [
