@@ -1999,7 +1999,7 @@ function App() {
     };
   }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider, isAiFullscreen]);
 
-  const closeApp = () => window.close();
+  const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
      ipcRenderer.invoke('minimize-window');
   };
