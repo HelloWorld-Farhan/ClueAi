@@ -2266,9 +2266,6 @@ function App() {
                   </span>
                 )}
               </h1>
-              <span className="hidden md:flex ml-4 px-2.5 py-1 rounded-md border border-brand-accent/20 bg-brand-accent/5 text-[10px] font-bold text-brand-accent tracking-wider uppercase items-center gap-1.5 pointer-events-none select-none shrink-0 self-center">
-                <Keyboard size={12} /> Ctrl+Shift+K to minimize/restore
-              </span>
             </div>
           </div>
           <div className="flex items-center gap-2 no-drag">
@@ -2299,6 +2296,12 @@ function App() {
                 <X size={16} />
               </button>
             </div>
+          </div>
+          
+          <div className="w-full flex justify-center pt-2 pb-1 border-b border-brand-border/30 bg-black/20">
+            <span className="hidden md:flex px-2.5 py-0.5 rounded-md border border-brand-accent/10 bg-brand-accent/5 text-[10px] font-bold text-brand-accent tracking-widest uppercase items-center gap-1.5 pointer-events-none select-none shrink-0 opacity-70">
+              <Keyboard size={12} /> Ctrl+Shift+K to minimize or restore
+            </span>
           </div>
         </div>
       )}
@@ -2496,6 +2499,16 @@ function App() {
                         <li>DeepSeek is extremely cheap but requires adding a small balance (Top-up).</li>
                         <li>Paste it into the DeepSeek API Key fields (up to 3 for rotation).</li>
                         <li><em>Note: Your DeepSeek account balance is automatically checked and shown!</em></li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting NVIDIA / GLM Keys (Free Llama 3)</h4>
+                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://build.nvidia.com/meta/llama-3_1-70b-instruct'); }} className="text-blue-400 hover:underline">build.nvidia.com</a> for NVIDIA NIM or <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://bigmodel.cn/'); }} className="text-blue-400 hover:underline">bigmodel.cn</a> for GLM.</li>
+                        <li>NVIDIA NIM gives you 1,000 free API credits automatically upon signup!</li>
+                        <li>GLM gives you 25,000,000 free API tokens upon signup!</li>
+                        <li>Click <strong>Get API Key</strong> on either site and copy the generated key.</li>
+                        <li>Paste it directly into the GLM/NVIDIA API Key fields (it automatically detects which provider you pasted).</li>
                       </ol>
                     </div>
                   </div>
