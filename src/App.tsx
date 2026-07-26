@@ -132,17 +132,21 @@ const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balanc
 const validateGlmKey = async (key: string): Promise<boolean> => {
   try {
     const isNvidia = key.startsWith('nvapi-');
-    const url = isNvidia ? 'https://integrate.api.nvidia.com/v1/models' : 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-    
-    const reqInit: RequestInit = {
-      headers: { Authorization: `Bearer ${key}` }
-    };
-    
-    if (!isNvidia) {
-       reqInit.method = 'POST';
-       reqInit.headers = { ...reqInit.headers, 'Content-Type': 'application/json' };
-       reqInit.body = JSON.stringify({ model: 'glm-4', messages: [{role: 'user', content: 'hi'}], max_tokens: 1 });
+    if (isNvidia) {
+      // NVIDIA keys are typically 69 chars long and start with nvapi-
+      return key.length === 69;
     }
+    
+    // For Zhipu GLM, try standard completion
+    const url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    const reqInit: RequestInit = {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ model: 'glm-4', messages: [{role: 'user', content: 'hi'}], max_tokens: 1 })
+    };
     
     const res = await fetch(url, reqInit);
     return res.ok;
@@ -541,6 +545,13 @@ function App() {
     setSaveMessages(msgs);
     setTimeout(() => setSaveMessages([]), 8000);
   };
+
+    useEffect(() => { localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys)); }, [groqKeys]);
+  useEffect(() => { localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys)); }, [geminiKeys]);
+  useEffect(() => { localStorage.setItem('claude_api_keys', JSON.stringify(claudeKeys)); }, [claudeKeys]);
+  useEffect(() => { localStorage.setItem('chatgpt_api_keys', JSON.stringify(chatgptKeys)); }, [chatgptKeys]);
+  useEffect(() => { localStorage.setItem('deepseek_api_keys', JSON.stringify(deepseekKeys)); }, [deepseekKeys]);
+  useEffect(() => { localStorage.setItem('glm_api_keys', JSON.stringify(glmKeys)); }, [glmKeys]);
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
