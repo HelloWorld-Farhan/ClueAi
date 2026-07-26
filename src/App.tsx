@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert} from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -2037,6 +2037,116 @@ function App() {
     }
   };
 
+  const markdownComponents = useMemo(() => ({
+    code(props: any) {
+      const {node, className, children, ...rest} = props;
+      const match = /language-(\w+)/.exec(className || "");
+      const codeText = String(children).replace(/\n$/, "");
+      const blockId = codeText.substring(0, 30);
+      const isTranslating = translatingCodeId === blockId;
+
+      return match ? (
+        <div className="w-full flex justify-center my-6">
+          <div className="relative group/code max-w-4xl w-full">
+            {isTranslating ? (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 rounded-2xl backdrop-blur-sm border border-brand-accent/30">
+                <Loader2 size={32} className="animate-spin text-brand-accent mb-3" />
+                <p className="text-sm text-brand-accent font-bold animate-pulse">Translating Code...</p>
+              </div>
+            ) : null}
+            <CopyButton 
+              text={codeText}
+              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
+              tooltip="Copy code"
+            />
+            <div className="absolute top-4 right-14 z-20 opacity-100 transition-opacity w-32">
+              <CustomSelect
+                value=""
+                onChange={async (targetLang: string) => {
+                  if (!targetLang) return;
+                  setTranslatingCodeId(blockId);
+                  try {
+                    const groqKey = groqKeys.find(k => k.trim()) || '';
+                    if (!groqKey) {
+                      setAlertMessage({ title: 'Key Required', message: 'Groq API Key is required for fast code translation.', type: 'warning' });
+                      return;
+                    }
+                    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+                      body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [{ role: 'system', content: `You are an expert coder. Translate this code to ${targetLang}. Output ONLY the raw markdown code block (e.g. \`\`\`${targetLang}\\n...\\n\`\`\`). Do NOT include ANY explanation or text outside the block.` }, { role: 'user', content: codeText }]
+                      })
+                    });
+                    const data = await res.json();
+                    if (data.choices && data.choices[0]) {
+                      let newCodeBlock = data.choices[0].message.content;
+                      setAiAnswer(prev => {
+                        const escapedOld = codeText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`\`\`\`[a-z]*\\n?${escapedOld}\\n?\`\`\``, 'g');
+                        if (regex.test(prev)) return prev.replace(regex, newCodeBlock);
+                        return prev.replace(codeText, newCodeBlock.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim());
+                      });
+                    }
+                  } catch (err) {
+                    console.error("Translation Error", err);
+                  } finally {
+                    setTranslatingCodeId(null);
+                  }
+                }}
+                options={[
+                  { value: '', label: 'Translate...' },
+                  { value: 'python', label: 'Python' },
+                  { value: 'java', label: 'Java' },
+                  { value: 'c++', label: 'C++' },
+                  { value: 'javascript', label: 'JavaScript' },
+                  { value: 'typescript', label: 'TypeScript' },
+                  { value: 'c#', label: 'C#' },
+                  { value: 'go', label: 'Go' },
+                  { value: 'rust', label: 'Rust' },
+                ]}
+                className="bg-[#18181b] hover:bg-[#27272a] text-white border border-white/20 text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer backdrop-blur-md font-medium"
+                listClassName="text-xs bg-[#18181b] !max-h-40 overflow-y-auto custom-scrollbar"
+              />
+            </div>
+            <SyntaxHighlighter
+              {...rest}
+              children={codeText}
+              style={vscDarkPlus}
+              language={match[1]}
+              PreTag="div"
+              className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px] !bg-black`}
+              customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
+            />
+          </div>
+        </div>
+      ) : (
+        <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[13px] font-bold">
+          {children}
+        </code>
+      );
+    },
+    p({children, ...props}: any) {
+      return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
+    },
+    h1({children, ...props}: any) {
+      return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
+    },
+    h2({children, ...props}: any) {
+      return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
+    },
+    h3({children, ...props}: any) {
+      return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
+    },
+    ul({children, ...props}: any) {
+      return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
+    },
+    li({node, children, ...props}: any) {
+      return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
+    }
+  }), [translatingCodeId, groqKeys]);
+
   return (
     <>
       
@@ -2203,109 +2313,7 @@ function App() {
                <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
-                      components={{
-                        code(props: any) {
-                          const {node, className, children, ...rest} = props;
-                          const match = /language-(\w+)/.exec(className || "");
-                          const codeText = String(children).replace(/\n$/, "");
-                          const blockId = codeText.substring(0, 30);
-                          const isTranslating = translatingCodeId === blockId;
-
-                          return match ? (
-                            <div className="w-full flex justify-center my-6">
-                              <div className="relative group/code max-w-4xl w-full">
-                                {isTranslating ? (
-                                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 rounded-2xl backdrop-blur-sm border border-brand-accent/30">
-                                    <Loader2 size={32} className="animate-spin text-brand-accent mb-3" />
-                                    <p className="text-sm text-brand-accent font-bold animate-pulse">Translating Code...</p>
-                                  </div>
-                                ) : null}
-                                <CopyButton 
-                                  text={codeText}
-                                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
-                                  tooltip="Copy code"
-                                />
-                                <div className="absolute top-4 right-14 z-10 opacity-100 transition-opacity">
-                                  <select
-                                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs rounded-lg px-2 py-2 outline-none cursor-pointer backdrop-blur-md font-medium"
-                                    value=""
-                                    onChange={async (e) => {
-                                      const targetLang = e.target.value;
-                                      if (!targetLang) return;
-                                      setTranslatingCodeId(blockId);
-                                      try {
-                                        const groqKey = groqKeys.find(k => k.trim()) || '';
-                                        if (!groqKey) {
-                                          setAlertMessage({ title: 'Key Required', message: 'Groq API Key is required for fast code translation.', type: 'warning' });
-                                          return;
-                                        }
-                                        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-                                          body: JSON.stringify({
-                                            model: 'llama-3.3-70b-versatile',
-                                            messages: [{ role: 'system', content: `You are an expert coder. Translate this code to ${targetLang}. Output ONLY the raw markdown code block (e.g. \`\`\`${targetLang}\\n...\\n\`\`\`). Do NOT include ANY explanation or text outside the block.` }, { role: 'user', content: codeText }]
-                                          })
-                                        });
-                                        const data = await res.json();
-                                        if (data.choices && data.choices[0]) {
-                                          let newCodeBlock = data.choices[0].message.content;
-                                          setAiAnswer(prev => {
-                                            const escapedOld = codeText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                            const regex = new RegExp(`\`\`\`[a-z]*\\n?${escapedOld}\\n?\`\`\``, 'g');
-                                            if (regex.test(prev)) return prev.replace(regex, newCodeBlock);
-                                            return prev.replace(codeText, newCodeBlock.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim());
-                                          });
-                                        }
-                                      } catch (err) {
-                                        console.error("Translation Error", err);
-                                      } finally {
-                                        setTranslatingCodeId(null);
-                                      }
-                                    }}
-                                  >
-                                    <option value="" disabled>Translate...</option>
-                                    {['Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'C#', 'Go', 'Rust'].map(l => (
-                                      <option key={l} value={l.toLowerCase()} className="bg-[#18181b] text-white">{l}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <SyntaxHighlighter
-                                  {...rest}
-                                  children={codeText}
-                                  style={vscDarkPlus}
-                                  language={match[1]}
-                                  PreTag="div"
-                                  className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px] !bg-black`}
-                                  customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[13px] font-bold">
-                              {children}
-                            </code>
-                          );
-                        },
-                        p({children, ...props}: any) {
-                          return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
-                        },
-                        h1({children, ...props}: any) {
-                          return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
-                        },
-                        h2({children, ...props}: any) {
-                          return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
-                        },
-                        h3({children, ...props}: any) {
-                          return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
-                        },
-                        ul({children, ...props}: any) {
-                          return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
-                        },
-                        li({node, children, ...props}: any) {
-                          return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
-                        }
-                      }}
+                      components={markdownComponents}
                     >
                         {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
                     </ReactMarkdown>
