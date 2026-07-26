@@ -1003,17 +1003,19 @@ function App() {
 
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
-    // Dynamically allow focus ONLY when the user needs to type text.
-    // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
     useEffect(() => {
       const wantsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
-      // If stealth mode is ON, the app must NEVER take focus, otherwise anti-cheat will detect it!
-      const needsFocus = stealthMode ? false : wantsFocus;
+      
+      // When NOT recording (e.g., in the main menu/history tab), the app should always be focusable so users can interact with everything normally.
+      // When RECORDING (stealth mode), the app is generally an unfocusable ghost overlay to avoid detection.
+      // However, if the user opens a modal (wantsFocus), they have accepted the risk and we MUST make it focusable so they can type.
+      const needsFocus = !isRecording || wantsFocus;
+      
       ipcRenderer.invoke('set-focusable', needsFocus);
-      // When focusable, we use normal React key events. When in Ghost Mode, we must hijack them globally!
-      // But ONLY hijack them globally if an interview is actually running (isRecording)!
+      
+      // Only hijack keys globally if we are recording AND the window is acting as an unfocusable ghost overlay.
       ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
-    }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording, stealthMode]);
+    }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording]);
 
   useEffect(() => {
     if (showVirtualKeyboard) {
