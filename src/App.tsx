@@ -64,12 +64,12 @@ const logEvent = (msg: string) => {
 
 const validateGroqKey = async (key: string): Promise<boolean> => {
   const trimmed = key.trim();
-  return trimmed.startsWith('gsk_') && trimmed.length > 40;
+  return trimmed.startsWith('gsk_') && trimmed.length >= 40;
 };
 
 const validateGeminiKey = async (key: string): Promise<boolean> => {
   const trimmed = key.trim();
-  return trimmed.startsWith('AIza') && trimmed.length === 39;
+  return trimmed.startsWith('AIza') && trimmed.length >= 39;
 };
 
 type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
@@ -83,12 +83,12 @@ const getDaysLeft = (addedAt: number, limit: number) => {
 
 const validateClaudeKey = async (key: string): Promise<boolean> => {
   const trimmed = key.trim();
-  return trimmed.startsWith('sk-ant-') && trimmed.length > 80;
+  return trimmed.startsWith('sk-ant-') && trimmed.length >= 60;
 };
 
 const validateChatgptKey = async (key: string): Promise<boolean> => {
   const trimmed = key.trim();
-  return (trimmed.startsWith('sk-') || trimmed.startsWith('sk-proj-')) && trimmed.length > 40;
+  return (trimmed.startsWith('sk-') || trimmed.startsWith('sk-proj-')) && trimmed.length >= 40;
 };
 
 const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
@@ -143,9 +143,10 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 };
 
 function App() {
-
-
-  const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>('groq');
+  const [translatingCodeId, setTranslatingCodeId] = useState<string | null>(null);
+  const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>(() => {
+    return (localStorage.getItem('selected_provider') as any) || 'groq';
+  });
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
     try { 
       const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]'); 
@@ -520,6 +521,7 @@ function App() {
   useEffect(() => { localStorage.setItem('chatgpt_api_keys', JSON.stringify(chatgptKeys)); }, [chatgptKeys]);
   useEffect(() => { localStorage.setItem('deepseek_api_keys', JSON.stringify(deepseekKeys)); }, [deepseekKeys]);
   useEffect(() => { localStorage.setItem('glm_api_keys', JSON.stringify(glmKeys)); }, [glmKeys]);
+  useEffect(() => { localStorage.setItem('selected_provider', provider); }, [provider]);
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
@@ -2182,17 +2184,72 @@ function App() {
                         code(props: any) {
                           const {node, className, children, ...rest} = props;
                           const match = /language-(\w+)/.exec(className || "");
+                          const codeText = String(children).replace(/\n$/, "");
+                          const blockId = codeText.substring(0, 30);
+                          const isTranslating = translatingCodeId === blockId;
+
                           return match ? (
                             <div className="w-full flex justify-center my-6">
                               <div className="relative group/code max-w-4xl w-full">
+                                {isTranslating ? (
+                                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 rounded-2xl backdrop-blur-sm border border-brand-accent/30">
+                                    <Loader2 size={32} className="animate-spin text-brand-accent mb-3" />
+                                    <p className="text-sm text-brand-accent font-bold animate-pulse">Translating Code...</p>
+                                  </div>
+                                ) : null}
                                 <CopyButton 
-                                  text={String(children).replace(/\n$/, "")}
+                                  text={codeText}
                                   className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
                                   tooltip="Copy code"
                                 />
+                                <div className="absolute top-4 right-14 z-10 opacity-0 group-hover/code:opacity-100 transition-opacity">
+                                  <select
+                                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs rounded-lg px-2 py-2 outline-none cursor-pointer backdrop-blur-md font-medium"
+                                    value=""
+                                    onChange={async (e) => {
+                                      const targetLang = e.target.value;
+                                      if (!targetLang) return;
+                                      setTranslatingCodeId(blockId);
+                                      try {
+                                        const groqKey = groqKeys.find(k => k.trim()) || '';
+                                        if (!groqKey) {
+                                          setAlertMessage({ title: 'Key Required', message: 'Groq API Key is required for fast code translation.', type: 'warning' });
+                                          return;
+                                        }
+                                        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+                                          body: JSON.stringify({
+                                            model: 'llama-3.3-70b-versatile',
+                                            messages: [{ role: 'system', content: `You are an expert coder. Translate this code to ${targetLang}. Output ONLY the raw markdown code block (e.g. \`\`\`${targetLang}\\n...\\n\`\`\`). Do NOT include ANY explanation or text outside the block.` }, { role: 'user', content: codeText }]
+                                          })
+                                        });
+                                        const data = await res.json();
+                                        if (data.choices && data.choices[0]) {
+                                          let newCodeBlock = data.choices[0].message.content;
+                                          setAiAnswer(prev => {
+                                            const escapedOld = codeText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                            const regex = new RegExp(`\`\`\`[a-z]*\\n?${escapedOld}\\n?\`\`\``, 'g');
+                                            if (regex.test(prev)) return prev.replace(regex, newCodeBlock);
+                                            return prev.replace(codeText, newCodeBlock.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim());
+                                          });
+                                        }
+                                      } catch (err) {
+                                        console.error("Translation Error", err);
+                                      } finally {
+                                        setTranslatingCodeId(null);
+                                      }
+                                    }}
+                                  >
+                                    <option value="" disabled>Translate...</option>
+                                    {['Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'C#', 'Go', 'Rust'].map(l => (
+                                      <option key={l} value={l.toLowerCase()} className="bg-[#18181b] text-white">{l}</option>
+                                    ))}
+                                  </select>
+                                </div>
                                 <SyntaxHighlighter
                                   {...rest}
-                                  children={String(children).replace(/\n$/, "")}
+                                  children={codeText}
                                   style={vscDarkPlus}
                                   language={match[1]}
                                   PreTag="div"

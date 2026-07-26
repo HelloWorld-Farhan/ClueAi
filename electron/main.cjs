@@ -236,6 +236,10 @@ function createWindow() {
     }
   });
 
+  ipcMain.on('app-quit', () => {
+    app.quit();
+  });
+
   ipcMain.on('toggle-fullscreen', () => {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize();
