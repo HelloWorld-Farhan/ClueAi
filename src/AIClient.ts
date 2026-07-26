@@ -202,6 +202,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
               messages,
               stream: true,
               temperature: 0.5,
+              max_tokens: 4096,
             } as any, modelSignal ? { signal: modelSignal } : undefined);
             console.log(`Groq connected: ${modelName} Key #${usedIndex + 1}`);
             keySuccess = true;
@@ -265,7 +266,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: systemPrompt }] },
               contents: geminiContents,
-              generationConfig: { temperature: 0.4, maxOutputTokens: 2000 }
+              generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
             })
           });
 
@@ -361,7 +362,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
             },
             body: JSON.stringify({
               model: claudeModel,
-              max_tokens: 2048,
+              max_tokens: 8192,
               system: systemPrompt,
               messages: claudeMessages,
               stream: true
@@ -446,7 +447,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages,
         stream: true,
         temperature: 0.1,
-        max_tokens: 1024
+        max_tokens: 4096
       });
 
       for await (const chunk of stream) {
@@ -489,6 +490,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages,
         stream: true,
         temperature: 0.4,
+        max_tokens: 4096,
       });
       
       for await (const chunk of stream) {
