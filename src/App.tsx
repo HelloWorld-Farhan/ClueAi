@@ -2153,7 +2153,7 @@ function App() {
                         }
                       }}
                     >
-                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()}
+                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\n{2,}/g, '\n').trim()}
                     </ReactMarkdown>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
@@ -3850,7 +3850,7 @@ function App() {
                                       }
                                     }}
                                   >
-                                    {item.answer || "No answer generated"}
+                                    {item.answer ? item.answer.replace(/\n{2,}/g, '\n').trim() : "No answer generated"}
                                   </ReactMarkdown>
                                 </div>
                               )}
@@ -4838,7 +4838,7 @@ function App() {
                     <div className="pt-6 border-t border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-[11px] font-black text-fuchsia-400 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
-                        <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
+                        <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\n{2,}/g, '\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
                       </div>
                       <div className="text-white/90 font-bold text-sm whitespace-pre-wrap leading-relaxed">
                         <ReactMarkdown
@@ -4870,7 +4870,7 @@ function App() {
                             }
                           }}
                         >
-                            {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()}
+                            {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\n{2,}/g, '\n').trim()}
                         </ReactMarkdown>
                       </div>
                     </div>
