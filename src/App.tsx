@@ -2785,7 +2785,7 @@ function App() {
                                 newKeys[i] = e.target.value;
                                 setGroqKeys(newKeys);
                               }}
-                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                               placeholder={`gsk_...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -2856,7 +2856,7 @@ function App() {
                                 newKeys[i] = e.target.value;
                                 setGeminiKeys(newKeys);
                               }}
-                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                               placeholder={`AIza... or AQ...`}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -2931,7 +2931,7 @@ function App() {
                                   newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
                                   setClaudeKeys(newKeys);
                                 }}
-                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                                 placeholder={`sk-ant-...`}
                               />
                               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -3001,7 +3001,7 @@ function App() {
                                     setGlmKeys(newKeys);
                                   }}
                                   
-                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                                   placeholder={`nvapi- or Zhipu key`}
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -3077,7 +3077,7 @@ function App() {
                                   newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
                                   setChatgptKeys(newKeys);
                                 }}
-                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                                 placeholder={`sk-...`}
                               />
                               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -3151,7 +3151,7 @@ function App() {
                                   newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
                                   setDeepseekKeys(newKeys);
                                 }}
-                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-16 py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
+                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
                                 placeholder={`sk-...`}
                               />
                               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
