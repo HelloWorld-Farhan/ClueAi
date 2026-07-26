@@ -990,15 +990,67 @@ function App() {
 
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
-  useEffect(() => {
-    const wantsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
-    // If stealth mode is ON, the app must NEVER take focus, otherwise anti-cheat will detect it!
-    const needsFocus = stealthMode ? false : wantsFocus;
-    ipcRenderer.invoke('set-focusable', needsFocus);
-    // When focusable, we use normal React key events. When in Ghost Mode, we must hijack them globally!
-    // But ONLY hijack them globally if an interview is actually running (isRecording)!
-    ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
-  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording, stealthMode]);
+    // DYNAMIC FOCUS TRACKING FOR ULTIMATE STEALTH
+    // Only allow the window to be focusable if the user is explicitly hovering over or interacting with a text input.
+    // This allows clicking buttons (Stop, Settings, Info) WITHOUT stealing focus from the test browser!
+    useEffect(() => {
+      let isInputHovered = false;
+      let isInputFocused = false;
+
+      const updateFocusable = () => {
+        const needsFocus = isInputHovered || isInputFocused;
+        ipcRenderer.invoke('set-focusable', needsFocus);
+      };
+
+      const handleMouseOver = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+          if (target.getAttribute('type') !== 'checkbox' && target.getAttribute('type') !== 'radio') {
+            isInputHovered = true;
+            updateFocusable();
+          }
+        }
+      };
+
+      const handleMouseOut = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+          isInputHovered = false;
+          updateFocusable();
+        }
+      };
+
+      const handleFocus = (e: FocusEvent) => {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+          isInputFocused = true;
+          updateFocusable();
+        }
+      };
+
+      const handleBlur = () => {
+        isInputFocused = false;
+        updateFocusable();
+      };
+
+      window.addEventListener('mouseover', handleMouseOver);
+      window.addEventListener('mouseout', handleMouseOut);
+      window.addEventListener('focusin', handleFocus);
+      window.addEventListener('focusout', handleBlur);
+
+      // Always manage hotkeys based on recording state, completely independent of focus
+      ipcRenderer.invoke('toggle-global-hotkeys', isRecording);
+
+      // Initial state
+      ipcRenderer.invoke('set-focusable', false);
+
+      return () => {
+        window.removeEventListener('mouseover', handleMouseOver);
+        window.removeEventListener('mouseout', handleMouseOut);
+        window.removeEventListener('focusin', handleFocus);
+        window.removeEventListener('focusout', handleBlur);
+      };
+    }, [isRecording]);
 
   useEffect(() => {
     if (showVirtualKeyboard) {
