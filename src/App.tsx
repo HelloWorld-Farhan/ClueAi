@@ -64,9 +64,13 @@ const logEvent = (msg: string) => {
 
 const validateGroqKey = async (key: string): Promise<boolean> => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const res = await fetch('https://api.groq.com/openai/v1/models', {
-      headers: { Authorization: `Bearer ${key}` }
+      headers: { Authorization: `Bearer ${key}` },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     return res.ok;
   } catch {
     return false;
@@ -79,7 +83,10 @@ const validateGeminiKey = async (key: string): Promise<boolean> => {
     return true;
   }
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     return res.ok;
   } catch {
     return false;
@@ -97,29 +104,41 @@ const getDaysLeft = (addedAt: number, limit: number) => {
 
 const validateClaudeKey = async (key: string): Promise<boolean> => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-3-5-sonnet-20240620', max_tokens: 1, messages: [{role: 'user', content: 'test'}]})
+      body: JSON.stringify({ model: 'claude-3-5-sonnet-20240620', max_tokens: 1, messages: [{role: 'user', content: 'test'}]}),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     return res.status !== 401;
   } catch { return false; }
 };
 
 const validateChatgptKey = async (key: string): Promise<boolean> => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const res = await fetch('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${key}` }
+      headers: { Authorization: `Bearer ${key}` },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     return res.ok;
   } catch { return false; }
 };
 
 const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const res = await fetch('https://api.deepseek.com/user/balance', {
-      headers: { Authorization: `Bearer ${key}` }
+      headers: { Authorization: `Bearer ${key}` },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     if (!res.ok) return {valid: false, balance: ''};
     const data = await res.json();
     return {
@@ -148,7 +167,10 @@ const validateGlmKey = async (key: string): Promise<boolean> => {
       body: JSON.stringify({ model: 'glm-4', messages: [{role: 'user', content: 'hi'}], max_tokens: 1 })
     };
     
-    const res = await fetch(url, reqInit);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(url, { ...reqInit, signal: controller.signal });
+    clearTimeout(timeoutId);
     return res.ok;
   } catch {
     return false;
