@@ -510,6 +510,7 @@ function App() {
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
+        if (target.classList && target.classList.contains('stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', false);
@@ -518,6 +519,7 @@ function App() {
     };
     const handleFocusOut = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
+        if (target.classList && target.classList.contains('stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', true);
@@ -979,6 +981,7 @@ function App() {
     const handleInputAttempt = (e: Event) => {
       if (stealthMode) {
         const target = e.target as HTMLElement;
+        if (target.classList && target.classList.contains('stealth-exempt')) return;
         if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox')) {
           e.preventDefault();
           e.stopPropagation();
@@ -1019,6 +1022,7 @@ function App() {
       }
       
       const target = e.target as HTMLElement;
+        if (target.classList && target.classList.contains('stealth-exempt')) return;
       const shouldPassThrough = target.classList.contains('click-through-bg') || target === document.body || target === document.documentElement || target.id === 'root';
       
       if (shouldPassThrough) {
@@ -2024,6 +2028,7 @@ function App() {
               className="flex items-start justify-between p-4 border-b border-white/10 shrink-0 gap-4 drag-area"
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
+        if (target.classList && target.classList.contains('stealth-exempt')) return;
                 if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
                   ipcRenderer.send('start-drag');
                   target.setPointerCapture(e.pointerId);
@@ -2236,6 +2241,7 @@ function App() {
         className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
         onPointerDown={(e) => {
           const target = e.target as HTMLElement;
+        if (target.classList && target.classList.contains('stealth-exempt')) return;
           if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
             ipcRenderer.send('start-drag');
             target.setPointerCapture(e.pointerId);
@@ -3819,7 +3825,7 @@ function App() {
                           onKeyDown={(e) => e.key === 'Enter' && handleRenameSession(session.id)}
                           onClick={(e) => e.stopPropagation()}
                           autoFocus
-                          className="bg-[#090909] text-white px-2 py-1 rounded-md text-sm border border-brand-accent outline-none flex-1 mr-4"
+                          className="stealth-exempt bg-[#090909] text-white px-2 py-1 rounded-md text-sm border border-brand-accent outline-none flex-1 mr-4"
                         />
                       ) : (
                         <div className="flex items-center gap-3">
@@ -4162,7 +4168,7 @@ function App() {
                       onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
                       placeholder="e.g. Meta Final Round"
                       onKeyDown={e => { if(e.key === 'Enter') startRecording(); }}
-                      className="w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
+                      className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
                     />
                   </div>
                 )}
