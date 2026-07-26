@@ -129,6 +129,28 @@ const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balanc
   } catch { return {valid: false, balance: ''}; }
 };
 
+const validateGlmKey = async (key: string): Promise<boolean> => {
+  try {
+    const isNvidia = key.startsWith('nvapi-');
+    const url = isNvidia ? 'https://integrate.api.nvidia.com/v1/models' : 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    
+    const reqInit: RequestInit = {
+      headers: { Authorization: `Bearer ${key}` }
+    };
+    
+    if (!isNvidia) {
+       reqInit.method = 'POST';
+       reqInit.headers = { ...reqInit.headers, 'Content-Type': 'application/json' };
+       reqInit.body = JSON.stringify({ model: 'glm-4', messages: [{role: 'user', content: 'hi'}], max_tokens: 1 });
+    }
+    
+    const res = await fetch(url, reqInit);
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
 const CustomSelect = ({ value, onChange, options, className, icon, listClassName }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find((o: any) => o.value === value) || options[0];
@@ -219,7 +241,7 @@ function App() {
   const [claudeKeyStatus, setClaudeKeyStatus] = useState<KeyValidationState[]>(Array(2).fill('idle'));
   const [chatgptKeyStatus, setChatgptKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
   const [deepseekKeyStatus, setDeepseekKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
-  const [glmKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
+  const [glmKeyStatus, setGlmKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
   
   const [showClaudeKeys, setShowClaudeKeys] = useState<boolean[]>(Array(2).fill(false));
   const [showChatgptKeys, setShowChatgptKeys] = useState<boolean[]>(Array(3).fill(false));
@@ -476,6 +498,7 @@ function App() {
   const claudeValidationCache = useRef<Record<string, boolean>>({});
   const chatgptValidationCache = useRef<Record<string, boolean>>({});
   const deepseekValidationCache = useRef<Record<string, {valid: boolean, balance: string}>>({});
+  const glmValidationCache = useRef<Record<string, boolean>>({});
 
 
   const saveApiKeys = () => {
@@ -705,6 +728,50 @@ function App() {
     }, 800);
     return () => clearTimeout(timeoutId);
   }, [chatgptKeys]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const keysToValidate = new Set<string>();
+      
+      setGlmKeyStatus(prev => {
+        const next = [...prev];
+        for (let i = 0; i < 3; i++) {
+          const key = glmKeys[i].key.trim();
+          if (!key) {
+            next[i] = 'idle';
+          } else if (glmKeys.findIndex((k, idx) => idx !== i && k.key.trim() === key) !== -1) {
+            next[i] = 'duplicate';
+          } else {
+            if (glmValidationCache.current[key] === undefined) {
+              next[i] = 'validating';
+              keysToValidate.add(key);
+            } else {
+              next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+        }
+        return next;
+      });
+
+      if (keysToValidate.size > 0) {
+        await Promise.all(Array.from(keysToValidate).map(async (key) => {
+          glmValidationCache.current[key] = await validateGlmKey(key);
+        }));
+        
+        setGlmKeyStatus(prev => {
+          const next = [...prev];
+          for (let i = 0; i < 3; i++) {
+            const key = glmKeys[i].key.trim();
+            if (key && glmKeys.findIndex((k, idx) => idx !== i && k.key.trim() === key) === -1) {
+               next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
+            }
+          }
+          return next;
+        });
+      }
+    }, 800);
+    return () => clearTimeout(timeoutId);
+  }, [glmKeys]);
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
