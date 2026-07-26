@@ -1998,7 +1998,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown);
       ipcRenderer.off('trigger-hotkey', handleIPCHotkey);
     };
-  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider, isAiFullscreen]);
+  }, [isRecording, isPaused, isGenerating, manualTriggerAI, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
 
   const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
