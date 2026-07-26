@@ -1998,6 +1998,34 @@ function App() {
   // re-registering this expensive listener on every render during AI streaming
   }, [isRecording, isPaused, isGenerating, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
 
+  useEffect(() => {
+    let lastIgnore = false;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isAiFullscreen && !isRecording) {
+        if (lastIgnore) {
+          lastIgnore = false;
+          ipcRenderer.send('set-ignore-mouse-events', false);
+        }
+        return;
+      }
+      
+      const target = e.target as HTMLElement;
+      // Identify if we're hovering over the transparent root backgrounds
+      const shouldIgnore = target.classList.contains('click-through-bg') || target.tagName === 'BODY' || target.id === 'root';
+      
+      if (shouldIgnore !== lastIgnore) {
+        lastIgnore = shouldIgnore;
+        ipcRenderer.send('set-ignore-mouse-events', shouldIgnore);
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      ipcRenderer.send('set-ignore-mouse-events', false);
+    };
+  }, [isAiFullscreen, isRecording]);
+
   const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
      ipcRenderer.invoke('minimize-window');
