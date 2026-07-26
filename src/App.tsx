@@ -331,7 +331,7 @@ function App() {
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
   
-  const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number, width: number} | null>(null);
+  const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number} | null>(null);
 
   const [stealthMode, setStealthMode] = useState(() => {
     try {
@@ -989,7 +989,7 @@ function App() {
           e.preventDefault();
           e.stopPropagation();
           const rect = target.getBoundingClientRect();
-          setStealthWarningToast({ x: rect.left, y: rect.bottom + 8, width: rect.width });
+          setStealthWarningToast({ x: rect.left + (rect.width / 2), y: rect.bottom + 12 });
           
           if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
           (window as any).stealthToastTimeout = setTimeout(() => setStealthWarningToast(null), 2500);
@@ -1060,6 +1060,10 @@ function App() {
     setStealthMode(true);
     ipcRenderer.invoke('set-stealth', true);
   }, []);
+
+  useEffect(() => {
+    setStealthWarningToast(null);
+  }, [showReminderPopup, showNotesPopup, showSettings, showSessionPrompt, showVirtualKeyboard]);
 
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
@@ -4746,8 +4750,8 @@ function App() {
             className="fixed z-[9999] bg-rose-500/90 text-white px-3 py-1.5 rounded-lg shadow-xl font-bold flex items-center justify-center gap-2 text-[11px] animate-in zoom-in duration-200 backdrop-blur-md pointer-events-none whitespace-nowrap"
             style={{ 
               top: Math.max(10, stealthWarningToast.y) + 'px', 
-              left: stealthWarningToast.x + 'px', 
-              minWidth: stealthWarningToast.width + 'px' 
+              left: stealthWarningToast.x + 'px',
+              transform: 'translateX(-50%)'
             }}
           >
             <ShieldAlert size={14} /> Shield is ON. Cannot type here.
