@@ -101,11 +101,17 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
   
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-      )}
-      <div className={`relative ${className || ''}`} onClick={() => setIsOpen(!isOpen)}>
-        <div className="flex items-center justify-between h-full cursor-pointer select-none">
+      <div className={`relative ${className || ''}`}>
+        {isOpen && (
+          <div 
+            className="fixed inset-0 z-[100]" 
+            onPointerDown={(e) => { e.stopPropagation(); setIsOpen(false); }}
+          />
+        )}
+        <div 
+          className="flex items-center justify-between gap-2 cursor-pointer w-full relative z-[105]"
+          onPointerDown={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        >
           <div className="flex flex-wrap items-center justify-end gap-2">
             {icon && icon}
             <span className="truncate">{selectedOption?.label || value}</span>
@@ -118,8 +124,9 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
               <div 
                 key={opt.value} 
                 className={`px-4 py-3 hover:bg-white/10 cursor-pointer text-sm transition-colors ${opt.value === value ? 'bg-brand-accent/20 text-white font-bold' : 'text-brand-subtext hover:text-white'}`}
-                onClick={(e) => {
+                onPointerDown={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
@@ -2044,12 +2051,18 @@ function App() {
       const codeText = String(children).replace(/\n$/, "");
       const blockId = codeText.substring(0, 30);
       const isTranslating = translatingCodeId === blockId;
+      const currentLang = match ? match[1]?.toLowerCase() : '';
+      let displayLang = currentLang;
+      if (currentLang === 'cpp') displayLang = 'c++';
+      else if (currentLang === 'js') displayLang = 'javascript';
+      else if (currentLang === 'ts') displayLang = 'typescript';
+      else if (currentLang === 'csharp') displayLang = 'c#';
 
       return match ? (
         <div className="w-full flex justify-center my-6">
           <div className="relative group/code max-w-4xl w-full">
             {isTranslating ? (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 rounded-2xl backdrop-blur-sm border border-brand-accent/30">
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 rounded-2xl backdrop-blur-sm border border-brand-accent/30 pointer-events-auto">
                 <Loader2 size={32} className="animate-spin text-brand-accent mb-3" />
                 <p className="text-sm text-brand-accent font-bold animate-pulse">Translating Code...</p>
               </div>
@@ -2059,11 +2072,11 @@ function App() {
               className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
               tooltip="Copy code"
             />
-            <div className="absolute top-4 right-14 z-20 opacity-100 transition-opacity w-32">
+            <div className="absolute top-4 right-14 z-50 opacity-100 transition-opacity w-32">
               <CustomSelect
-                value=""
+                value={displayLang}
                 onChange={async (targetLang: string) => {
-                  if (!targetLang) return;
+                  if (!targetLang || targetLang === displayLang) return;
                   setTranslatingCodeId(blockId);
                   try {
                     const groqKey = groqKeys.find(k => k.trim()) || '';
