@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert} from 'lucide-react';
-import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
+import { initAIClient, getInterviewAnswer, switchProvider, streamCodeTranslation } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -80,7 +80,31 @@ const getDaysLeft = (addedAt: number, limit: number) => {
 };
 
 const validateClaudeKey = async (key: string): Promise<boolean> => {
-  return key.trim().length > 0;
+  if (!key.trim()) return false;
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key.trim(),
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'hello' }]
+      })
+    });
+    // Even if it fails due to balance, usually it returns a 400 or 403.
+    // Anthropic returns 401 for invalid keys. 400 for bad request.
+    const data = await response.json();
+    if (response.status === 401) return false;
+    if (data.type === 'error' && data.error.type === 'authentication_error') return false;
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 const validateChatgptKey = async (key: string): Promise<boolean> => {
@@ -88,7 +112,24 @@ const validateChatgptKey = async (key: string): Promise<boolean> => {
 };
 
 const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
-  return { valid: key.trim().length > 0, balance: '' };
+  if (!key.trim()) return { valid: false, balance: '' };
+  try {
+    const response = await fetch('https://api.deepseek.com/user/balance', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${key.trim()}`
+      }
+    });
+    if (response.status === 401) return { valid: false, balance: '' };
+    const data = await response.json();
+    if (data && data.balance_infos && data.balance_infos.length > 0) {
+      return { valid: true, balance: data.balance_infos[0].total_balance };
+    }
+    return { valid: true, balance: '' };
+  } catch {
+    return { valid: false, balance: '' };
+  }
 };
 
 const validateGlmKey = async (key: string): Promise<boolean> => {
@@ -250,6 +291,10 @@ function App() {
   isRecordingRef.current = isRecording;
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [localSettingsStealth, setLocalSettingsStealth] = useState(false);
+  const [localReminderStealth, setLocalReminderStealth] = useState(false);
+  const [localNotesStealth, setLocalNotesStealth] = useState(false);
+  const [localRenameStealth, setLocalRenameStealth] = useState(false);
   const [transcript, setTranscript] = useState('');
   const finalizedTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
@@ -329,6 +374,71 @@ function App() {
   const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
   const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
   
+  const validateDateTime = (dateStr: string, timeStr: string, ampmStr: string) => {
+    let dateError = '';
+    let timeError = '';
+    
+    // Date validation
+    if (dateStr && dateStr.length === 10) {
+      const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+      if (!dateRegex.test(dateStr)) {
+        dateError = 'Invalid date format (DD-MM-YYYY)';
+      } else {
+        const [d, m, y] = dateStr.split('-').map(Number);
+        if (m < 1 || m > 12) {
+          dateError = 'Month must be between 01 and 12';
+        } else if (y < 2026) {
+          dateError = 'Year cannot be in the past';
+        } else {
+          const daysInMonth = new Date(y, m, 0).getDate();
+          if (d < 1 || d > daysInMonth) {
+            dateError = m === 2 ? `February has ${daysInMonth} days in ${y}` : `Month ${m} has ${daysInMonth} days`;
+          } else {
+            const today = new Date();
+            const inputDate = new Date(y, m - 1, d);
+            today.setHours(0, 0, 0, 0);
+            if (inputDate < today) {
+              dateError = 'Date cannot be in the past';
+            }
+          }
+        }
+      }
+    }
+
+    // Time validation
+    if (timeStr && timeStr.length === 5) {
+      const timeRegex = /^(0[1-9]|1[0-2]):[0-5]\d$/;
+      if (!timeRegex.test(timeStr)) {
+        let [hours, minutes] = timeStr.split(':');
+        if (Number(hours) > 12 || Number(hours) < 1) {
+          timeError = 'Hour must be 01-12';
+        } else if (Number(minutes) > 59) {
+          timeError = 'Minute must be 00-59';
+        } else {
+          timeError = 'Invalid time format (HH:MM)';
+        }
+      } else if (!dateError && dateStr.length === 10) {
+        const [d, m, y] = dateStr.split('-').map(Number);
+        const inputDate = new Date(y, m - 1, d);
+        const today = new Date();
+        if (inputDate.toDateString() === today.toDateString()) {
+          let [hours, minutes] = timeStr.split(':').map(Number);
+          if (ampmStr === 'PM' && hours < 12) hours += 12;
+          if (ampmStr === 'AM' && hours === 12) hours = 0;
+          
+          const inputTime = new Date(today);
+          inputTime.setHours(hours, minutes, 0, 0);
+          
+          if (inputTime <= today) {
+            timeError = 'Time cannot be in the past';
+          }
+        }
+      }
+    }
+
+    return { dateError, timeError };
+  };
+
   const handleDateChange = (val: string, form: any, setForm: any) => {
     // Let them backspace without auto-filling everything back
     if (val.length < form.date.length) {
@@ -440,7 +550,7 @@ function App() {
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-        if (target.classList && target.classList.contains('stealth-exempt')) return;
+        if (target.closest && target.closest('.stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', false);
@@ -449,7 +559,7 @@ function App() {
     };
     const handleFocusOut = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-        if (target.classList && target.classList.contains('stealth-exempt')) return;
+        if (target.closest && target.closest('.stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', true);
@@ -525,8 +635,17 @@ function App() {
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
+      // 1. Identify which keys need validation, outside the state setter to avoid closure stale state
       const keysToValidate = new Set<string>();
-      
+      for (let i = 0; i < 15; i++) {
+        const key = groqKeys[i].trim();
+        if (key && groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
+          if (groqValidationCache.current[key] === undefined) {
+            keysToValidate.add(key);
+          }
+        }
+      }
+
       setGroqKeyStatus(prev => {
         const next = [...prev];
         for (let i = 0; i < 15; i++) {
@@ -546,15 +665,6 @@ function App() {
         return next;
       });
 
-      for (let i = 0; i < 15; i++) {
-        const key = groqKeys[i].trim();
-        if (key && groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
-          if (groqValidationCache.current[key] === undefined) {
-            keysToValidate.add(key);
-          }
-        }
-      }
-
       if (keysToValidate.size > 0) {
         await Promise.all(Array.from(keysToValidate).map(async (key) => {
           groqValidationCache.current[key] = await validateGroqKey(key);
@@ -565,7 +675,9 @@ function App() {
           for (let i = 0; i < 15; i++) {
             const key = groqKeys[i].trim();
             if (key && groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
-               next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+               if (groqValidationCache.current[key] !== undefined) {
+                 next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+               }
             }
           }
           return next;
@@ -578,7 +690,15 @@ function App() {
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const keysToValidate = new Set<string>();
-      
+      for (let i = 0; i < 15; i++) {
+        const key = geminiKeys[i].trim();
+        if (key && geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
+          if (geminiValidationCache.current[key] === undefined) {
+            keysToValidate.add(key);
+          }
+        }
+      }
+
       setGeminiKeyStatus(prev => {
         const next = [...prev];
         for (let i = 0; i < 15; i++) {
@@ -598,15 +718,6 @@ function App() {
         return next;
       });
 
-      for (let i = 0; i < 15; i++) {
-        const key = geminiKeys[i].trim();
-        if (key && geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
-          if (geminiValidationCache.current[key] === undefined) {
-            keysToValidate.add(key);
-          }
-        }
-      }
-
       if (keysToValidate.size > 0) {
         await Promise.all(Array.from(keysToValidate).map(async (key) => {
           geminiValidationCache.current[key] = await validateGeminiKey(key);
@@ -617,7 +728,9 @@ function App() {
           for (let i = 0; i < 15; i++) {
             const key = geminiKeys[i].trim();
             if (key && geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
-               next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+               if (geminiValidationCache.current[key] !== undefined) {
+                 next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+               }
             }
           }
           return next;
@@ -631,6 +744,12 @@ function App() {
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const keysToValidate = new Set<string>();
+      for (let i = 0; i < 2; i++) {
+        const key = claudeKeys[i].key.trim();
+        if (key && claudeValidationCache.current[key] === undefined) {
+          keysToValidate.add(key);
+        }
+      }
       
       setClaudeKeyStatus(prev => {
         const next = [...prev];
@@ -641,7 +760,6 @@ function App() {
           } else {
             if (claudeValidationCache.current[key] === undefined) {
               next[i] = 'validating';
-              keysToValidate.add(key);
             } else {
               next[i] = claudeValidationCache.current[key] ? 'valid' : 'invalid';
             }
@@ -659,7 +777,9 @@ function App() {
           for (let i = 0; i < 2; i++) {
             const key = claudeKeys[i].key.trim();
             if (key) {
-              next[i] = claudeValidationCache.current[key] ? 'valid' : 'invalid';
+              if (claudeValidationCache.current[key] !== undefined) {
+                next[i] = claudeValidationCache.current[key] ? 'valid' : 'invalid';
+              }
             }
           }
           return next;
@@ -672,6 +792,12 @@ function App() {
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const keysToValidate = new Set<string>();
+      for (let i = 0; i < 3; i++) {
+        const key = chatgptKeys[i].key.trim();
+        if (key && chatgptValidationCache.current[key] === undefined) {
+          keysToValidate.add(key);
+        }
+      }
       
       setChatgptKeyStatus(prev => {
         const next = [...prev];
@@ -682,7 +808,6 @@ function App() {
           } else {
             if (chatgptValidationCache.current[key] === undefined) {
               next[i] = 'validating';
-              keysToValidate.add(key);
             } else {
               next[i] = chatgptValidationCache.current[key] ? 'valid' : 'invalid';
             }
@@ -700,7 +825,9 @@ function App() {
           for (let i = 0; i < 3; i++) {
             const key = chatgptKeys[i].key.trim();
             if (key) {
-              next[i] = chatgptValidationCache.current[key] ? 'valid' : 'invalid';
+              if (chatgptValidationCache.current[key] !== undefined) {
+                next[i] = chatgptValidationCache.current[key] ? 'valid' : 'invalid';
+              }
             }
           }
           return next;
@@ -713,6 +840,14 @@ function App() {
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const keysToValidate = new Set<string>();
+      for (let i = 0; i < 3; i++) {
+        const key = glmKeys[i].key.trim();
+        if (key && glmKeys.findIndex((k, idx) => idx !== i && k.key.trim() === key) === -1) {
+          if (glmValidationCache.current[key] === undefined) {
+            keysToValidate.add(key);
+          }
+        }
+      }
       
       setGlmKeyStatus(prev => {
         const next = [...prev];
@@ -725,7 +860,6 @@ function App() {
           } else {
             if (glmValidationCache.current[key] === undefined) {
               next[i] = 'validating';
-              keysToValidate.add(key);
             } else {
               next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
             }
@@ -744,7 +878,9 @@ function App() {
           for (let i = 0; i < 3; i++) {
             const key = glmKeys[i].key.trim();
             if (key && glmKeys.findIndex((k, idx) => idx !== i && k.key.trim() === key) === -1) {
-               next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
+               if (glmValidationCache.current[key] !== undefined) {
+                 next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
+               }
             }
           }
           return next;
@@ -757,6 +893,12 @@ function App() {
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const keysToValidate = new Set<string>();
+      for (let i = 0; i < 3; i++) {
+        const key = deepseekKeys[i].key.trim();
+        if (key && deepseekValidationCache.current[key] === undefined) {
+          keysToValidate.add(key);
+        }
+      }
       
       setDeepseekKeyStatus(prev => {
         const next = [...prev];
@@ -767,7 +909,6 @@ function App() {
           } else {
             if (deepseekValidationCache.current[key] === undefined) {
               next[i] = 'validating';
-              keysToValidate.add(key);
             } else {
               next[i] = deepseekValidationCache.current[key].valid ? 'valid' : 'invalid';
             }
@@ -786,7 +927,9 @@ function App() {
           for (let i = 0; i < 3; i++) {
             const key = deepseekKeys[i].key.trim();
             if (key) {
-              next[i] = deepseekValidationCache.current[key].valid ? 'valid' : 'invalid';
+              if (deepseekValidationCache.current[key] !== undefined) {
+                next[i] = deepseekValidationCache.current[key].valid ? 'valid' : 'invalid';
+              }
             }
           }
           return next;
@@ -914,7 +1057,7 @@ function App() {
     const handleInputAttempt = (e: Event) => {
       if (stealthMode) {
         const target = e.target as HTMLElement;
-        if (target.classList && target.classList.contains('stealth-exempt')) return;
+        if (target.closest && target.closest('.stealth-exempt')) return;
         if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox')) {
           e.preventDefault();
           e.stopPropagation();
@@ -964,7 +1107,7 @@ function App() {
       }
       
       const target = e.target as HTMLElement;
-        if (target.classList && target.classList.contains('stealth-exempt')) return;
+        if (target.closest && target.closest('.stealth-exempt')) return;
       const shouldPassThrough = target.classList.contains('click-through-bg') || target === document.body || target === document.documentElement || target.id === 'root';
       
       if (shouldPassThrough) {
@@ -1128,6 +1271,7 @@ function App() {
 
   const handleStartCaptureClick = async () => {
     if (username.trim() === '') {
+      setLocalRenameStealth(stealthMode);
       setShowUsernamePrompt(true);
       return;
     }
@@ -1139,6 +1283,7 @@ function App() {
     if (!hasActiveKey || !hasGroqKey) {
       if (!hasActiveKey) setAlertMessage({ title: 'API Key Missing', message: 'Please add at least one valid Gemini or Groq API key.', type: 'warning' });
       else if (!hasGroqKey) setAlertMessage({ title: 'Groq Key Missing', message: 'Please add at least one valid Groq API key for Transcription.', type: 'warning' });
+      setLocalSettingsStealth(stealthMode);
       setShowSettings(true);
       return;
     }
@@ -1204,6 +1349,9 @@ function App() {
 
     if (!silent) {
       setProvider('groq');
+      setGlobalHotkeysEnabled(true);
+      ipcRenderer.invoke('toggle-global-hotkeys', true);
+      
       if (showSessionPrompt || isStealthBypass) {
         if (!currentSessionId) {
           const name = isStealthBypass ? ('Stealth Session ' + new Date().toLocaleTimeString()) : sessionNameInput.trim();
@@ -1538,7 +1686,8 @@ function App() {
         return newHistory;
       });
       // Use currentTranscript (local var) not stale transcript state for accurate log
-      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${snaps.length > 0 ? '[IMAGE_BASE64: MULTIPLE_IMAGES]\n' : ''}${currentTranscript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
+      const imagesLog = snaps.map(s => `[IMAGE_BASE64:${s}]`).join('\n');
+      setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${imagesLog ? imagesLog + '\n' : ''}${currentTranscript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
     } else if (signal.aborted) {
       // Remove the unanswered placeholder history item if generation was cancelled
       setCurrentSessionHistory(prev => prev.filter((_, idx) => idx !== prev.length - 1 || prev[prev.length - 1]?.answer !== ''));
@@ -1632,127 +1781,203 @@ function App() {
   };
 
   const exportSession = (session: any) => {
-    let htmlContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ClueAI Session - ${session.name}</title>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #09090b; color: #ffffff; line-height: 1.6; margin: 0; padding: 0; }
-          .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-          .header { text-align: center; border-bottom: 2px solid rgba(6, 182, 212, 0.3); padding-bottom: 30px; margin-bottom: 40px; }
-          .header h1 { color: #22d3ee; margin: 0 0 10px 0; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 2px; }
-          .meta { color: #a1a1aa; font-size: 0.9rem; }
-          .meta b { color: #e4e4e7; }
-          .session-marker { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 15px; border-radius: 8px; margin: 30px 0; text-align: center; color: #a1a1aa; font-family: monospace; font-size: 0.85rem; letter-spacing: 1px; }
-          .block { background: rgba(24, 24, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
-          .question { padding: 20px; border-left: 4px solid #22d3ee; }
-          .question-label { font-size: 0.75rem; font-weight: 900; color: #22d3ee; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
-          .answer { padding: 20px; border-left: 4px solid #e879f9; background: rgba(232, 121, 249, 0.03); border-top: 1px solid rgba(255, 255, 255, 0.05); }
-          .answer-label { font-size: 0.75rem; font-weight: 900; color: #e879f9; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-          .text-content { white-space: pre-wrap; font-size: 0.95rem; }
-          .snapshot { max-width: 100%; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
-          .footer { text-align: center; margin-top: 50px; color: #52525b; font-size: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>ClueAI Session</h1>
-            <div class="meta">
-              <p><b>Name:</b> ${session.name}</p>
-              <p><b>Date:</b> ${session.date || new Date().toLocaleDateString()} | <b>Time:</b> ${session.time}</p>
-              ${session.interviewTitle ? `<p><b>Interview:</b> ${session.interviewTitle}</p>` : ''}
-            </div>
-          </div>
-          <div class="transcript">
-    `;
-
-    // Parse transcript
     const lines = session.transcript.split('\n');
-    let currentBlockType = ''; // 'question', 'answer'
-    let currentBlockContent = '';
-    let currentImage = '';
-    let currentModelInfo = '';
-
-    const closeBlock = () => {
-      if (currentBlockType === 'question') {
-        htmlContent += `<div class="block"><div class="question"><div class="question-label">Question context</div>`;
-        if (currentImage) htmlContent += `<img src="${currentImage}" class="snapshot" />`;
-        htmlContent += `<div class="text-content">${currentBlockContent.trim()}</div></div>`;
-      } else if (currentBlockType === 'answer') {
-        htmlContent += `<div class="answer"><div class="answer-label">AI Output</div>`;
-        if (currentModelInfo) {
-           htmlContent += `<div style="font-size: 0.65rem; color: #a1a1aa; margin-bottom: 8px; font-family: monospace; letter-spacing: 0.5px;">GENERATED BY: <span style="color: #e879f9; border: 1px solid rgba(232, 121, 249, 0.3); padding: 2px 6px; border-radius: 4px; background: rgba(232, 121, 249, 0.1); font-weight: bold;">${currentModelInfo}</span></div>`;
-        }
-        
-        // Format markdown code blocks (```) to have a sleek black background in the export
-        let formattedContent = currentBlockContent.trim();
-        formattedContent = formattedContent.replace(/```[a-z]*\n([\s\S]*?)```/gi, '<pre style="background-color: #000000; padding: 15px; border-radius: 8px; border: 1px solid #27272a; overflow-x: auto; font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin-top: 10px; margin-bottom: 10px;">$1</pre>');
-        formattedContent = formattedContent.replace(/```([\s\S]*?)```/g, '<pre style="background-color: #000000; padding: 15px; border-radius: 8px; border: 1px solid #27272a; overflow-x: auto; font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin-top: 10px; margin-bottom: 10px;">$1</pre>');
-        // Format inline code backticks to also stand out slightly
-        formattedContent = formattedContent.replace(/`([^`]+)`/g, '<code style="background-color: #000000; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #38bdf8; border: 1px solid #27272a;">$1</code>');
-
-        htmlContent += `<div class="text-content">${formattedContent}</div></div></div>`;
-      }
-      currentBlockContent = '';
-      currentImage = '';
-      currentModelInfo = '';
-      currentBlockType = '';
-    };
-
+    interface Interaction {
+      question: string;
+      images: string[];
+      answer: string;
+      modelInfo: string;
+    }
+    let interactions: Interaction[] = [];
+    let currentInteraction: Interaction | null = null;
+    let block = '';
+    let sessionStart = '';
+    let sessionEnd = '';
+    
     for (let line of lines) {
       if (line.includes('[SESSION_START:')) {
-        closeBlock();
-        const time = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
-        htmlContent += `<div class="session-marker">▶ SESSION STARTED AT ${time}</div>`;
+         sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
       } else if (line.includes('[SESSION_END:')) {
-        closeBlock();
-        const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
-        const time = match?.[1] || '';
-        const dur = match?.[2] || '';
-        htmlContent += `<div class="session-marker">■ SESSION ENDED AT ${time} (DURATION: ${dur})</div>`;
+         const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
+         sessionEnd = match?.[1] || '';
       } else if (line.includes('--- QUESTION ---')) {
-        closeBlock();
-        currentBlockType = 'question';
+         if (currentInteraction) interactions.push(currentInteraction);
+         currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
+         block = 'question';
       } else if (line.includes('--- AI ANSWER ---')) {
-        if (currentBlockType === 'question') {
-           // We don't close block yet because answer goes in the same card
-           htmlContent += `<div class="block"><div class="question"><div class="question-label">Question context</div>`;
-           if (currentImage) htmlContent += `<img src="${currentImage}" class="snapshot" />`;
-           htmlContent += `<div class="text-content">${currentBlockContent.trim()}</div></div>`;
-           currentBlockContent = '';
-           currentImage = '';
-        }
-        currentBlockType = 'answer';
-      } else if (line.startsWith('[MODEL:')) {
-        const match = line.match(/\[MODEL:(.*?)\]/);
-        if (match) currentModelInfo = match[1];
+         block = 'answer';
       } else if (line.startsWith('[IMAGE_BASE64:')) {
-        const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
-        if (match) currentImage = match[1];
+         const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
+         if (match && currentInteraction) currentInteraction.images.push(match[1]);
+      } else if (line.startsWith('[MODEL:')) {
+         const match = line.match(/\[MODEL:(.*?)\]/);
+         if (match && currentInteraction) currentInteraction.modelInfo = match[1];
       } else {
-        if (currentBlockType) {
-          currentBlockContent += line + '\n';
-        }
+         if (currentInteraction) {
+           if (block === 'question') currentInteraction.question += line + '\n';
+           if (block === 'answer') currentInteraction.answer += line + '\n';
+         }
       }
     }
-    closeBlock(); // Close any trailing blocks
+    if (currentInteraction) interactions.push(currentInteraction);
+    
+    const formatMd = (content: string) => {
+       let formatted = content.trim();
+       formatted = formatted.replace(/```[a-z]*\n([\s\S]*?)```/gi, '<pre class="code-block">$1</pre>');
+       formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block">$1</pre>');
+       formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+       return formatted;
+    };
+
+    const reversedInteractions = [...interactions].reverse();
+
+    let htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClueAI Session - ${session.name}</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #09090b; color: #ffffff; line-height: 1.6; margin: 0; padding: 0; }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    .header { text-align: center; border-bottom: 2px solid rgba(6, 182, 212, 0.3); padding-bottom: 30px; margin-bottom: 40px; }
+    .header h1 { color: #22d3ee; margin: 0 0 10px 0; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 2px; }
+    .meta { color: #a1a1aa; font-size: 0.9rem; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .meta b { color: #e4e4e7; }
+    
+    .interaction-card { background: rgba(24, 24, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 30px; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+    .interaction-header { background: rgba(255, 255, 255, 0.02); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); flex-wrap: wrap; gap: 15px; }
+    .interaction-title { font-weight: 900; color: #fff; font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase; }
+    
+    .interaction-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #e4e4e7; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: all 0.2s; }
+    .btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-q.active { background: rgba(6, 182, 212, 0.2); border-color: rgba(6, 182, 212, 0.5); color: #22d3ee; }
+    .btn-a.active { background: rgba(232, 121, 249, 0.2); border-color: rgba(232, 121, 249, 0.5); color: #e879f9; }
+    .btn-info.active { background: rgba(250, 204, 21, 0.2); border-color: rgba(250, 204, 21, 0.5); color: #facc15; }
+    
+    .section-content { padding: 20px; display: none; }
+    .section-content.active { display: block; }
+    .question-content { border-left: 4px solid #22d3ee; }
+    .answer-content { border-left: 4px solid #e879f9; background: rgba(232, 121, 249, 0.02); border-top: 1px solid rgba(255,255,255,0.05); }
+    
+    .images-container { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
+    .snapshot-thumb { width: 150px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: transform 0.2s; }
+    .snapshot-thumb:hover { transform: scale(1.05); border-color: #22d3ee; }
+    
+    .info-panel { background: rgba(0,0,0,0.5); padding: 15px 20px; font-family: monospace; font-size: 0.85rem; color: #a1a1aa; border-bottom: 1px solid rgba(255,255,255,0.05); display: none; }
+    .info-panel.active { display: block; }
+    
+    .text-content { white-space: pre-wrap; font-size: 0.95rem; }
+    .code-block { background-color: #000000; padding: 15px; border-radius: 8px; border: 1px solid #27272a; overflow-x: auto; font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin: 15px 0; }
+    .inline-code { background-color: #000000; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #38bdf8; border: 1px solid #27272a; }
+    
+    /* Lightbox */
+    #lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; cursor: zoom-out; }
+    #lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+    
+    .footer { text-align: center; margin-top: 50px; color: #52525b; font-size: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; }
+  </style>
+</head>
+<body>
+  <div id="lightbox" onclick="closeLightbox()">
+    <img src="" alt="Snapshot Fullscreen" />
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>ClueAI Session</h1>
+      <div class="meta">
+        <span><b>Name:</b> ${session.name}</span>
+        <span><b>Date:</b> ${session.date || new Date().toLocaleDateString()}</span>
+        <span><b>Time:</b> ${session.time}</span>
+        ${session.interviewTitle ? `<span><b>Interview:</b> ${session.interviewTitle}</span>` : ''}
+      </div>
+    </div>
+    
+    <div class="transcript">
+    `;
+
+    reversedInteractions.forEach((int, index) => {
+       const originalIndex = interactions.length - index;
+       const qId = `q-${originalIndex}`;
+       const aId = `a-${originalIndex}`;
+       const iId = `i-${originalIndex}`;
+
+       htmlContent += `
+       <div class="interaction-card">
+         <div class="interaction-header">
+           <div class="interaction-title">Question ${originalIndex}</div>
+           <div class="interaction-actions">
+             <button class="btn btn-info" onclick="toggleSection('${iId}', this)">Info</button>
+             <button class="btn btn-q active" onclick="toggleSection('${qId}', this)">Transcript</button>
+             <button class="btn btn-a" onclick="toggleSection('${aId}', this)">ClueAI Answer ${originalIndex}</button>
+           </div>
+         </div>
+         
+         <div id="${iId}" class="info-panel">
+            <b>Model / API:</b> ${int.modelInfo || 'Unknown'} <br/>
+            <b>Session Time:</b> ${sessionStart} ${sessionEnd ? '- ' + sessionEnd : ''} <br/>
+            <b>Snapshots:</b> ${int.images.length}
+         </div>
+         
+         <div id="${qId}" class="section-content question-content active">
+           ${int.images.length > 0 ? 
+              `<div class="images-container">
+                 ${int.images.map(img => `<img src="${img}" class="snapshot-thumb" onclick="openLightbox(this.src)" />`).join('')}
+               </div>` : ''}
+           <div class="text-content">${formatMd(int.question)}</div>
+         </div>
+         
+         <div id="${aId}" class="section-content answer-content">
+           <div class="text-content">${formatMd(int.answer)}</div>
+         </div>
+       </div>
+       `;
+    });
 
     htmlContent += `
-          </div>
-          <div class="footer">
-            Generated by Clue AI & Farhan Khalid &copy; ${new Date().getFullYear()} <br/>
-            <div style="margin-top: 8px;">
-              <a href="mailto:farhankhalid17968@gmail.com" style="color: #22d3ee; text-decoration: none;">Contact: farhankhalid17968@gmail.com</a> | 
-              <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} style={{color: '#22d3ee', textDecoration: 'none'}}>Portfolio Website</a>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
+    </div>
+    
+    <div class="footer">
+      Generated by Clue AI & Farhan Khalid &copy; ${new Date().getFullYear()} <br/>
+      <div style="margin-top: 8px;">
+        <a href="mailto:farhankhalid17968@gmail.com" style="color: #22d3ee; text-decoration: none;">Contact: farhankhalid17968@gmail.com</a> | 
+        <a href="#" onclick="openExternal('https://farhan-khalid-portfolio.vercel.app/')" style="color: #22d3ee; text-decoration: none;">Portfolio Website</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleSection(id, btn) {
+      const el = document.getElementById(id);
+      if (el.classList.contains('active')) {
+        el.classList.remove('active');
+        btn.classList.remove('active');
+      } else {
+        el.classList.add('active');
+        btn.classList.add('active');
+      }
+    }
+    
+    function openLightbox(src) {
+      const lb = document.getElementById('lightbox');
+      const img = lb.querySelector('img');
+      img.src = src;
+      lb.style.display = 'flex';
+    }
+    
+    function closeLightbox() {
+      document.getElementById('lightbox').style.display = 'none';
+    }
+
+    function openExternal(url) {
+      window.open(url, '_blank');
+    }
+  </script>
+</body>
+</html>
     `;
 
     const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -2079,39 +2304,30 @@ function App() {
                   if (!targetLang || targetLang === displayLang) return;
                   setTranslatingCodeId(blockId);
                   try {
-                    const groqKey = groqKeys.find(k => k.trim()) || '';
-                    if (!groqKey) {
-                      setAlertMessage({ title: 'Key Required', message: 'Groq API Key is required for fast code translation.', type: 'warning' });
-                      return;
-                    }
-                    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-                      body: JSON.stringify({
-                        model: 'llama-3.3-70b-versatile',
-                        messages: [{ role: 'system', content: `You are an expert coder. Translate this code to ${targetLang}. Output ONLY the raw markdown code block (e.g. \`\`\`${targetLang}\\n...\\n\`\`\`). Do NOT include ANY explanation or text outside the block.` }, { role: 'user', content: codeText }]
-                      })
+                    let currentContentToReplace = codeText;
+                    let newCodeContent = '';
+
+                    await streamCodeTranslation(codeText, targetLang, (chunk) => {
+                       newCodeContent += chunk;
+                       const cleanCode = newCodeContent.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trimStart();
+                       const searchStr = cleanCode.length > 0 ? cleanCode : '\u200B';
+                       
+                       setAiAnswer(prev => {
+                          const startIdx = prev.indexOf(currentContentToReplace);
+                          if (startIdx === -1) return prev;
+                          
+                          const blockStart = prev.lastIndexOf('```', startIdx);
+                          const blockEnd = prev.indexOf('```', startIdx + currentContentToReplace.length);
+                          
+                          if (blockStart !== -1 && blockEnd !== -1) {
+                             const newBlock = `\`\`\`${targetLang}\n${searchStr}\n\`\`\``;
+                             const updated = prev.substring(0, blockStart) + newBlock + prev.substring(blockEnd + 3);
+                             currentContentToReplace = searchStr;
+                             return updated;
+                          }
+                          return prev;
+                       });
                     });
-                    const data = await res.json();
-                    if (data.choices && data.choices[0]) {
-                      let newCodeBlock = data.choices[0].message.content.trim();
-                      if (!newCodeBlock.startsWith('```')) {
-                        newCodeBlock = `\`\`\`${targetLang}\n${newCodeBlock}\n\`\`\``;
-                      }
-                      setAiAnswer(prev => {
-                        const startIdx = prev.indexOf(codeText);
-                        if (startIdx === -1) return prev;
-                        
-                        const blockStart = prev.lastIndexOf('```', startIdx);
-                        const blockEnd = prev.indexOf('```', startIdx + codeText.length);
-                        
-                        if (blockStart !== -1 && blockEnd !== -1) {
-                           return prev.substring(0, blockStart) + newCodeBlock + prev.substring(blockEnd + 3);
-                        }
-                        
-                        return prev.replace(codeText, newCodeBlock.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim());
-                      });
-                    }
                   } catch (err) {
                     console.error("Translation Error", err);
                   } finally {
@@ -2193,7 +2409,7 @@ function App() {
               className="flex items-start justify-between p-4 border-b border-white/10 shrink-0 gap-4 drag-area"
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
-        if (target.classList && target.classList.contains('stealth-exempt')) return;
+        if (target.closest && target.closest('.stealth-exempt')) return;
                 if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
                   ipcRenderer.send('start-drag');
                   target.setPointerCapture(e.pointerId);
@@ -2269,6 +2485,21 @@ function App() {
                   
                   <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
                      <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2">
+                    <span className="text-[9px] font-black uppercase text-white/70">Hotkeys</span>
+                    <button 
+                      onClick={() => {
+                        const newState = !globalHotkeysEnabled;
+                        setGlobalHotkeysEnabled(newState);
+                        ipcRenderer.invoke('toggle-global-hotkeys', newState);
+                      }} 
+                      className={`relative w-7 h-4 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
+                      title="Toggle Global Hotkeys"
+                    >
+                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-3' : 'translate-x-0'}`} />
+                    </button>
                   </div>
                   <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
                      <button onClick={() => {
@@ -2358,7 +2589,7 @@ function App() {
         className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
         onPointerDown={(e) => {
           const target = e.target as HTMLElement;
-        if (target.classList && target.classList.contains('stealth-exempt')) return;
+        if (target.closest && target.closest('.stealth-exempt')) return;
           if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
             ipcRenderer.send('start-drag');
             target.setPointerCapture(e.pointerId);
@@ -2544,7 +2775,7 @@ function App() {
                   <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
                     <span className="mx-2 text-white/30">|</span> {username}
                     <button 
-                      onClick={() => { setTempUsername(username); setShowUsernamePrompt(true); }}
+                      onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
                       className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-md transition-colors shadow-sm ml-1"
                       title="Rename"
                     >
@@ -2566,7 +2797,7 @@ function App() {
               <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
               <Info size={16} />
             </button>
-            <button onClick={() => setShowSettings(!showSettings)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
+            <button onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
               <Settings size={16} />
             </button>
             <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
@@ -2766,7 +2997,6 @@ function App() {
                         <li><strong>Important:</strong> You must verify a <strong>brand new phone number</strong> (not just an email) to get $5 free. If it doesn't give you $5, Anthropic may have stopped the free promotion in your region.</li>
                         <li>Click <strong>Create Key</strong> and copy it (starts with `sk-ant-`).</li>
                         <li>Paste it into the Claude API Key field in ClueAI Settings.</li>
-                        <li><em>Note: Free credits expire in 14 days, so add your keys one-by-one!</em></li>
                       </ol>
                     </div>
                     <div className="space-y-2">
@@ -2814,7 +3044,12 @@ function App() {
             <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
               <div className="flex items-center gap-4">
                   <div>
-                    <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
+                      <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localSettingsStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                        {localSettingsStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                      </button>
+                    </div>
                     <p className="text-white/50 text-xs mt-1">Configure your shortcuts, AI models, and stealth mode.</p>
                   </div>
                   <span className="hidden md:flex px-2.5 py-1 rounded-md border border-white/10 bg-black/30 text-[10px] font-bold text-white/50 tracking-wider uppercase items-center gap-1.5 pointer-events-none select-none">
@@ -3146,12 +3381,10 @@ function App() {
                     {apiAccordion === 'claude' && (
                       <div className="p-5 bg-brand-card space-y-3">
                         {Array.from({ length: 2 }).map((_, i) => {
-                          const daysLeft = getDaysLeft(claudeKeys[i].addedAt, 14);
                           return (
                           <div key={`claude-${i}`}>
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                              {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
                             </div>
                             <div className="relative">
                               <input 
@@ -3292,12 +3525,10 @@ function App() {
                     {apiAccordion === 'chatgpt' && (
                       <div className="p-5 bg-brand-card space-y-3">
                         {Array.from({ length: 3 }).map((_, i) => {
-                          const daysLeft = getDaysLeft(chatgptKeys[i].addedAt, 90);
                           return (
                           <div key={`chatgpt-${i}`}>
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                              {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
                             </div>
                             <div className="relative">
                               <input 
@@ -3363,14 +3594,12 @@ function App() {
                     {apiAccordion === 'deepseek' && (
                       <div className="p-5 bg-brand-card space-y-3">
                         {Array.from({ length: 3 }).map((_, i) => {
-                          const daysLeft = getDaysLeft(deepseekKeys[i].addedAt, 90);
                           return (
                           <div key={`deepseek-${i}`}>
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
                               <div className="flex gap-2">
                                 {deepseekBalances[i] && <span className="text-[10px] font-bold text-green-400">Bal: ${deepseekBalances[i]}</span>}
-                                {daysLeft !== null && <span className="text-[10px] font-bold text-rose-400">{daysLeft} Days Left</span>}
                               </div>
                             </div>
                             <div className="relative">
@@ -3800,6 +4029,7 @@ function App() {
                   <button 
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
+                      setLocalReminderStealth(stealthMode);
                       setShowReminderPopup(true);
                     }} 
                     className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -3809,6 +4039,7 @@ function App() {
                   <button 
                     onClick={() => {
                       setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
+                      setLocalNotesStealth(stealthMode);
                       setShowNotesPopup(true);
                     }} 
                     className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -3849,6 +4080,7 @@ function App() {
                           className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
                           onClick={() => {
                             setReminderForm(prof as any);
+                            setLocalReminderStealth(stealthMode);
                             setShowReminderPopup(true);
                           }}
                         >
@@ -3882,6 +4114,7 @@ function App() {
                           className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
                           onClick={() => {
                             setNotesForm(prof as any);
+                            setLocalNotesStealth(stealthMode);
                             setShowNotesPopup(true);
                           }}
                         >
@@ -4111,7 +4344,7 @@ function App() {
                   <button onClick={() => setShowPreviousQuestions(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
                      <Clock size={20} />
                   </button>
-                  <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
+                  <button onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
                      <Settings size={20} />
                   </button>
                </div>
@@ -4385,9 +4618,14 @@ function App() {
       {/* Reminder Popup Editor */}
       {showReminderPopup && (
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className={`w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${!localReminderStealth ? 'stealth-exempt' : ''}`}>
             <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
+                <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localReminderStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                  {localReminderStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                </button>
+              </div>
               <button onClick={() => setShowReminderPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
             </div>
             <div className="p-6 grid grid-cols-2 gap-4">
@@ -4444,14 +4682,14 @@ function App() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
-                <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
+                <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.date) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
                 {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {showReminderErrors && reminderForm.date && !/^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please follow the example - DD-MM-YYYY format.</p>}
+                {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
                 <div className="relative">
-                  <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.time || !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
+                  <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.time) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
                   <button
                     onClick={() => setReminderForm({...reminderForm, ampm: reminderForm.ampm === 'AM' ? 'PM' : 'AM'})}
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-500/30 transition-colors"
@@ -4460,7 +4698,7 @@ function App() {
                   </button>
                 </div>
                 {showReminderErrors && !reminderForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {showReminderErrors && reminderForm.time && !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please use HH:MM 12-hour format.</p>}
+                {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError}</p>}
               </div>
             </div>
             <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
@@ -4477,8 +4715,9 @@ function App() {
               {emailSendStatus === 'idle' && (
               <button 
                 onClick={() => {
-                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date);
-                  const timeValid = /^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time);
+                  const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
+                  const dateValid = !dateError && reminderForm.date;
+                  const timeValid = !timeError && reminderForm.time;
                   const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
                   
                   if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
@@ -4534,8 +4773,9 @@ function App() {
               )}
               <button 
                 onClick={() => {
-                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(reminderForm.date);
-                  const timeValid = /^(0[1-9]|1[0-2]):[0-5]\d$/.test(reminderForm.time);
+                  const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
+                  const dateValid = !dateError && reminderForm.date;
+                  const timeValid = !timeError && reminderForm.time;
                   const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
                   
                   if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
@@ -4564,9 +4804,14 @@ function App() {
       {/* Notes Popup Editor */}
       {showNotesPopup && (
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden">
-            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-teal-500/10">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
+          <div className={`w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden ${!localNotesStealth ? 'stealth-exempt' : ''}`}>
+            <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
+                <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localNotesStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                  {localNotesStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                </button>
+              </div>
               <button onClick={() => setShowNotesPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
             </div>
             
@@ -4625,14 +4870,14 @@ function App() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
-                  <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.date || !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
+                  <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.date) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
                   {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
-                  {showNotesErrors && notesForm.date && !/^\d{2}-\d{2}-\d{4}$/.test(notesForm.date) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
+                  {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
                   <div className="relative">
-                    <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.time || !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(notesForm.time)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
+                    <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.time) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
                     <button
                       onClick={() => setNotesForm({...notesForm, ampm: notesForm.ampm === 'AM' ? 'PM' : 'AM'})}
                       className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-teal-500/30 transition-colors"
@@ -4641,7 +4886,7 @@ function App() {
                     </button>
                   </div>
                   {showNotesErrors && !notesForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
-                  {showNotesErrors && notesForm.time && !/^(0[1-9]|1[0-2]):[0-5]\d$/.test(notesForm.time) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Invalid format.</p>}
+                  {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError}</p>}
                 </div>
               </div>
             </div>
@@ -4660,8 +4905,9 @@ function App() {
               {emailSendStatus === 'idle' && (
               <button 
                 onClick={() => {
-                  const dateValid = /^\d{2}-\d{2}-\d{4}$/.test(notesForm.date);
-                  const timeValid = /^(0[1-9]|1[0-2]):[0-5]\d$/.test(notesForm.time);
+                  const { dateError, timeError } = validateDateTime(notesForm.date, notesForm.time, notesForm.ampm);
+                  const dateValid = !dateError && notesForm.date;
+                  const timeValid = !timeError && notesForm.time;
                   const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
                   
                   if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
@@ -4885,13 +5131,18 @@ function App() {
       
       {showUsernamePrompt && (
         <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
-          <div className="w-full max-w-sm bg-brand-secondary border border-brand-border rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="px-6 py-6 flex flex-col gap-4">
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-white mb-1">Your Name</h2>
-                <p className="text-xs font-medium text-brand-subtext leading-relaxed">
-                  Enter your name to personalize your session exports.
-                </p>
+          <div className={`w-full max-w-sm bg-brand-secondary border border-brand-border rounded-3xl shadow-2xl flex flex-col overflow-hidden ${!localRenameStealth ? 'stealth-exempt' : ''}`}>
+            <div className="p-8 pb-6 bg-[#18181b]/50">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-lg font-bold tracking-tight text-white m-0">Your Name</h2>
+                    <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localRenameStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                      {localRenameStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-brand-subtext leading-relaxed">This name will be attached to your exported sessions.</p>
+                </div>
               </div>
               <div className="w-full">
                 <input 

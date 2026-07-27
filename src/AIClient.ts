@@ -164,9 +164,8 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       // Prioritize fastest-known working vision models first, then fall back to text models
       const groqVisionModels = [
         'meta-llama/llama-4-scout-17b-16e-instruct',
-        'llama-3.2-11b-vision-preview',
         'llama-3.2-90b-vision-preview',
-        'llama-3.2-11b-vision-instruct',
+        'llama-3.2-11b-vision-preview',
       ];
       const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192'];
       
@@ -503,3 +502,176 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
     onChunk(`\n[AI Error: ${error.message || error}]`);
   }
 }
+
+export async function streamCodeTranslation(
+  codeText: string,
+  targetLang: string,
+  onChunk: (chunk: string) => void,
+  abortSignal?: AbortSignal
+) {
+  if (currentProvider === 'groq' && groqClients.length === 0) return;
+  if (currentProvider === 'gemini-flash' && geminiApiKeys.length === 0) return;
+  if (currentProvider === 'claude' && claudeApiKeys.length === 0) return;
+  if (currentProvider === 'chatgpt' && chatgptClients.length === 0) return;
+  if (currentProvider === 'deepseek' && deepseekClients.length === 0) return;
+
+  try {
+    const systemPrompt = `You are an expert programmer. You must translate the following code block to ${targetLang}. 
+CRITICAL RULE: You MUST output ONLY the translated code. Do NOT output any explanations, markdown code blocks, or greetings. JUST THE EXACT CODE STRING. DO NOT wrap the code in \`\`\` tags.`;
+    const userPrompt = `Translate this code to ${targetLang}:\n\n${codeText}`;
+
+    const effectiveProvider = currentProvider;
+
+    if (effectiveProvider === 'groq' && groqClients.length > 0) {
+      const messages: any[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ];
+      const client = groqClients[currentGroqIndex];
+      currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
+      
+      const stream = await client.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages,
+        stream: true,
+        temperature: 0.1,
+        max_tokens: 4096
+      });
+      for await (const chunk of stream) {
+        if (abortSignal?.aborted) return;
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) onChunk(content);
+      }
+    } else if (effectiveProvider === 'gemini-flash' && geminiApiKeys.length > 0) {
+      const apiKey = geminiApiKeys[currentGeminiIndex];
+      currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }]
+        })
+      });
+      if (!response.ok) throw new Error(`Gemini API Error: ${response.status}`);
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      while (reader) {
+        if (abortSignal?.aborted) { reader.cancel(); return; }
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        
+        let nlIndex;
+        while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, nlIndex);
+          buffer = buffer.slice(nlIndex + 1);
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+            if (dataStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+                onChunk(data.candidates[0].content.parts[0].text);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+    } else if (effectiveProvider === 'claude' && claudeApiKeys.length > 0) {
+      const key = claudeApiKeys[currentClaudeIndex];
+      currentClaudeIndex = (currentClaudeIndex + 1) % claudeApiKeys.length;
+      
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+          stream: true
+        })
+      });
+      if (!response.ok) throw new Error(`Claude API Error: ${response.status}`);
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      while (reader) {
+        if (abortSignal?.aborted) { reader.cancel(); return; }
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        
+        let nlIndex;
+        while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, nlIndex);
+          buffer = buffer.slice(nlIndex + 1);
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+            if (dataStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.type === 'content_block_delta' && data.delta?.text) {
+                onChunk(data.delta.text);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+    } else if (effectiveProvider === 'glm' && glmClients.length > 0) {
+      const clientObj = glmClients[currentGlmIndex];
+      currentGlmIndex = (currentGlmIndex + 1) % glmClients.length;
+      
+      const stream = await clientObj.client.chat.completions.create({
+        model: clientObj.model,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        stream: true,
+        temperature: 0.1,
+        max_tokens: 4096
+      });
+      for await (const chunk of stream) {
+        if (abortSignal?.aborted) return;
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) onChunk(content);
+      }
+    } else if ((effectiveProvider === 'chatgpt' && chatgptClients.length > 0) || (effectiveProvider === 'deepseek' && deepseekClients.length > 0)) {
+      const isChatGPT = effectiveProvider === 'chatgpt';
+      const clients = isChatGPT ? chatgptClients : deepseekClients;
+      const currentIndex = isChatGPT ? currentChatgptIndex : currentDeepseekIndex;
+      
+      const client = clients[currentIndex];
+      if (isChatGPT) currentChatgptIndex = (currentChatgptIndex + 1) % clients.length;
+      else currentDeepseekIndex = (currentDeepseekIndex + 1) % clients.length;
+      
+      const modelName = isChatGPT ? 'gpt-4o' : 'deepseek-chat';
+      const stream = await client.chat.completions.create({
+        model: modelName,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        stream: true,
+        temperature: 0.1,
+        max_tokens: 4096,
+      });
+      
+      for await (const chunk of stream) {
+        if (abortSignal?.aborted) return;
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) onChunk(content);
+      }
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError' || abortSignal?.aborted) return;
+    console.error('Translation Error:', error);
+  }
+}
+   
+ 
