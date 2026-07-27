@@ -165,7 +165,8 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
       const groqVisionModels = [
         'meta-llama/llama-4-scout-17b-16e-instruct',
         'llama-3.2-90b-vision-preview',
-        'llama-3.2-11b-vision-preview',
+        'llama-3.2-90b-vision',
+        'llama-3.2-11b-vision',
       ];
       const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192'];
       
