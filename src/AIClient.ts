@@ -673,5 +673,3 @@ CRITICAL RULE: You MUST output ONLY the translated code. Do NOT output any expla
     console.error('Translation Error:', error);
   }
 }
-   
- 

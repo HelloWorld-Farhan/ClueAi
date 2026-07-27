@@ -73,11 +73,7 @@ const validateGeminiKey = async (key: string): Promise<boolean> => {
 type KeyValidationState = 'idle' | 'validating' | 'valid' | 'invalid' | 'duplicate';
 
 
-const getDaysLeft = (addedAt: number, limit: number) => {
-  if (!addedAt) return null;
-  const daysPassed = (Date.now() - addedAt) / (1000 * 60 * 60 * 24);
-  return Math.max(0, limit - Math.floor(daysPassed));
-};
+
 
 const validateClaudeKey = async (key: string): Promise<boolean> => {
   if (!key.trim()) return false;
