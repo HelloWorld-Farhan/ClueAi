@@ -299,7 +299,7 @@ function App() {
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
   
-  const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number} | null>(null);
+  const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number, isShieldToast?: boolean} | null>(null);
 
   const [stealthMode, setStealthMode] = useState(() => {
     try {
@@ -1058,7 +1058,15 @@ function App() {
           e.preventDefault();
           e.stopPropagation();
           const rect = target.getBoundingClientRect();
-          setStealthWarningToast({ x: rect.left + (rect.width / 2), y: rect.bottom + 12 });
+          const modal = target.closest('.w-full.max-w-2xl, .w-full.max-w-4xl, .w-full.max-w-sm, .w-full.max-w-md');
+          const shieldBtn = modal ? modal.querySelector('.shield-toggle-btn') : null;
+          
+          if (shieldBtn) {
+            const shieldRect = shieldBtn.getBoundingClientRect();
+            setStealthWarningToast({ x: shieldRect.left + (shieldRect.width / 2), y: shieldRect.bottom + 12, isShieldToast: true });
+          } else {
+            setStealthWarningToast({ x: rect.left + (rect.width / 2), y: rect.bottom + 12, isShieldToast: false });
+          }
           
           if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
           (window as any).stealthToastTimeout = setTimeout(() => setStealthWarningToast(null), 2500);
@@ -3042,7 +3050,7 @@ function App() {
                   <div>
                     <div className="flex items-center gap-3">
                       <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
-                      <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localSettingsStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                      <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localSettingsStealth ? 'Stealth ON' : 'Stealth OFF'}>
                         {localSettingsStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                       </button>
                     </div>
@@ -4618,7 +4626,7 @@ function App() {
             <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
-                <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localReminderStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localReminderStealth ? 'Stealth ON' : 'Stealth OFF'}>
                   {localReminderStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                 </button>
               </div>
@@ -4804,7 +4812,7 @@ function App() {
             <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
-                <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localNotesStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localNotesStealth ? 'Stealth ON' : 'Stealth OFF'}>
                   {localNotesStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                 </button>
               </div>
@@ -5097,7 +5105,12 @@ function App() {
               transform: 'translateX(-50%)'
             }}
           >
-            <ShieldAlert size={14} /> Shield is ON. Cannot type here.
+            {stealthWarningToast.isShieldToast && <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-rose-500/90" />}
+            {stealthWarningToast.isShieldToast ? (
+              <><ShieldAlert size={14} /> Turn OFF the shield above to type.</>
+            ) : (
+              <><ShieldAlert size={14} /> Shield is ON. Cannot type here.</>
+            )}
           </div>
         )}
 
@@ -5133,7 +5146,7 @@ function App() {
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <h2 className="text-lg font-bold tracking-tight text-white m-0">Your Name</h2>
-                    <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localRenameStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                    <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localRenameStealth ? 'Stealth ON' : 'Stealth OFF'}>
                       {localRenameStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                     </button>
                   </div>
