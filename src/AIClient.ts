@@ -163,15 +163,12 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
 
       // Prioritize fastest-known working vision models first, then fall back to text models
       const groqVisionModels = [
-        'meta-llama/llama-4-scout-17b-16e-instruct',
+        'llama-4-scout-17b-16e-instruct',
         'llama-3.2-90b-vision-preview',
-        'llama-3.2-90b-vision',
-        'llama-3.2-11b-vision',
       ];
       const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192'];
       
-      // If there are images, try vision models first, then fall back to text models (stripping images).
-      const modelsToTry = hasImages ? [...groqVisionModels, ...groqTextModels] : groqTextModels;
+      const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
       let stream: any = null;
       let lastGroqError: any = null;
 
@@ -189,19 +186,13 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         for (const modelName of modelsToTry) {
           if (abortSignal?.aborted) return;
           try {
-            // If the model is a text model, strip the image content out and only send the text prompt.
-            const isTextModel = groqTextModels.includes(modelName);
-            const currentMessages = (hasImages && isTextModel) 
-              ? [{ role: 'user', content: userPrompt }] 
-              : messages;
-
             // Add an 8-second per-model timeout for vision requests to fail fast
             const modelSignal = hasImages && abortSignal
               ? AbortSignal.any([abortSignal, AbortSignal.timeout(8000)])
               : abortSignal;
             stream = await client.chat.completions.create({
               model: modelName,
-              messages: currentMessages,
+              messages: messages,
               stream: true,
               temperature: 0.5,
               max_tokens: 4096,
