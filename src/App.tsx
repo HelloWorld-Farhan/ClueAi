@@ -5189,17 +5189,19 @@ function App() {
                       setUsername(tempUsername.trim());
                       localStorage.setItem('clueai_username', tempUsername.trim());
                       setShowUsernamePrompt(false);
+                      setStealthWarningToast(null);
                     }
                   }}
                 />
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end mt-4">
                 <button 
                   disabled={!tempUsername.trim()}
                   onClick={() => {
                     setUsername(tempUsername.trim());
                     localStorage.setItem('clueai_username', tempUsername.trim());
                     setShowUsernamePrompt(false);
+                    setStealthWarningToast(null);
                   }}
                   className="px-6 py-2 bg-brand-accent hover:bg-brand-accentSec disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-all shadow-sm"
                 >
