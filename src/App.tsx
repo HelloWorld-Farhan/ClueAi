@@ -370,6 +370,20 @@ function App() {
   const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
   const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
   
+  const getDayOfWeek = (dateString: string) => {
+    if (!dateString) return '';
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return '';
+    const [d, m, y] = parts;
+    if (d.length === 2 && m.length === 2 && y.length === 4) {
+      const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', { weekday: 'long' });
+      }
+    }
+    return '';
+  };
+
   const validateDateTime = (dateStr: string, timeStr: string, ampmStr: string) => {
     let dateError = '';
     let timeError = '';
@@ -4694,7 +4708,8 @@ function App() {
                   <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
                     <div 
                       className="px-4 py-3 hover:bg-white/10 cursor-pointer flex flex-col transition-colors"
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                         e.preventDefault();
                          setReminderForm({...reminderForm, email: localStorage.getItem('clueai_saved_email') || ''});
                          setShowReminderEmailSuggest(false);
                       }}
@@ -4708,7 +4723,10 @@ function App() {
                 {showReminderErrors && reminderForm.email && !/^\S+@\S+\.\S+$/.test(reminderForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
               </div>
               <div>
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
+                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1 flex justify-between">
+                  <span>Date</span>
+                  {getDayOfWeek(reminderForm.date) && <span className="text-blue-400 capitalize">{getDayOfWeek(reminderForm.date)}</span>}
+                </label>
                 <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.date) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
                 {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError}</p>}
@@ -4881,7 +4899,8 @@ function App() {
                   <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
                     <div 
                       className="px-4 py-3 hover:bg-white/10 cursor-pointer flex flex-col transition-colors"
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                         e.preventDefault();
                          setNotesForm({...notesForm, email: localStorage.getItem('clueai_saved_email') || ''});
                          setShowNotesEmailSuggest(false);
                       }}
@@ -4896,7 +4915,10 @@ function App() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Date</label>
+                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1 flex justify-between">
+                    <span>Date</span>
+                    {getDayOfWeek(notesForm.date) && <span className="text-teal-400 capitalize">{getDayOfWeek(notesForm.date)}</span>}
+                  </label>
                   <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.date) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
                   {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
                   {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError}</p>}
