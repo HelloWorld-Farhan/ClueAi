@@ -2287,9 +2287,10 @@ function App() {
     code(props: any) {
       const {node, className, children, ...rest} = props;
       const match = /language-(\w+)/.exec(className || "");
-      const codeText = String(children).replace(/\n$/, "");
+      let codeTextRaw = String(children).replace(/\n$/, "");
+      const isTranslating = codeTextRaw.includes('___TRANSLATING_');
+      const codeText = codeTextRaw.replace(/___TRANSLATING_\d+___\n?/, "");
       const blockId = codeText.substring(0, 30);
-      const isTranslating = translatingCodeId === blockId;
       const currentLang = match ? match[1]?.toLowerCase() : '';
       let displayLang = currentLang;
       if (currentLang === 'cpp') displayLang = 'c++';
@@ -2318,7 +2319,20 @@ function App() {
                   if (!targetLang || targetLang === displayLang) return;
                   setTranslatingCodeId(blockId);
                   try {
-                    let currentContentToReplace = codeText;
+                    const uniqueTag = `___TRANSLATING_${Date.now()}___`;
+                    setTranslatingCodeId(uniqueTag);
+                    
+                    setAiAnswer(prev => {
+                       const startIdx = prev.indexOf(codeText);
+                       if (startIdx === -1) return prev;
+                       const blockStart = prev.lastIndexOf('```', startIdx);
+                       const blockEnd = prev.indexOf('```', startIdx + codeText.length);
+                       if (blockStart !== -1 && blockEnd !== -1) {
+                          return prev.substring(0, blockStart) + `\`\`\`${targetLang}\n${uniqueTag}\n\`\`\`` + prev.substring(blockEnd + 3);
+                       }
+                       return prev;
+                    });
+
                     let newCodeContent = '';
 
                     await streamCodeTranslation(codeText, targetLang, (chunk) => {
@@ -2327,17 +2341,15 @@ function App() {
                        const searchStr = cleanCode.length > 0 ? cleanCode : '\u200B';
                        
                        setAiAnswer(prev => {
-                          const startIdx = prev.indexOf(currentContentToReplace);
-                          if (startIdx === -1) return prev;
+                          const tagIdx = prev.indexOf(uniqueTag);
+                          if (tagIdx === -1) return prev;
                           
-                          const blockStart = prev.lastIndexOf('```', startIdx);
-                          const blockEnd = prev.indexOf('```', startIdx + currentContentToReplace.length);
+                          const blockStart = prev.lastIndexOf('```', tagIdx);
+                          const blockEnd = prev.indexOf('```', tagIdx + uniqueTag.length);
                           
                           if (blockStart !== -1 && blockEnd !== -1) {
-                             const newBlock = `\`\`\`${targetLang}\n${searchStr}\n\`\`\``;
-                             const updated = prev.substring(0, blockStart) + newBlock + prev.substring(blockEnd + 3);
-                             currentContentToReplace = searchStr;
-                             return updated;
+                             const newBlock = `\`\`\`${targetLang}\n${uniqueTag}\n${searchStr}\n\`\`\``;
+                             return prev.substring(0, blockStart) + newBlock + prev.substring(blockEnd + 3);
                           }
                           return prev;
                        });
@@ -2346,6 +2358,7 @@ function App() {
                     console.error("Translation Error", err);
                   } finally {
                     setTranslatingCodeId(null);
+                    setAiAnswer(prev => prev.replace(/___TRANSLATING_\d+___\n?/g, ''));
                   }
                 }}
                 options={[
