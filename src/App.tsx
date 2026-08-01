@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert} from 'lucide-react';
-import { initAIClient, getInterviewAnswer, switchProvider, streamCodeTranslation } from './AIClient';
+import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
 // @ts-ignore
@@ -180,7 +180,10 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 };
 
 function App() {
-  const [translatingCodeId, setTranslatingCodeId] = useState<string | null>(null);
+
+  const [preferredCodeLanguage, setPreferredCodeLanguage] = useState<string>(() => {
+    return localStorage.getItem('clueai_code_language') || 'Java';
+  });
   const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>(() => {
     return (localStorage.getItem('selected_provider') as any) || 'groq';
   });
@@ -369,6 +372,9 @@ function App() {
   
   const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
   const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
+  const [reminderPopupMode, setReminderPopupMode] = useState<'create' | 'preview' | 'edit'>('create');
+  const [notesPopupMode, setNotesPopupMode] = useState<'create' | 'preview' | 'edit'>('create');
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'reminder' | 'note', name: string, isPast: boolean } | null>(null);
   
   const getDayOfWeek = (dateString: string) => {
     if (!dateString) return '';
@@ -1315,6 +1321,18 @@ function App() {
     try {
       const state = await ipcRenderer.invoke('get-mic-state');
       if (state.muted || state.volume < 80) {
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.type = 'square';
+          oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          oscillator.start();
+          setTimeout(() => oscillator.stop(), 300);
+        } catch(e) {}
         setShowAudioErrorModal(true);
         return;
       }
@@ -1643,10 +1661,11 @@ function App() {
   processAudioRef.current = processAudio;
 
   // Use a stable ref so the keyboard useEffect never needs to re-register due to this function changing
-  const manualTriggerAIRef = useRef<(overrideSnapshots?: string[], overrideTranscript?: string) => Promise<void>>(async () => {});
+  const manualTriggerAIRef = useRef<(overrideSnapshots?: string[], overrideTranscript?: string, overrideLanguage?: string) => Promise<void>>(async () => {});
 
-  const manualTriggerAI = async (overrideSnapshots?: string[], overrideTranscript?: string) => {
+  const manualTriggerAI = async (overrideSnapshots?: string[], overrideTranscript?: string, overrideLanguage?: string) => {
     const snaps = overrideSnapshots || currentSnapshots;
+    const isLanguageSwitch = isAiFullscreen; // If already showing, this is a re-generate (language switch)
     if (aiAbortControllerRef.current) {
       aiAbortControllerRef.current.abort();
     }
@@ -1663,9 +1682,21 @@ function App() {
     setIsGenerating(true);
     setIsAiFullscreen(true);
     
-    if (currentTranscript.trim() || snaps.length > 0) {
-      // Create a temporary history item to show the question immediately
+    if (!isLanguageSwitch && (currentTranscript.trim() || snaps.length > 0)) {
+      // Only add a new history item if this is NOT a language re-generation
       setCurrentSessionHistory(prev => [...prev, { question: currentTranscript, answer: '', images: [...snaps] }]);
+    } else if (isLanguageSwitch) {
+      // For language switch: clear the answer of the last entry so it streams fresh
+      setCurrentSessionHistory(prev => {
+        if (prev.length === 0) return prev;
+        const newHistory = [...prev];
+        newHistory[newHistory.length - 1] = { 
+          ...newHistory[newHistory.length - 1], 
+          question: currentTranscript, // Update question to reflect any injected language requests
+          answer: '' 
+        };
+        return newHistory;
+      });
     }
     
     setAiAnswer('');
@@ -1691,7 +1722,8 @@ function App() {
           if (activeAITimeoutRef.current) clearTimeout(activeAITimeoutRef.current);
           activeAITimeoutRef.current = setTimeout(() => setActiveAIInfo(null), 5000);
         },
-        signal
+        signal,
+        overrideLanguage || preferredCodeLanguage
       );
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
@@ -1715,8 +1747,10 @@ function App() {
       const imagesLog = snaps.map(s => `[IMAGE_BASE64:${s}]`).join('\n');
       setSessionLog(prev => prev + `\n\n--- QUESTION ---\n${imagesLog ? imagesLog + '\n' : ''}${currentTranscript}\n\n--- AI ANSWER ---\n[MODEL:${currentProviderInfo}]\n${finalAnswer}\n\n`);
     } else if (signal.aborted) {
-      // Remove the unanswered placeholder history item if generation was cancelled
-      setCurrentSessionHistory(prev => prev.filter((_, idx) => idx !== prev.length - 1 || prev[prev.length - 1]?.answer !== ''));
+      // Remove the unanswered placeholder history item if generation was cancelled (only for fresh triggers)
+      if (!isLanguageSwitch) {
+        setCurrentSessionHistory(prev => prev.filter((_, idx) => idx !== prev.length - 1 || prev[prev.length - 1]?.answer !== ''));
+      }
     }
   };
 
@@ -2127,7 +2161,22 @@ function App() {
         e.preventDefault();
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
-        if (!isGenerating) manualTriggerAIRef.current();
+        if (isAiFullscreen) {
+          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+          setIsGenerating(false);
+          setIsAiFullscreen(false);
+          setTranscript('');
+          finalizedTranscriptRef.current = '';
+          interimTranscriptRef.current = '';
+          setAiAnswer('');
+          setCurrentSnapshots([]);
+          audioDataRef.current = new Float32Array(0);
+          listeningSessionIdRef.current++;
+          setIsPaused(false);
+          isPausedRef.current = false;
+        } else if (!isGenerating) {
+          manualTriggerAIRef.current();
+        }
       } else if (key === 'z' || key === '1') {
         e.preventDefault();
         if (isAiFullscreen) {
@@ -2140,6 +2189,8 @@ function App() {
           interimTranscriptRef.current = '';
           setAiAnswer('');
           setCurrentSnapshots([]);
+          audioDataRef.current = new Float32Array(0);
+          listeningSessionIdRef.current++;
           setIsPaused(false);
           isPausedRef.current = false;
         } else {
@@ -2195,13 +2246,30 @@ function App() {
           interimTranscriptRef.current = '';
           setAiAnswer('');
           setCurrentSnapshots([]);
+          audioDataRef.current = new Float32Array(0);
+          listeningSessionIdRef.current++;
           setIsPaused(false);
           isPausedRef.current = false;
         } else {
           handlePauseToggle();
         }
       } else if (action === 'force-ai') {
-        if (!isGenerating) manualTriggerAIRef.current();
+        if (isAiFullscreen) {
+          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+          setIsGenerating(false);
+          setIsAiFullscreen(false);
+          setTranscript('');
+          finalizedTranscriptRef.current = '';
+          interimTranscriptRef.current = '';
+          setAiAnswer('');
+          setCurrentSnapshots([]);
+          audioDataRef.current = new Float32Array(0);
+          listeningSessionIdRef.current++;
+          setIsPaused(false);
+          isPausedRef.current = false;
+        } else if (!isGenerating) {
+          manualTriggerAIRef.current();
+        }
       } else if (action === 'clear-all') {
         if (isAiFullscreen) {
           stopRecording();
@@ -2302,9 +2370,7 @@ function App() {
       const {node, className, children, ...rest} = props;
       const match = /language-(\w+)/.exec(className || "");
       let codeTextRaw = String(children).replace(/\n$/, "");
-      const isTranslating = codeTextRaw.includes('___TRANSLATING_');
-      const codeText = codeTextRaw.replace(/___TRANSLATING_\d+___\n?/, "");
-      const blockId = codeText.substring(0, 30);
+      const codeText = codeTextRaw;
       const currentLang = match ? match[1]?.toLowerCase() : '';
       let displayLang = currentLang;
       if (currentLang === 'cpp') displayLang = 'c++';
@@ -2315,12 +2381,6 @@ function App() {
       return match ? (
         <div className="w-full flex justify-center my-6">
           <div className="relative group/code max-w-4xl w-full">
-            {isTranslating ? (
-              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 rounded-2xl backdrop-blur-sm border border-brand-accent/30 pointer-events-auto">
-                <Loader2 size={32} className="animate-spin text-brand-accent mb-3" />
-                <p className="text-sm text-brand-accent font-bold animate-pulse">Translating Code...</p>
-              </div>
-            ) : null}
             <CopyButton 
               text={codeText}
               className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
@@ -2331,49 +2391,25 @@ function App() {
                 value={displayLang}
                 onChange={async (targetLang: string) => {
                   if (!targetLang || targetLang === displayLang) return;
-                  setTranslatingCodeId(blockId);
-                  try {
-                    const uniqueTag = `___TRANSLATING_${Date.now()}___`;
-                    setTranslatingCodeId(uniqueTag);
-                    
-                    setAiAnswer(prev => {
-                       const startIdx = prev.indexOf(codeText);
-                       if (startIdx === -1) return prev;
-                       const blockStart = prev.lastIndexOf('```', startIdx);
-                       const blockEnd = prev.indexOf('```', startIdx + codeText.length);
-                       if (blockStart !== -1 && blockEnd !== -1) {
-                          return prev.substring(0, blockStart) + `\`\`\`${targetLang}\n${uniqueTag}\n\`\`\`` + prev.substring(blockEnd + 3);
-                       }
-                       return prev;
-                    });
+                  // Capitalize first letter for the language name used in the AI prompt
+                  const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
+                  // Update the preferred language state and persist it
+                  setPreferredCodeLanguage(langLabel);
+                  localStorage.setItem('clueai_code_language', langLabel);
+                  // Re-generate the FULL answer (code + explanation) in the new language
+                  let currentTranscript = finalizedTranscriptRef.current || transcript || '';
+                  
+                  // Append a note to the transcript so the user sees the language change in the UI history
+                  const langNote = `\n[User requested code in ${langLabel}]`;
+                  // Remove any previous language note to prevent stacking
+                  currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
+                  currentTranscript += langNote;
 
-                    let newCodeContent = '';
-
-                    await streamCodeTranslation(codeText, targetLang, (chunk) => {
-                       newCodeContent += chunk;
-                       const cleanCode = newCodeContent.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trimStart();
-                       const searchStr = cleanCode.length > 0 ? cleanCode : '\u200B';
-                       
-                       setAiAnswer(prev => {
-                          const tagIdx = prev.indexOf(uniqueTag);
-                          if (tagIdx === -1) return prev;
-                          
-                          const blockStart = prev.lastIndexOf('```', tagIdx);
-                          const blockEnd = prev.indexOf('```', tagIdx + uniqueTag.length);
-                          
-                          if (blockStart !== -1 && blockEnd !== -1) {
-                             const newBlock = `\`\`\`${targetLang}\n${uniqueTag}\n${searchStr}\n\`\`\``;
-                             return prev.substring(0, blockStart) + newBlock + prev.substring(blockEnd + 3);
-                          }
-                          return prev;
-                       });
-                    });
-                  } catch (err) {
-                    console.error("Translation Error", err);
-                  } finally {
-                    setTranslatingCodeId(null);
-                    setAiAnswer(prev => prev.replace(/___TRANSLATING_\d+___\n?/g, ''));
-                  }
+                  await manualTriggerAI(
+                    currentSnapshots.length > 0 ? currentSnapshots : undefined,
+                    currentTranscript,
+                    langLabel
+                  );
                 }}
                 options={[
                   { value: '', label: 'Translate...' },
@@ -2425,7 +2461,7 @@ function App() {
     li({node, children, ...props}: any) {
       return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
     }
-  }), [translatingCodeId, groqKeys]);
+  }), [groqKeys, preferredCodeLanguage, transcript, currentSnapshots]);
 
   return (
     <>
@@ -2555,7 +2591,7 @@ function App() {
                        localStorage.setItem('clueai_answer_size', next.toString());
                      }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
                   </div>
-                  <button 
+                   <button 
                      onClick={() => {
                        // Abort any in-progress generation immediately
                        if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
@@ -2566,6 +2602,8 @@ function App() {
                        interimTranscriptRef.current = '';
                        setAiAnswer('');
                        setCurrentSnapshots([]);
+                       audioDataRef.current = new Float32Array(0);
+                       listeningSessionIdRef.current++;
                        setIsPaused(false);
                        isPausedRef.current = false;
                      }} 
@@ -2811,7 +2849,10 @@ function App() {
             <div className="flex items-center">
               <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
                 <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
-                <span>ClueAI</span>
+                <div className="flex flex-col items-start">
+                  <span>ClueAI</span>
+                  <span className="text-[8px] text-brand-accent/70 uppercase tracking-widest font-bold mt-0.5">Version - V4.0.0</span>
+                </div>
                 {username && (
                   <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
                     <span className="mx-2 text-white/30">|</span> {username}
@@ -4030,6 +4071,7 @@ function App() {
               <button 
                 onClick={() => {
                   setShowAudioErrorModal(false);
+                  minimizeApp();
                   shell.openExternal('ms-settings:sound');
                 }}
                 className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-rose-500/20 transition-all uppercase tracking-widest text-sm"
@@ -4071,6 +4113,7 @@ function App() {
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
                       setLocalReminderStealth(stealthMode);
+                      setReminderPopupMode('create');
                       setShowReminderPopup(true);
                     }} 
                     className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -4081,6 +4124,7 @@ function App() {
                     onClick={() => {
                       setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
                       setLocalNotesStealth(stealthMode);
+                      setNotesPopupMode('create');
                       setShowNotesPopup(true);
                     }} 
                     className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
@@ -4122,6 +4166,7 @@ function App() {
                           onClick={() => {
                             setReminderForm(prof as any);
                             setLocalReminderStealth(stealthMode);
+                            setReminderPopupMode('preview');
                             setShowReminderPopup(true);
                           }}
                         >
@@ -4138,7 +4183,7 @@ function App() {
                               <button 
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
-                                  setReminderProfiles(prev => prev.filter(r => r.id !== prof.id));
+                                  setItemToDelete({ id: prof.id, type: 'reminder', name: prof.name, isPast });
                                 }} 
                                 className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
                               >
@@ -4156,6 +4201,7 @@ function App() {
                           onClick={() => {
                             setNotesForm(prof as any);
                             setLocalNotesStealth(stealthMode);
+                            setNotesPopupMode('preview');
                             setShowNotesPopup(true);
                           }}
                         >
@@ -4172,7 +4218,7 @@ function App() {
                               <button 
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
-                                  setNotesProfiles(prev => prev.filter(r => r.id !== prof.id));
+                                  setItemToDelete({ id: prof.id, type: 'note', name: 'Note Scheduled', isPast });
                                 }} 
                                 className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
                               >
@@ -4656,6 +4702,54 @@ function App() {
         </div>
       )}
 
+      {itemToDelete && (
+        <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-brand-secondary border border-rose-500/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2"><Trash2 size={18} className="text-rose-400" /> Confirm Deletion</h2>
+              <button onClick={() => setItemToDelete(null)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+            <div className="p-6 text-center">
+              <p className="text-sm text-gray-300 mb-4">Are you sure you want to delete this {itemToDelete.type}?</p>
+              <div className="bg-black/30 p-3 rounded-lg border border-white/5 mb-6 text-left">
+                <span className="font-bold text-white block">{itemToDelete.name}</span>
+              </div>
+              {!itemToDelete.isPast && (
+                <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 text-xs text-rose-300 font-medium text-left flex items-start gap-2 mb-6">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <p>On deleting, it will cancel the scheduled email and it will not send it again.</p>
+                </div>
+              )}
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setItemToDelete(null)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-sm transition-colors">Cancel</button>
+                <button 
+                  onClick={() => {
+                    const { id, type, isPast } = itemToDelete;
+                    if (type === 'reminder') {
+                      setReminderProfiles(prev => prev.filter(r => r.id !== id));
+                    } else {
+                      setNotesProfiles(prev => prev.filter(r => r.id !== id));
+                    }
+                    if (!isPast) {
+                      fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete', id })
+                      }).catch(console.error);
+                    }
+                    setItemToDelete(null);
+                  }} 
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-sm transition-colors"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reminder Popup Editor */}
       {showReminderPopup && (
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
@@ -4672,51 +4766,56 @@ function App() {
             <div className="p-6 grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Company Name</label>
-                <input type="text" placeholder="e.g. Amazon" className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.name ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.name} onChange={e => setReminderForm({...reminderForm, name: e.target.value})} />
+                <input type="text" placeholder="e.g. Amazon" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.name ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.name} onChange={e => setReminderForm({...reminderForm, name: e.target.value})} />
                 {showReminderErrors && !reminderForm.name && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Job Title</label>
-                <input type="text" placeholder="e.g. Software Engineer" className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.jobTitle ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.jobTitle} onChange={e => setReminderForm({...reminderForm, jobTitle: e.target.value})} />
+                <input type="text" placeholder="e.g. Software Engineer" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.jobTitle ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.jobTitle} onChange={e => setReminderForm({...reminderForm, jobTitle: e.target.value})} />
                 {showReminderErrors && !reminderForm.jobTitle && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
               </div>
               <div className="relative">
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
                 <input 
                   type="email" 
+                  disabled={reminderPopupMode !== 'create'}
                   placeholder="e.g. user@example.com" 
-                  className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} 
+                  className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} 
                   value={reminderForm.email} 
                   onChange={e => {
                      setReminderForm({...reminderForm, email: e.target.value});
-                     const saved = localStorage.getItem('clueai_saved_email');
-                     if (saved && e.target.value && saved.toLowerCase().startsWith(e.target.value.toLowerCase()) && e.target.value.toLowerCase() !== saved.toLowerCase()) {
-                        setShowReminderEmailSuggest(true);
-                     } else {
-                        setShowReminderEmailSuggest(false);
-                     }
+                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                     const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                     setShowReminderEmailSuggest(matches.length > 0);
                   }}
                   onFocus={() => {
-                     const saved = localStorage.getItem('clueai_saved_email');
-                     if (saved && !reminderForm.email) {
+                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                     if (saved.length > 0) {
                         setShowReminderEmailSuggest(true);
                      }
                   }}
                   onBlur={() => setTimeout(() => setShowReminderEmailSuggest(false), 200)}
                 />
-                {showReminderEmailSuggest && localStorage.getItem('clueai_saved_email') && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                    <div 
-                      className="px-4 py-3 hover:bg-white/10 cursor-pointer flex flex-col transition-colors"
-                      onMouseDown={(e) => {
-                         e.preventDefault();
-                         setReminderForm({...reminderForm, email: localStorage.getItem('clueai_saved_email') || ''});
-                         setShowReminderEmailSuggest(false);
-                      }}
-                    >
-                      <span className="text-[10px] font-bold text-brand-accent uppercase tracking-wider mb-0.5">Suggested</span>
-                      <span className="text-sm text-white font-medium">{localStorage.getItem('clueai_saved_email')}</span>
+                {showReminderEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
+                    <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
+                      <span className="text-[10px] font-bold text-brand-accent uppercase tracking-wider mb-0.5">Suggested Emails</span>
                     </div>
+                    {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                      .filter(s => !reminderForm.email || s.toLowerCase().includes(reminderForm.email.toLowerCase()))
+                      .map((email, idx) => (
+                      <div 
+                        key={idx}
+                        className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
+                        onMouseDown={(e) => {
+                           e.preventDefault();
+                           setReminderForm({...reminderForm, email});
+                           setShowReminderEmailSuggest(false);
+                        }}
+                      >
+                        <span className="text-sm text-white font-medium">{email}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
@@ -4727,125 +4826,167 @@ function App() {
                   <span>Date</span>
                   {getDayOfWeek(reminderForm.date) && <span className="text-blue-400 capitalize">{getDayOfWeek(reminderForm.date)}</span>}
                 </label>
-                <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.date) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
+                <input type="text" placeholder="DD-MM-YYYY" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.date) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
                 {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                 {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
                 <div className="relative">
-                  <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.time) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
+                  <input type="text" placeholder="HH:MM" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.time) || (reminderPopupMode !== 'preview' && validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16 disabled:opacity-50`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
                   <button
+                    disabled={reminderPopupMode === 'preview'}
                     onClick={() => setReminderForm({...reminderForm, ampm: reminderForm.ampm === 'AM' ? 'PM' : 'AM'})}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-500/30 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
                   >
                     {reminderForm.ampm} <RefreshCcw size={10} />
                   </button>
                 </div>
                 {showReminderErrors && !reminderForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError}</p>}
+                {reminderPopupMode !== 'preview' && validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError}</p>}
               </div>
             </div>
             <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
-              {emailSendStatus === 'sending' && (
-                <div className="px-5 py-2.5 flex items-center justify-center h-[44px]">
-                  <Loader2 size={24} className="text-blue-500 animate-spin" />
-                </div>
-              )}
-              {emailSendStatus === 'success' && (
-                <div className="px-5 py-2.5 flex items-center justify-center h-[44px] gap-2 text-green-500 font-bold">
-                  <CheckCircle2 size={24} /> Scheduled
-                </div>
-              )}
-              {emailSendStatus === 'idle' && (
-              <button 
-                onClick={() => {
-                  const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
-                  const dateValid = !dateError && reminderForm.date;
-                  const timeValid = !timeError && reminderForm.time;
-                  const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
-                  
-                  if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
-                    setShowReminderErrors(true);
-                    return;
-                  }
-                  setShowReminderErrors(false);
+              {reminderPopupMode === 'preview' ? (() => {
+                let isPast = false;
+                try {
+                  const [d, m, y] = reminderForm.date.split('-');
+                  const [h, min] = reminderForm.time.split(':');
+                  let hours = parseInt(h);
+                  if (reminderForm.ampm === 'PM' && hours < 12) hours += 12;
+                  if (reminderForm.ampm === 'AM' && hours === 12) hours = 0;
+                  const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                  isPast = new Date() > targetDate;
+                } catch(e) {}
+                
+                return (
+                  <button 
+                    onClick={() => setReminderPopupMode('edit')}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                  >
+                    <Edit2 size={16} /> {isPast ? 'Resend' : 'Edit'}
+                  </button>
+                );
+              })() : (
+                <>
+                  {emailSendStatus === 'sending' && (
+                    <div className="px-5 py-2.5 flex items-center justify-center h-[44px]">
+                      <Loader2 size={24} className="text-blue-500 animate-spin" />
+                    </div>
+                  )}
+                  {emailSendStatus === 'success' && (
+                    <div className="px-5 py-2.5 flex items-center justify-center h-[44px] gap-2 text-green-500 font-bold">
+                      <CheckCircle2 size={24} /> Scheduled
+                    </div>
+                  )}
+                  {emailSendStatus === 'idle' && (
+                  <button 
+                    onClick={() => {
+                      const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
+                      const dateValid = !dateError && reminderForm.date;
+                      const timeValid = !timeError && reminderForm.time;
+                      const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
+                      
+                      if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
+                        setShowReminderErrors(true);
+                        return;
+                      }
+                      setShowReminderErrors(false);
 
-                  const templateParams = {
-                    type: 'reminder',
-                    to_name: reminderForm.name,
-                    to_email: reminderForm.email,
-                    company_name: reminderForm.name,
-                    job_title: reminderForm.jobTitle,
-                    date: reminderForm.date,
-                    time: `${reminderForm.time} ${reminderForm.ampm}`, // Send concatenated time and AM/PM
-                  };
+                      const currentId = reminderForm.id || Date.now().toString();
+                      const templateParams = {
+                        id: currentId,
+                        type: 'reminder',
+                        to_name: reminderForm.name,
+                        to_email: reminderForm.email,
+                        company_name: reminderForm.name,
+                        job_title: reminderForm.jobTitle,
+                        date: reminderForm.date,
+                        time: `${reminderForm.time} ${reminderForm.ampm}`,
+                      };
 
-                  // Send to Google Apps Script
-                  setEmailSendStatus('sending');
-                  fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Essential for Google Apps Script Web Apps
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(templateParams)
-                  })
-                  .then(() => {
-                    setEmailSendStatus('success');
-                    // Save Profile
-                    if (reminderForm.id) {
-                      setReminderProfiles(prev => prev.map(p => p.id === reminderForm.id ? reminderForm : p));
-                    } else {
-                      setReminderProfiles(prev => [{...reminderForm, id: Date.now().toString()}, ...prev]);
-                    }
-                    
-                    setTimeout(() => {
+                      setEmailSendStatus('sending');
+                      const doSchedule = () => {
+                        fetch(GOOGLE_SCRIPT_URL, {
+                          method: 'POST',
+                          mode: 'no-cors',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(templateParams)
+                        })
+                        .then(() => {
+                          setEmailSendStatus('success');
+                          setReminderProfiles(prev => {
+                            if (prev.some(p => p.id === currentId)) {
+                              return prev.map(p => p.id === currentId ? {...reminderForm, id: currentId} : p);
+                            }
+                            return [{...reminderForm, id: currentId}, ...prev];
+                          });
+                          
+                          setTimeout(() => {
+                            setShowReminderPopup(false);
+                            setEmailSendStatus('idle');
+                          }, 1500);
+                        })
+                        .catch(err => {
+                          setEmailSendStatus('idle');
+                          console.error('Google Script Error:', err);
+                          setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Error: ${err.message}`, type: 'error' });
+                        });
+                      };
+
+                      if (reminderForm.id) {
+                        fetch(GOOGLE_SCRIPT_URL, {
+                          method: 'POST', mode: 'no-cors',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'delete', id: reminderForm.id })
+                        }).then(doSchedule).catch(doSchedule);
+                      } else {
+                        doSchedule();
+                      }
+                    }}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                  >
+                    Send Reminder via Email
+                  </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
+                      const dateValid = !dateError && reminderForm.date;
+                      const timeValid = !timeError && reminderForm.time;
+                      const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
+                      
+                      if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
+                        setShowReminderErrors(true);
+                        return;
+                      }
+                      setShowReminderErrors(false);
+                      const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                      if (!currentEmails.includes(reminderForm.email)) {
+                         currentEmails.unshift(reminderForm.email);
+                         localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
+                      }
+                      localStorage.setItem('clueai_saved_email', reminderForm.email);
+                      
+                      const currentId = reminderForm.id || Date.now().toString();
+                      setReminderProfiles(prev => {
+                        if (prev.some(p => p.id === currentId)) {
+                          return prev.map(p => p.id === currentId ? {...reminderForm, id: currentId} : p);
+                        }
+                        return [{...reminderForm, id: currentId}, ...prev];
+                      });
                       setShowReminderPopup(false);
-                      setEmailSendStatus('idle');
-                    }, 1500);
-                  })
-                  .catch(err => {
-                    setEmailSendStatus('idle');
-                    console.error('Google Script Error:', err);
-                    setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Check URL. Error: ${err.message}`, type: 'error' });
-                  });
-                }}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-              >
-                Send Reminder via Email
-              </button>
+                    }}
+                    className="px-5 py-2.5 bg-brand-accent hover:bg-brand-accent/80 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                  >
+                    <Save size={16} /> Save Profile
+                  </button>
+                </>
               )}
-              <button 
-                onClick={() => {
-                  const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
-                  const dateValid = !dateError && reminderForm.date;
-                  const timeValid = !timeError && reminderForm.time;
-                  const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
-                  
-                  if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
-                    setShowReminderErrors(true);
-                    return;
-                  }
-                  setShowReminderErrors(false);
-                  localStorage.setItem('clueai_saved_email', reminderForm.email);
-                  
-                  if (reminderForm.id) {
-                    setReminderProfiles(prev => prev.map(p => p.id === reminderForm.id ? reminderForm : p));
-                  } else {
-                    setReminderProfiles(prev => [{...reminderForm, id: Date.now().toString()}, ...prev]);
-                  }
-                  setShowReminderPopup(false);
-                }}
-                className="px-5 py-2.5 bg-brand-accent hover:bg-brand-accent/80 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-              >
-                <Save size={16} /> Save Profile
-              </button>
             </div>
           </div>
         </div>
       )}
-
       {/* Notes Popup Editor */}
       {showNotesPopup && (
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
@@ -4865,7 +5006,8 @@ function App() {
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Notes</label>
                 <textarea 
                   placeholder="e.g. Discussed system design..." 
-                  className={`w-full bg-black/40 border ${showNotesErrors && !notesForm.notes ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors h-24 resize-none`} 
+                  disabled={notesPopupMode === 'preview'}
+                  className={`w-full bg-black/40 border ${showNotesErrors && !notesForm.notes ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors h-24 resize-none disabled:opacity-50`} 
                   value={notesForm.notes} 
                   onChange={e => setNotesForm({...notesForm, notes: e.target.value})} 
                 />
@@ -4875,39 +5017,44 @@ function App() {
                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
                 <input 
                   type="email" 
+                  disabled={notesPopupMode !== 'create'}
                   placeholder="e.g. user@example.com" 
-                  className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} 
+                  className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors disabled:opacity-50`} 
                   value={notesForm.email} 
                   onChange={e => {
                      setNotesForm({...notesForm, email: e.target.value});
-                     const saved = localStorage.getItem('clueai_saved_email');
-                     if (saved && e.target.value && saved.toLowerCase().startsWith(e.target.value.toLowerCase()) && e.target.value.toLowerCase() !== saved.toLowerCase()) {
-                        setShowNotesEmailSuggest(true);
-                     } else {
-                        setShowNotesEmailSuggest(false);
-                     }
+                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                     const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                     setShowNotesEmailSuggest(matches.length > 0);
                   }}
                   onFocus={() => {
-                     const saved = localStorage.getItem('clueai_saved_email');
-                     if (saved && !notesForm.email) {
+                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                     if (saved.length > 0) {
                         setShowNotesEmailSuggest(true);
                      }
                   }}
                   onBlur={() => setTimeout(() => setShowNotesEmailSuggest(false), 200)}
                 />
-                {showNotesEmailSuggest && localStorage.getItem('clueai_saved_email') && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                    <div 
-                      className="px-4 py-3 hover:bg-white/10 cursor-pointer flex flex-col transition-colors"
-                      onMouseDown={(e) => {
-                         e.preventDefault();
-                         setNotesForm({...notesForm, email: localStorage.getItem('clueai_saved_email') || ''});
-                         setShowNotesEmailSuggest(false);
-                      }}
-                    >
-                      <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-0.5">Suggested</span>
-                      <span className="text-sm text-white font-medium">{localStorage.getItem('clueai_saved_email')}</span>
+                {showNotesEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
+                    <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
+                      <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-0.5">Suggested Emails</span>
                     </div>
+                    {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                      .filter(s => !notesForm.email || s.toLowerCase().includes(notesForm.email.toLowerCase()))
+                      .map((email, idx) => (
+                      <div 
+                        key={idx}
+                        className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
+                        onMouseDown={(e) => {
+                           e.preventDefault();
+                           setNotesForm({...notesForm, email});
+                           setShowNotesEmailSuggest(false);
+                        }}
+                      >
+                        <span className="text-sm text-white font-medium">{email}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
@@ -4919,95 +5066,136 @@ function App() {
                     <span>Date</span>
                     {getDayOfWeek(notesForm.date) && <span className="text-teal-400 capitalize">{getDayOfWeek(notesForm.date)}</span>}
                   </label>
-                  <input type="text" placeholder="DD-MM-YYYY" className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.date) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
+                  <input type="text" placeholder="DD-MM-YYYY" disabled={notesPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.date) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors disabled:opacity-50`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
                   {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
                   {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
                   <div className="relative">
-                    <input type="text" placeholder="HH:MM" className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.time) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
+                    <input type="text" placeholder="HH:MM" disabled={notesPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.time) || (notesPopupMode !== 'preview' && validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16 disabled:opacity-50`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
                     <button
+                      disabled={notesPopupMode === 'preview'}
                       onClick={() => setNotesForm({...notesForm, ampm: notesForm.ampm === 'AM' ? 'PM' : 'AM'})}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-teal-500/30 transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
                     >
                       {notesForm.ampm} <RefreshCcw size={10} />
                     </button>
                   </div>
                   {showNotesErrors && !notesForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
-                  {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError}</p>}
+                  {notesPopupMode !== 'preview' && validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError}</p>}
                 </div>
               </div>
             </div>
             
             <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
-              {emailSendStatus === 'sending' && (
-                <div className="px-5 py-2.5 bg-teal-600/50 text-white rounded-xl font-bold flex items-center gap-2 border border-teal-500/50">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending & Saving...
-                </div>
-              )}
-              {emailSendStatus === 'success' && (
-                <div className="px-5 py-2.5 bg-green-500/20 text-green-400 rounded-xl font-bold flex items-center gap-2 border border-green-500/50">
-                  <CheckCircle2 size={16} /> Sent & Saved!
-                </div>
-              )}
-              {emailSendStatus === 'idle' && (
-              <button 
-                onClick={() => {
-                  const { dateError, timeError } = validateDateTime(notesForm.date, notesForm.time, notesForm.ampm);
-                  const dateValid = !dateError && notesForm.date;
-                  const timeValid = !timeError && notesForm.time;
-                  const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
-                  
-                  if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
-                    setShowNotesErrors(true);
-                    return;
-                  }
-                  setShowNotesErrors(false);
-                  localStorage.setItem('clueai_saved_email', notesForm.email);
+              {notesPopupMode === 'preview' ? (() => {
+                let isPast = false;
+                try {
+                  const [d, m, y] = notesForm.date.split('-');
+                  const [h, min] = notesForm.time.split(':');
+                  let hours = parseInt(h);
+                  if (notesForm.ampm === 'PM' && hours < 12) hours += 12;
+                  if (notesForm.ampm === 'AM' && hours === 12) hours = 0;
+                  const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                  isPast = new Date() > targetDate;
+                } catch(e) {}
+                
+                return (
+                  <button 
+                    onClick={() => setNotesPopupMode('edit')}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                  >
+                    <Edit2 size={16} /> {isPast ? 'Resend' : 'Edit'}
+                  </button>
+                );
+              })() : (
+                <>
+                  {emailSendStatus === 'sending' && (
+                    <div className="px-5 py-2.5 bg-teal-600/50 text-white rounded-xl font-bold flex items-center gap-2 border border-teal-500/50">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending & Saving...
+                    </div>
+                  )}
+                  {emailSendStatus === 'success' && (
+                    <div className="px-5 py-2.5 bg-green-500/20 text-green-400 rounded-xl font-bold flex items-center gap-2 border border-green-500/50">
+                      <CheckCircle2 size={16} /> Sent & Saved!
+                    </div>
+                  )}
+                  {emailSendStatus === 'idle' && (
+                  <button 
+                    onClick={() => {
+                      const { dateError, timeError } = validateDateTime(notesForm.date, notesForm.time, notesForm.ampm);
+                      const dateValid = !dateError && notesForm.date;
+                      const timeValid = !timeError && notesForm.time;
+                      const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
+                      
+                      if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
+                        setShowNotesErrors(true);
+                        return;
+                      }
+                      setShowNotesErrors(false);
+                      const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                      if (!currentEmails.includes(notesForm.email)) {
+                         currentEmails.unshift(notesForm.email);
+                         localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
+                      }
+                      localStorage.setItem('clueai_saved_email', notesForm.email);
 
-                  const templateParams = {
-                    type: 'note',
-                    email: notesForm.email,
-                    date: notesForm.date,
-                    time: `${notesForm.time} ${notesForm.ampm}`, // Send concatenated time and AM/PM
-                    notes: notesForm.notes,
-                  };
+                      const currentId = notesForm.id || Date.now().toString();
+                      const templateParams = {
+                        id: currentId,
+                        type: 'note',
+                        email: notesForm.email,
+                        date: notesForm.date,
+                        time: `${notesForm.time} ${notesForm.ampm}`,
+                        notes: notesForm.notes,
+                      };
 
-                  // Send to Google Apps Script
-                  setEmailSendStatus('sending');
-                  fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(templateParams)
-                  })
-                  .then(() => {
-                    setEmailSendStatus('success');
-                    // Save Profile
-                    if (notesForm.id) {
-                      setNotesProfiles(prev => prev.map(p => p.id === notesForm.id ? notesForm : p));
-                    } else {
-                      setNotesProfiles(prev => [{...notesForm, id: Date.now().toString()}, ...prev]);
-                    }
-                    
-                    setTimeout(() => {
-                      setShowNotesPopup(false);
-                      setEmailSendStatus('idle');
-                    }, 1500);
-                  })
-                  .catch(err => {
-                    setEmailSendStatus('idle');
-                    console.error('Google Script Error:', err);
-                    setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
-                  });
-                }}
-                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-              >
-                Send & Save Notes
-              </button>
+                      setEmailSendStatus('sending');
+                      const doSchedule = () => {
+                        fetch(GOOGLE_SCRIPT_URL, {
+                          method: 'POST',
+                          mode: 'no-cors',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(templateParams)
+                        })
+                        .then(() => {
+                          setEmailSendStatus('success');
+                          setNotesProfiles(prev => {
+                            if (prev.some(p => p.id === currentId)) {
+                              return prev.map(p => p.id === currentId ? {...notesForm, id: currentId} : p);
+                            }
+                            return [{...notesForm, id: currentId}, ...prev];
+                          });
+                          
+                          setTimeout(() => {
+                            setShowNotesPopup(false);
+                            setEmailSendStatus('idle');
+                          }, 1500);
+                        })
+                        .catch(err => {
+                          setEmailSendStatus('idle');
+                          console.error('Google Script Error:', err);
+                          setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
+                        });
+                      };
+
+                      if (notesForm.id) {
+                        fetch(GOOGLE_SCRIPT_URL, {
+                          method: 'POST', mode: 'no-cors',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'delete', id: notesForm.id })
+                        }).then(doSchedule).catch(doSchedule);
+                      } else {
+                        doSchedule();
+                      }
+                    }}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                  >
+                    Send & Save Notes
+                  </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -5212,6 +5400,7 @@ function App() {
                       localStorage.setItem('clueai_username', tempUsername.trim());
                       setShowUsernamePrompt(false);
                       setStealthWarningToast(null);
+                      if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
                     }
                   }}
                 />
@@ -5224,6 +5413,7 @@ function App() {
                     localStorage.setItem('clueai_username', tempUsername.trim());
                     setShowUsernamePrompt(false);
                     setStealthWarningToast(null);
+                    if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
                   }}
                   className="px-6 py-2 bg-brand-accent hover:bg-brand-accentSec disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-all shadow-sm"
                 >
