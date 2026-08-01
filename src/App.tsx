@@ -1505,6 +1505,7 @@ function App() {
   const silenceFramesRef = useRef(0);
   const isPausedRef = useRef(isPaused);
   isPausedRef.current = isPaused;
+  const listeningSessionIdRef = useRef(0);
   
   const processAudio = async () => {
     if (!streamRef.current) return; 
@@ -1575,9 +1576,16 @@ function App() {
          return; // Skip this STT cycle, the next cycle will grab the fresh audio
       }
       
+      const currentSessionId = listeningSessionIdRef.current;
       const sttStart = Date.now();
       let text = await transcribeAudioChunk(currentAudio, resumeText + ' ' + personalContextText);
       const latency = Date.now() - sttStart;
+      
+      // If the user clicked Next Question or Clear while we were awaiting STT, discard the stale result
+      if (currentSessionId !== listeningSessionIdRef.current) {
+         logEvent("Discarding stale STT result from previous listening session.");
+         return;
+      }
       
       logEvent(`STT Latency: ${latency}ms, Raw Text: ${text}`);
       
@@ -2000,6 +2008,7 @@ function App() {
       
     }
     
+    listeningSessionIdRef.current++; // Invalidate any in-flight STT processing
     setTranscript('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
@@ -2029,6 +2038,7 @@ function App() {
     if (currentSnapshots.length > 0) {
       
     }
+    listeningSessionIdRef.current++; // Invalidate any in-flight STT processing
     setTranscript(''); 
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
