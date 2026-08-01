@@ -4072,7 +4072,14 @@ function App() {
                 onClick={() => {
                   setShowAudioErrorModal(false);
                   minimizeApp();
-                  shell.openExternal('ms-settings:sound');
+                  setTimeout(() => {
+                    try {
+                      const { exec } = (window as any).require('child_process');
+                      exec('powershell -Command "Start-Process \'ms-settings:sound\' -WindowStyle Maximized"');
+                    } catch (e) {
+                      shell.openExternal('ms-settings:sound');
+                    }
+                  }, 500);
                 }}
                 className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-rose-500/20 transition-all uppercase tracking-widest text-sm"
               >
