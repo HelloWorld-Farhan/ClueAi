@@ -4892,6 +4892,11 @@ function App() {
                         return;
                       }
                       setShowReminderErrors(false);
+                      const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                      if (!currentEmails.includes(reminderForm.email)) {
+                         currentEmails.unshift(reminderForm.email);
+                         localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
+                      }
 
                       const currentId = reminderForm.id || Date.now().toString();
                       const templateParams = {
