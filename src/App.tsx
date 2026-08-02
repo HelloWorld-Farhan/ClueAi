@@ -1758,20 +1758,28 @@ function App() {
   manualTriggerAIRef.current = manualTriggerAI;
 
   const handleSnipClick = async () => {
+    const wasPaused = isPausedRef.current;
     setIsPaused(true);
     isPausedRef.current = true;
     const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
     if (!base64Img) {
-      setIsPaused(false);
-      isPausedRef.current = false;
+      if (!wasPaused || isAiFullscreen) {
+        setIsPaused(false);
+        isPausedRef.current = false;
+      }
       return; // User cancelled
     }
     
     setCurrentSnapshots(prev => {
         const next = [...prev, base64Img];
-        if (next.length > 5) return next.slice(next.length - 5);
+        if (next.length > 8) return next.slice(next.length - 8);
         return next;
       });
+      
+    if (isAiFullscreen) {
+      setIsPaused(false);
+      isPausedRef.current = false;
+    }
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
@@ -2539,7 +2547,7 @@ function App() {
                                  }
                                  setCurrentSnapshots(prev => {
         const next = [...prev, base64Img];
-        if (next.length > 5) return next.slice(next.length - 5);
+        if (next.length > 8) return next.slice(next.length - 8);
         return next;
       });
                                  setIsPaused(false);
