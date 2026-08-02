@@ -332,6 +332,7 @@ function App() {
   const [editTranscript, setEditTranscript] = useState('');
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{top: number, right: number} | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
 
@@ -4269,22 +4270,35 @@ function App() {
                       
                       <div className="flex items-center gap-6 text-brand-subtext text-xs font-mono shrink-0">
                         <span>{session.time}</span>
-                        <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === session.id ? null : session.id); }} className="p-1 hover:bg-white/10 rounded-md transition-colors">
+                        <button onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (openMenuId === session.id) {
+                            setOpenMenuId(null);
+                            setMenuPos(null);
+                          } else {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setOpenMenuId(session.id);
+                            setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
+                          }
+                        }} className="p-1 hover:bg-white/10 rounded-md transition-colors">
                           <MoreVertical size={16} />
                         </button>
                       </div>
                       
-                      {openMenuId === session.id && (
+                      {openMenuId === session.id && menuPos && (
                         <>
-                          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); }}></div>
-                          <div className="absolute right-4 top-10 bg-brand-secondary border border-brand-border rounded-lg shadow-xl z-50 overflow-hidden min-w-[120px]">
-                            <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingSessionId(session.id); setEditingSessionName(session.name); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors">
+                          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); setMenuPos(null); }}></div>
+                          <div 
+                            className="fixed bg-brand-secondary border border-brand-border rounded-lg shadow-xl z-[100] overflow-hidden min-w-[120px]"
+                            style={{ top: menuPos.top + 4, right: menuPos.right }}
+                          >
+                            <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingSessionId(session.id); setEditingSessionName(session.name); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors">
                               <FileText size={14} /> Rename
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); exportSession(session); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors border-t border-brand-border">
+                            <button onClick={(e) => { e.stopPropagation(); exportSession(session); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors border-t border-brand-border">
                               <Download size={14} /> Export
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); setOpenMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 transition-colors border-t border-brand-border">
+                            <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 transition-colors border-t border-brand-border">
                               <Trash2 size={14} /> Delete
                             </button>
                           </div>
