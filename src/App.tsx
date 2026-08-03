@@ -2170,20 +2170,7 @@ function App() {
         e.preventDefault();
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
-        if (isAiFullscreen) {
-          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
-          setIsGenerating(false);
-          setIsAiFullscreen(false);
-          setTranscript('');
-          finalizedTranscriptRef.current = '';
-          interimTranscriptRef.current = '';
-          setAiAnswer('');
-          setCurrentSnapshots([]);
-          audioDataRef.current = new Float32Array(0);
-          listeningSessionIdRef.current++;
-          setIsPaused(false);
-          isPausedRef.current = false;
-        } else if (!isGenerating) {
+        if (!isGenerating) {
           manualTriggerAIRef.current();
         }
       } else if (key === 'z' || key === '1') {
@@ -2263,20 +2250,7 @@ function App() {
           handlePauseToggle();
         }
       } else if (action === 'force-ai') {
-        if (isAiFullscreen) {
-          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
-          setIsGenerating(false);
-          setIsAiFullscreen(false);
-          setTranscript('');
-          finalizedTranscriptRef.current = '';
-          interimTranscriptRef.current = '';
-          setAiAnswer('');
-          setCurrentSnapshots([]);
-          audioDataRef.current = new Float32Array(0);
-          listeningSessionIdRef.current++;
-          setIsPaused(false);
-          isPausedRef.current = false;
-        } else if (!isGenerating) {
+        if (!isGenerating) {
           manualTriggerAIRef.current();
         }
       } else if (action === 'clear-all') {
