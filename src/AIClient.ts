@@ -167,7 +167,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         'llama-4-scout-17b-16e-instruct',
         'llama-3.2-90b-vision-preview',
       ];
-      const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'llama3-70b-8192'];
+      const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.1-70b-versatile', 'llama3-70b-8192'];
       
       const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
       let stream: any = null;
@@ -531,7 +531,7 @@ CRITICAL RULE: You MUST output ONLY the translated code. Do NOT output any expla
       currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
       
       const stream = await client.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-70b-versatile',
         messages,
         stream: true,
         temperature: 0.1,
