@@ -1388,6 +1388,7 @@ function App() {
 
     if (!silent) {
       setProvider('groq');
+      setIsAnswerMinimized(false);
       setGlobalHotkeysEnabled(true);
       ipcRenderer.invoke('toggle-global-hotkeys', true);
       
@@ -2489,23 +2490,18 @@ function App() {
     <>
       
         <div 
-          className="flex flex-col h-screen text-brand-text p-4 font-sans overflow-y-auto overflow-x-hidden rounded-3xl select-none animate-in fade-in duration-300 fill-mode-both click-through-bg"
-          style={{ backgroundColor: (!isRecording && !isAiFullscreen) ? '#09090b' : 'transparent', transition: 'none' }}
+          className="absolute inset-0 flex flex-col items-center pointer-events-none p-4 font-sans select-none animate-in fade-in duration-300 fill-mode-both click-through-bg"
+          style={{ transition: 'none' }}
         >
         {isAiFullscreen ? (
-          <div 
-            className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto click-through-bg ${isAnswerMinimized ? 'w-[400px] h-[600px] mx-auto mt-8 rounded-3xl' : 'w-full max-h-[95vh] rounded-[2.5rem]'}`}
-            style={{ 
-              backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
-              backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
-              borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
-              borderWidth: "1px",
-              boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"
-            }}
-          >
-            {/* Top Bar */}
+          <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
+            {/* Top Bar Panel */}
             <div 
-              className={`flex items-start justify-between border-b border-white/10 shrink-0 drag-area ${isAnswerMinimized ? 'gap-2 p-3 flex-wrap' : 'gap-4 p-4'}`}
+              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-full gap-4 p-4 mt-2"
+              style={{
+                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`,
+                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`
+              }}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
         if (target.closest && target.closest('.stealth-exempt')) return;
@@ -2524,7 +2520,7 @@ function App() {
                   <Move size={16} />
                 </div>
               </div>
-                 <div className={`flex-1 min-w-0 pr-4 no-drag ${isAnswerMinimized ? 'hidden' : ''}`}>
+                 <div className="flex-1 min-w-0 pr-4 no-drag">
                    <div className="text-white/80 font-semibold select-text w-full bg-black/20 p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
@@ -2580,13 +2576,13 @@ function App() {
                    </div>
                  </div>
                
-               <div className={`flex items-center shrink-0 ${isAnswerMinimized ? 'mt-0 w-full justify-between gap-1' : 'mt-1 gap-3'}`}>
+               <div className="flex items-center shrink-0 mt-1 gap-3">
                   
-                  <div className={`bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 ${isAnswerMinimized ? 'hidden' : 'hidden md:flex'}`}>
+                  <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
                      <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
                   </div>
                   
-                  <div className={`flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2 ${isAnswerMinimized ? 'hidden' : ''}`}>
+                  <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2">
                     <span className="text-[9px] font-black uppercase text-white/70">Hotkeys</span>
                     <button 
                       onClick={() => {
@@ -2700,29 +2696,56 @@ function App() {
                </div>
             </div>
             
-            {/* AI Answer Content */}
-            <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
-               <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
-                  {aiAnswer ? (
-                    <ReactMarkdown
-                      components={markdownComponents}
-                    >
-                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
-                    </ReactMarkdown>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
-                       <Loader2 size={48} className="animate-spin text-cyan-500 mb-4" />
-                       <p className="text-lg animate-pulse">Generating response...</p>
-                    </div>
-                  )}
-               </div>
+            {/* AI Answer Content Panel */}
+            <div 
+              className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto drag-area rounded-[2.5rem] mt-2 mb-4 ${isAnswerMinimized ? 'w-[400px] h-[500px]' : 'w-full max-w-6xl max-h-[85vh]'}`}
+              style={{
+                backgroundColor: isAnswerMinimized ? 'rgba(0, 0, 0, 0.95)' : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`),
+                backdropFilter: isAnswerMinimized ? 'blur(20px)' : (opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`),
+                borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
+                borderWidth: "1px",
+                boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"
+              }}
+              onPointerDown={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest && target.closest('.stealth-exempt')) return;
+                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
+                  ipcRenderer.send('start-drag');
+                  target.setPointerCapture(e.pointerId);
+                }
+              }}
+              onPointerUp={(e) => {
+                ipcRenderer.send('stop-drag');
+                (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+              }}
+            >
+              <div className="w-full flex justify-center pt-3 cursor-grab active:cursor-grabbing no-drag opacity-30 hover:opacity-100 transition-opacity">
+                 <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
+              </div>
+              <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
+                 <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
+                    {aiAnswer ? (
+                      <ReactMarkdown
+                        components={markdownComponents}
+                      >
+                          {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
+                         <Loader2 size={48} className="animate-spin text-cyan-500 mb-4" />
+                         <p className="text-lg animate-pulse">Generating response...</p>
+                      </div>
+                    )}
+                 </div>
+              </div>
             </div>
           </div>
         ) : (
-          <>
-      <datalist id="saved-emails">
-        {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
-      </datalist>
+          <div className="flex flex-col w-full max-h-[90vh] max-w-6xl mx-auto bg-[#09090b]/95 backdrop-blur-3xl rounded-[2.5rem] overflow-hidden shadow-2xl pointer-events-auto border border-white/10 mt-2 mb-4 animate-in slide-in-from-bottom-8 duration-300">
+            <datalist id="saved-emails">
+              {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
+            </datalist>
+            <div className="flex flex-col flex-shrink overflow-y-auto overflow-x-hidden custom-scrollbar">
       <div 
         className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
         onPointerDown={(e) => {
@@ -5647,8 +5670,9 @@ function App() {
           </div>
         </div>
       )}
-      </>
       )}
+      </div>
+      </div>
       {modelChangeMsg && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
           <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-300 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
