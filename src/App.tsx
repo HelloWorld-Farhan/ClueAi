@@ -1109,6 +1109,35 @@ function App() {
   const [isAiFullscreen, setIsAiFullscreen] = useState(false);
   const [aiCopied, setAiCopied] = useState(false);
 
+  const [topBarPos, setTopBarPos] = useState({ x: 0, y: 0 });
+  const [answerPos, setAnswerPos] = useState({ x: 0, y: 0 });
+  const dragStateRef = useRef<{ panel: 'top' | 'answer' | null, startX: number, startY: number, initialX: number, initialY: number }>({ panel: null, startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      const state = dragStateRef.current;
+      if (!state.panel) return;
+      const dx = e.clientX - state.startX;
+      const dy = e.clientY - state.startY;
+      if (state.panel === 'top') {
+        setTopBarPos({ x: state.initialX + dx, y: state.initialY + dy });
+      } else if (state.panel === 'answer') {
+        setAnswerPos({ x: state.initialX + dx, y: state.initialY + dy });
+      }
+    };
+    const handlePointerUp = () => {
+      if (dragStateRef.current.panel) {
+        dragStateRef.current.panel = null;
+      }
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, []);
+
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<any>(null);
     const aiAbortControllerRef = useRef<AbortController | null>(null);
@@ -2500,18 +2529,25 @@ function App() {
               className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-full gap-4 p-4 mt-2"
               style={{
                 backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`,
-                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`
+                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
+                transform: `translate(${topBarPos.x}px, ${topBarPos.y}px)`
               }}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
-        if (target.closest && target.closest('.stealth-exempt')) return;
+                if (target.closest && target.closest('.stealth-exempt')) return;
                 if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
-                  ipcRenderer.send('start-drag');
+                  dragStateRef.current = {
+                    panel: 'top',
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    initialX: topBarPos.x,
+                    initialY: topBarPos.y
+                  };
                   target.setPointerCapture(e.pointerId);
                 }
               }}
               onPointerUp={(e) => {
-                ipcRenderer.send('stop-drag');
+                dragStateRef.current.panel = null;
                 (e.target as HTMLElement).releasePointerCapture(e.pointerId);
               }}
             >
@@ -2704,18 +2740,25 @@ function App() {
                 backdropFilter: isAnswerMinimized ? 'blur(20px)' : (opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`),
                 borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
                 borderWidth: "1px",
-                boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"
+                boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
+                transform: `translate(${answerPos.x}px, ${answerPos.y}px)`
               }}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
                 if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
-                  ipcRenderer.send('start-drag');
+                  dragStateRef.current = {
+                    panel: 'answer',
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    initialX: answerPos.x,
+                    initialY: answerPos.y
+                  };
                   target.setPointerCapture(e.pointerId);
                 }
               }}
               onPointerUp={(e) => {
-                ipcRenderer.send('stop-drag');
+                dragStateRef.current.panel = null;
                 (e.target as HTMLElement).releasePointerCapture(e.pointerId);
               }}
             >
