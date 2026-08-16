@@ -247,10 +247,12 @@ function createWindow() {
     if (isCustomMaximized) {
       isCustomMaximized = false;
       mainWindow.setBounds(preMaximizeBounds);
+      mainWindow.setResizable(false);
     } else {
       isCustomMaximized = true;
       preMaximizeBounds = mainWindow.getBounds();
       const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
+      mainWindow.setResizable(true);
       mainWindow.setBounds(currentDisplay.bounds);
     }
   });
@@ -262,12 +264,14 @@ function createWindow() {
           isCustomMaximized = true;
           preMaximizeBounds = mainWindow.getBounds();
           const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
+          mainWindow.setResizable(true);
           mainWindow.setBounds(currentDisplay.bounds);
         }
       } else {
         if (isCustomMaximized) {
           isCustomMaximized = false;
           mainWindow.setBounds(preMaximizeBounds);
+          mainWindow.setResizable(false);
           mainWindow.center();
         }
       }

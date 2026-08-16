@@ -2519,9 +2519,9 @@ function App() {
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
             <div 
-              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-full gap-4 p-4 mt-2"
+              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-full max-w-6xl mx-auto gap-4 p-4 mt-2"
               style={{
-                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`,
+                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
                 backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
                 transform: `translate(${topBarPos.x}px, ${topBarPos.y}px)`
               }}
@@ -2550,7 +2550,7 @@ function App() {
                 </div>
               </div>
                  <div className="flex-1 min-w-0 pr-4 no-drag">
-                   <div className="text-white/80 font-semibold select-text w-full bg-black/20 p-3 rounded-xl border border-white/5 shadow-inner">
+                   <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
                        <span className="px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none">
