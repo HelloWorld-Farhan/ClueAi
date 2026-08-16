@@ -5671,7 +5671,7 @@ function App() {
         </div>
       )}
       </div>
-      </div>
+      )}
       {modelChangeMsg && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
           <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-300 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
