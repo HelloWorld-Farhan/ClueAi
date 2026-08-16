@@ -2321,6 +2321,7 @@ function App() {
   useEffect(() => {
     let animationFrameId: number;
     let lastTime = performance.now();
+    let accumulatedScroll = 0;
 
     const scrollLoop = (time: number) => {
       const delta = time - lastTime;
@@ -2332,7 +2333,13 @@ function App() {
         const pixelsPerSecond = scrollSpeed * 15; 
         const scrollAmount = (pixelsPerSecond * delta) / 1000;
         
-        aiAnswerScrollRef.current.scrollBy(0, scrollAmount);
+        accumulatedScroll += scrollAmount;
+        
+        if (accumulatedScroll >= 1) {
+          const pixelsToScroll = Math.floor(accumulatedScroll);
+          aiAnswerScrollRef.current.scrollBy(0, pixelsToScroll);
+          accumulatedScroll -= pixelsToScroll;
+        }
       }
       animationFrameId = requestAnimationFrame(scrollLoop);
     };
@@ -2702,7 +2709,7 @@ function App() {
             </div>
             
             {/* AI Answer Content */}
-            <div className={`overflow-y-auto custom-scrollbar no-drag ${isAnswerMinimized ? 'w-[360px] h-[480px] ml-auto mt-4 mr-4 mb-4 rounded-xl shadow-2xl border border-white/20 p-4' : 'w-full p-8'} bg-transparent`} ref={aiAnswerScrollRef} style={isAnswerMinimized ? { backgroundColor: altColor ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(20px)' } : {}}>
+            <div className={`overflow-y-auto custom-scrollbar no-drag ${isAnswerMinimized ? 'w-[360px] h-[480px] mx-auto mt-4 mb-4 p-4' : 'w-full p-8'} bg-transparent`} ref={aiAnswerScrollRef}>
                <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
