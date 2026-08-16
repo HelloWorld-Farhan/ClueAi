@@ -333,6 +333,8 @@ function App() {
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{top: number, right: number} | null>(null);
+  const [isAnswerMinimized, setIsAnswerMinimized] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(0); // 0 = stopped, 1-5 = speed level
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
 
@@ -2194,7 +2196,15 @@ function App() {
         }
       } else if (key === 'c' || key === '3') {
         e.preventDefault();
-        handleClearAll();
+        if (isAiFullscreen) {
+          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+          setIsGenerating(false);
+          setIsAiFullscreen(false);
+          setIsPaused(false);
+          isPausedRef.current = false;
+        } else {
+          handleClearAll();
+        }
       } else if (key === 's' || key === '5') {
         e.preventDefault();
         const availableProviders = [];
@@ -2255,7 +2265,11 @@ function App() {
         }
       } else if (action === 'clear-all') {
         if (isAiFullscreen) {
-          stopRecording();
+          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+          setIsGenerating(false);
+          setIsAiFullscreen(false);
+          setIsPaused(false);
+          isPausedRef.current = false;
         } else {
           handleClearAll();
         }
@@ -2303,6 +2317,32 @@ function App() {
   // manualTriggerAI intentionally excluded — we use manualTriggerAIRef.current to avoid
   // re-registering this expensive listener on every render during AI streaming
   }, [isRecording, isPaused, isGenerating, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    let lastTime = performance.now();
+
+    const scrollLoop = (time: number) => {
+      const delta = time - lastTime;
+      lastTime = time;
+
+      if (scrollSpeed > 0 && isAiFullscreen && aiAnswerScrollRef.current) {
+        // Speed 1: 15 pixels per second
+        // Speed 5: 75 pixels per second
+        const pixelsPerSecond = scrollSpeed * 15; 
+        const scrollAmount = (pixelsPerSecond * delta) / 1000;
+        
+        aiAnswerScrollRef.current.scrollBy(0, scrollAmount);
+      }
+      animationFrameId = requestAnimationFrame(scrollLoop);
+    };
+
+    if (scrollSpeed > 0 && isAiFullscreen) {
+      animationFrameId = requestAnimationFrame(scrollLoop);
+    }
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [scrollSpeed, isAiFullscreen]);
 
   useEffect(() => {
     let lastIgnore = false;
@@ -2574,6 +2614,45 @@ function App() {
                        localStorage.setItem('clueai_answer_size', next.toString());
                      }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
                   </div>
+                  <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
+                    <button 
+                      onClick={() => {
+                        const newMinimized = !isAnswerMinimized;
+                        setIsAnswerMinimized(newMinimized);
+                        if (newMinimized) {
+                          ipcRenderer.invoke('set-window-size', 400, 300);
+                        } else {
+                          ipcRenderer.invoke('start-interview-window', layout);
+                        }
+                      }}
+                      className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs flex items-center justify-center"
+                      title={isAnswerMinimized ? "Maximize Window" : "Minimize Window"}
+                    >
+                      {isAnswerMinimized ? <Maximize size={14}/> : <Minus size={14}/>}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
+                    <button 
+                      onClick={() => setScrollSpeed(prev => (prev === 0 ? 1 : 0))} 
+                      className={`px-2 py-1.5 rounded-lg transition-colors font-black text-xs flex items-center gap-1 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400' : 'hover:bg-white/10 text-white/50 hover:text-white'}`}
+                      title="Auto Scroll"
+                    >
+                      {scrollSpeed > 0 ? <Pause size={12}/> : <ArrowDown size={12}/>}
+                    </button>
+                    {scrollSpeed > 0 && (
+                      <div className="flex items-center gap-0.5 ml-0.5 pr-1">
+                        {[1, 2, 3, 4, 5].map(speed => (
+                          <button
+                            key={speed}
+                            onClick={() => setScrollSpeed(speed)}
+                            className={`w-4 h-4 text-[9px] font-bold rounded flex items-center justify-center ${scrollSpeed === speed ? 'bg-white text-black' : 'hover:bg-white/10 text-white/50'}`}
+                          >
+                            {speed}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                    <button 
                      onClick={() => {
                        // Abort any in-progress generation immediately
@@ -2598,12 +2677,16 @@ function App() {
                   <div className="flex flex-col gap-1.5 shrink-0">
                     <button 
                       onClick={() => {
-                        stopRecording();
+                        if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+                        setIsGenerating(false);
+                        setIsAiFullscreen(false);
+                        setIsPaused(false);
+                        isPausedRef.current = false;
                       }}
-                      title="Stop Session (Press C or 3)"
-                      className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
+                      title="Clear Answer & Return (Press C or 3)"
+                      className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
                     >
-                      <Square size={12} fill="currentColor" /> STOP <span className="opacity-70 text-[8px] border border-rose-500/30 px-1 rounded ml-0.5">3</span>
+                      <Square size={12} fill="currentColor" /> CLOSE <span className="opacity-70 text-[8px] border border-amber-500/30 px-1 rounded ml-0.5">3</span>
                     </button>
                     <button
                       onClick={() => {
