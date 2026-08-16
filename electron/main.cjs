@@ -5,15 +5,10 @@ const audio = require('win-audio');
 let mainWindow;
 
 function createWindow() {
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.bounds;
-
   mainWindow = new BrowserWindow({
-    width: width,
-    height: height,
-    x: 0,
-    y: 0,
-    center: false,
+    width: 1000,
+    height: 600,
+    center: true,
     transparent: true,
     frame: false,
     hasShadow: false,
@@ -245,8 +240,38 @@ function createWindow() {
     app.quit();
   });
 
+  let isCustomMaximized = false;
+  let preMaximizeBounds = { width: 1000, height: 600, x: 0, y: 0 };
+
+  ipcMain.on('toggle-fullscreen', () => {
+    if (isCustomMaximized) {
+      isCustomMaximized = false;
+      mainWindow.setBounds(preMaximizeBounds);
+    } else {
+      isCustomMaximized = true;
+      preMaximizeBounds = mainWindow.getBounds();
+      const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
+      mainWindow.setBounds(currentDisplay.bounds);
+    }
+  });
+
   ipcMain.on('set-window-maximized', (event, maximize) => {
-    // Window is now permanently fullscreen on startup, no dynamic resizing needed.
+    if (mainWindow) {
+      if (maximize) {
+        if (!isCustomMaximized) {
+          isCustomMaximized = true;
+          preMaximizeBounds = mainWindow.getBounds();
+          const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
+          mainWindow.setBounds(currentDisplay.bounds);
+        }
+      } else {
+        if (isCustomMaximized) {
+          isCustomMaximized = false;
+          mainWindow.setBounds(preMaximizeBounds);
+          mainWindow.center();
+        }
+      }
+    }
   });
 
   let dragInterval;

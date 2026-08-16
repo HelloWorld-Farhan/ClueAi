@@ -1125,18 +1125,11 @@ function App() {
         setAnswerPos({ x: state.initialX + dx, y: state.initialY + dy });
       }
     };
-    const handlePointerUp = () => {
-      if (dragStateRef.current.panel) {
-        dragStateRef.current.panel = null;
-      }
-    };
     window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
+    return () => window.removeEventListener('pointermove', handlePointerMove);
   }, []);
+
+
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<any>(null);
@@ -2519,7 +2512,7 @@ function App() {
     <>
       
         <div 
-          className="absolute inset-0 flex flex-col items-center pointer-events-none p-4 font-sans select-none animate-in fade-in duration-300 fill-mode-both click-through-bg"
+          className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-300 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
           style={{ transition: 'none' }}
         >
         {isAiFullscreen ? (
@@ -2736,7 +2729,7 @@ function App() {
             <div 
               className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto drag-area rounded-[2.5rem] mt-2 mb-4 ${isAnswerMinimized ? 'w-[400px] h-[500px]' : 'w-full max-w-6xl max-h-[85vh]'}`}
               style={{
-                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`,
+                backgroundColor: isAnswerMinimized ? `rgba(24, 24, 27, ${0.6 * opacity})` : (altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`),
                 backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
                 borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
                 borderWidth: "1px",
@@ -2784,7 +2777,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col w-[1000px] h-[600px] mt-[calc(50vh-300px)] mx-auto bg-[#09090b] rounded-[1.5rem] overflow-hidden shadow-2xl pointer-events-auto border border-white/10 animate-in slide-in-from-bottom-8 duration-300">
+          <div className="flex flex-col w-full h-full bg-[#09090b] overflow-hidden pointer-events-auto rounded-3xl p-4">
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
