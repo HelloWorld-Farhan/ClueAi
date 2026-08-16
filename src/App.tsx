@@ -1107,6 +1107,11 @@ function App() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAiFullscreen, setIsAiFullscreen] = useState(false);
+  
+  useEffect(() => {
+    ipcRenderer.send('set-window-maximized', isAiFullscreen);
+  }, [isAiFullscreen]);
+
   const [aiCopied, setAiCopied] = useState(false);
 
   const [topBarPos, setTopBarPos] = useState({ x: 0, y: 0 });
