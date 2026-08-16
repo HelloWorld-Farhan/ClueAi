@@ -2354,14 +2354,6 @@ function App() {
   useEffect(() => {
     let lastIgnore = false;
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isAiFullscreen && !isRecording) {
-        if (lastIgnore) {
-          lastIgnore = false;
-          ipcRenderer.send('set-ignore-mouse-events', false);
-        }
-        return;
-      }
-      
       const target = e.target as HTMLElement;
       // Identify if we're hovering over the transparent root backgrounds
       const shouldIgnore = target.classList.contains('click-through-bg') || target.tagName === 'BODY' || target.id === 'root';
@@ -2502,7 +2494,7 @@ function App() {
         >
         {isAiFullscreen ? (
           <div 
-            className="flex flex-col w-full max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto click-through-bg"
+            className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto click-through-bg ${isAnswerMinimized ? 'w-[400px] h-[600px] mx-auto mt-8 rounded-3xl' : 'w-full max-h-[95vh] rounded-[2.5rem]'}`}
             style={{ 
               backgroundColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
               backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
@@ -2513,7 +2505,7 @@ function App() {
           >
             {/* Top Bar */}
             <div 
-              className="flex items-start justify-between border-b border-white/10 shrink-0 gap-4 drag-area p-4"
+              className={`flex items-start justify-between border-b border-white/10 shrink-0 drag-area ${isAnswerMinimized ? 'gap-2 p-3 flex-wrap' : 'gap-4 p-4'}`}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
         if (target.closest && target.closest('.stealth-exempt')) return;
@@ -2532,7 +2524,7 @@ function App() {
                   <Move size={16} />
                 </div>
               </div>
-                 <div className="flex-1 min-w-0 pr-4 no-drag">
+                 <div className={`flex-1 min-w-0 pr-4 no-drag ${isAnswerMinimized ? 'hidden' : ''}`}>
                    <div className="text-white/80 font-semibold select-text w-full bg-black/20 p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
@@ -2588,13 +2580,13 @@ function App() {
                    </div>
                  </div>
                
-               <div className="flex items-center gap-3 shrink-0 mt-1">
+               <div className={`flex items-center shrink-0 ${isAnswerMinimized ? 'mt-0 w-full justify-between gap-1' : 'mt-1 gap-3'}`}>
                   
-                  <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
+                  <div className={`bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 ${isAnswerMinimized ? 'hidden' : 'hidden md:flex'}`}>
                      <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
                   </div>
                   
-                  <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2">
+                  <div className={`flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2 ${isAnswerMinimized ? 'hidden' : ''}`}>
                     <span className="text-[9px] font-black uppercase text-white/70">Hotkeys</span>
                     <button 
                       onClick={() => {
@@ -2709,7 +2701,7 @@ function App() {
             </div>
             
             {/* AI Answer Content */}
-            <div className={`overflow-y-auto custom-scrollbar no-drag ${isAnswerMinimized ? 'w-[360px] h-[480px] mx-auto mt-4 mb-4 p-4' : 'w-full p-8'} bg-transparent`} ref={aiAnswerScrollRef}>
+            <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
                <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
