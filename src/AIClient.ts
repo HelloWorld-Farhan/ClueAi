@@ -167,7 +167,7 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         'llama-4-scout-17b-16e-instruct',
         'llama-3.2-90b-vision-preview',
       ];
-      const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.1-70b-versatile', 'mixtral-8x7b-32768'];
+      const groqTextModels = ['llama-3.1-8b-instant', 'llama-3.1-70b-versatile', 'llama-3.2-90b-text-preview'];
       
       const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
       let stream: any = null;

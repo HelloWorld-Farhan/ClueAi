@@ -2506,7 +2506,7 @@ function App() {
           >
             {/* Top Bar */}
             <div 
-              className={`flex items-start justify-between border-b border-white/10 shrink-0 gap-4 drag-area ${isAnswerMinimized ? 'p-2 flex-wrap' : 'p-4'}`}
+              className="flex items-start justify-between border-b border-white/10 shrink-0 gap-4 drag-area p-4"
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
         if (target.closest && target.closest('.stealth-exempt')) return;
@@ -2525,7 +2525,7 @@ function App() {
                   <Move size={16} />
                 </div>
               </div>
-                 <div className={`flex-1 min-w-0 pr-4 no-drag ${isAnswerMinimized ? 'hidden' : ''}`}>
+                 <div className="flex-1 min-w-0 pr-4 no-drag">
                    <div className="text-white/80 font-semibold select-text w-full bg-black/20 p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
@@ -2581,13 +2581,13 @@ function App() {
                    </div>
                  </div>
                
-               <div className={`flex items-center shrink-0 ${isAnswerMinimized ? 'mt-0 w-full justify-between gap-1' : 'mt-1 gap-3'}`}>
+               <div className="flex items-center gap-3 shrink-0 mt-1">
                   
-                  <div className={`bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 ${isAnswerMinimized ? 'hidden' : 'hidden md:flex'}`}>
+                  <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
                      <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
                   </div>
                   
-                  <div className={`flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2 ${isAnswerMinimized ? 'hidden' : ''}`}>
+                  <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2">
                     <span className="text-[9px] font-black uppercase text-white/70">Hotkeys</span>
                     <button 
                       onClick={() => {
@@ -2617,13 +2617,7 @@ function App() {
                   <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
                     <button 
                       onClick={() => {
-                        const newMinimized = !isAnswerMinimized;
-                        setIsAnswerMinimized(newMinimized);
-                        if (newMinimized) {
-                          ipcRenderer.invoke('set-window-size', 400, 300);
-                        } else {
-                          ipcRenderer.invoke('start-interview-window', layout);
-                        }
+                        setIsAnswerMinimized(!isAnswerMinimized);
                       }}
                       className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs flex items-center justify-center"
                       title={isAnswerMinimized ? "Maximize Window" : "Minimize Window"}
@@ -2708,7 +2702,7 @@ function App() {
             </div>
             
             {/* AI Answer Content */}
-            <div className={`overflow-y-auto custom-scrollbar bg-transparent no-drag ${isAnswerMinimized ? 'p-3' : 'p-8'}`} ref={aiAnswerScrollRef}>
+            <div className={`overflow-y-auto custom-scrollbar no-drag ${isAnswerMinimized ? 'w-[360px] h-[480px] ml-auto mt-4 mr-4 mb-4 rounded-xl shadow-2xl border border-white/20 p-4' : 'w-full p-8'} bg-transparent`} ref={aiAnswerScrollRef} style={isAnswerMinimized ? { backgroundColor: altColor ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(20px)' } : {}}>
                <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                   {aiAnswer ? (
                     <ReactMarkdown
