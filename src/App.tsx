@@ -1113,6 +1113,7 @@ function App() {
   }, [isAiFullscreen]);
 
   const [aiCopied, setAiCopied] = useState(false);
+  const [answerHovered, setAnswerHovered] = useState(false);
 
   const [topBarPos, setTopBarPos] = useState({ x: 0, y: 0 });
   const [answerPos, setAnswerPos] = useState({ x: 0, y: 0 });
@@ -2526,7 +2527,7 @@ function App() {
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
             <div 
-              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-fit max-w-6xl mx-auto gap-4 p-4 mt-2"
+              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-[1050px] max-w-none mx-auto gap-4 p-4 mt-2"
               style={{
                 backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
                 backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
@@ -2556,7 +2557,7 @@ function App() {
                   <Move size={16} />
                 </div>
               </div>
-                 <div className="w-[600px] shrink-0 pr-4 no-drag">
+                 <div className="flex-1 min-w-0 pr-4 no-drag">
                    <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
@@ -2734,15 +2735,17 @@ function App() {
             
             {/* AI Answer Content Panel */}
             <div 
-              className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto drag-area rounded-[2.5rem] mt-2 mb-4 ${isAnswerMinimized ? 'w-[400px] h-[500px]' : 'w-full max-w-6xl max-h-[85vh]'}`}
+              className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto drag-area rounded-[2.5rem] mt-2 mb-4 ${isAnswerMinimized ? 'w-[400px] h-[500px]' : 'w-[1050px] max-w-none max-h-[85vh]'}`}
               style={{
-                backgroundColor: isAnswerMinimized ? `rgba(24, 24, 27, ${0.6 * opacity})` : (altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`),
-                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
+                backgroundColor: isAnswerMinimized ? `rgba(24, 24, 27, ${0.6 * opacity})` : (answerHovered ? (altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`) : 'transparent'),
+                backdropFilter: (opacity < 0.05 || (!answerHovered && !isAnswerMinimized)) ? "none" : `blur(${opacity * 30}px)`,
+                borderColor: (!answerHovered && !isAnswerMinimized) ? 'transparent' : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
                 borderWidth: "1px",
-                boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
+                boxShadow: (!answerHovered && !isAnswerMinimized) ? 'none' : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
                 transform: `translate(${answerPos.x}px, ${answerPos.y}px)`
               }}
+              onMouseEnter={() => setAnswerHovered(true)}
+              onMouseLeave={() => setAnswerHovered(false)}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
@@ -4569,6 +4572,22 @@ function App() {
                       )}
                     </div>
                   )}
+
+                  {/* 2. Generate Answer Button */}
+                  <div className="flex justify-center mt-3 shrink-0 relative z-20 w-full">
+                       <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="w-full max-w-[400px] py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
+                          {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
+                            <div className="flex items-center justify-center gap-2">
+                              <span>Generate Answer</span>
+                              <div className="flex items-center gap-1 opacity-70 ml-1">
+                                <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
+                                <span className="text-[9px]">/</span>
+                                <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">X</span>
+                              </div>
+                            </div>
+                          )}
+                       </button>
+                  </div>
                </div>
 
                {/* Right: Icons */}
@@ -4580,22 +4599,6 @@ function App() {
                      <Settings size={20} />
                   </button>
                </div>
-            </div>
-
-            {/* 2. Generate Answer Button */}
-            <div className="flex justify-center mt-2 shrink-0 relative z-20">
-                 <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
-                    {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <span>Generate Answer</span>
-                        <div className="flex items-center gap-1 opacity-70 ml-1">
-                          <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
-                          <span className="text-[9px]">/</span>
-                          <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">X</span>
-                        </div>
-                      </div>
-                    )}
-                 </button>
             </div>
         </div>
       )}
