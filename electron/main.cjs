@@ -5,10 +5,15 @@ const audio = require('win-audio');
 let mainWindow;
 
 function createWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.bounds;
+
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 600,
-    center: true,
+    width: width,
+    height: height,
+    x: 0,
+    y: 0,
+    center: false,
     transparent: true,
     frame: false,
     hasShadow: false,
@@ -240,14 +245,8 @@ function createWindow() {
     app.quit();
   });
 
-  ipcMain.on('toggle-fullscreen', () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-      mainWindow.setSize(1000, 600);
-      mainWindow.center();
-    } else {
-      mainWindow.maximize();
-    }
+  ipcMain.on('set-window-maximized', (event, maximize) => {
+    // Window is now permanently fullscreen on startup, no dynamic resizing needed.
   });
 
   let dragInterval;

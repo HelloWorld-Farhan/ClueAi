@@ -2736,8 +2736,8 @@ function App() {
             <div 
               className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto drag-area rounded-[2.5rem] mt-2 mb-4 ${isAnswerMinimized ? 'w-[400px] h-[500px]' : 'w-full max-w-6xl max-h-[85vh]'}`}
               style={{
-                backgroundColor: isAnswerMinimized ? 'rgba(0, 0, 0, 0.95)' : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`),
-                backdropFilter: isAnswerMinimized ? 'blur(20px)' : (opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`),
+                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`,
+                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
                 borderColor: altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`,
                 borderWidth: "1px",
                 boxShadow: opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
@@ -2784,7 +2784,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col w-full max-h-[90vh] max-w-6xl mx-auto bg-[#09090b]/95 backdrop-blur-3xl rounded-[2.5rem] overflow-hidden shadow-2xl pointer-events-auto border border-white/10 mt-2 mb-4 animate-in slide-in-from-bottom-8 duration-300">
+          <div className="flex flex-col w-[1000px] h-[600px] mt-[calc(50vh-300px)] mx-auto bg-[#09090b] rounded-[1.5rem] overflow-hidden shadow-2xl pointer-events-auto border border-white/10 animate-in slide-in-from-bottom-8 duration-300">
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
