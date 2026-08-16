@@ -1417,6 +1417,8 @@ function App() {
       setProvider('groq');
       setIsAnswerMinimized(false);
       setGlobalHotkeysEnabled(true);
+      setTopBarPos({ x: 0, y: 0 });
+      setAnswerPos({ x: 0, y: 0 });
       ipcRenderer.invoke('toggle-global-hotkeys', true);
       
       if (showSessionPrompt || isStealthBypass) {
@@ -2524,7 +2526,7 @@ function App() {
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
             <div 
-              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-full max-w-6xl mx-auto gap-4 p-4 mt-2"
+              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-fit max-w-6xl mx-auto gap-4 p-4 mt-2"
               style={{
                 backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
                 backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
@@ -2554,7 +2556,7 @@ function App() {
                   <Move size={16} />
                 </div>
               </div>
-                 <div className="flex-1 min-w-0 pr-4 no-drag">
+                 <div className="w-[600px] shrink-0 pr-4 no-drag">
                    <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl border border-white/5 shadow-inner">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
