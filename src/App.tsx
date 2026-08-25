@@ -1417,6 +1417,7 @@ function App() {
 
     if (!silent) {
       setProvider('groq');
+      switchProvider('groq');
       setIsAnswerMinimized(false);
       setGlobalHotkeysEnabled(true);
       setTopBarPos({ x: 0, y: 0 });
@@ -1830,6 +1831,7 @@ function App() {
 
     if (!silent) {
       setProvider('groq');
+      switchProvider('groq');
       setIsRecording(false);
       setIsPaused(false);
       setIsAiFullscreen(false);
