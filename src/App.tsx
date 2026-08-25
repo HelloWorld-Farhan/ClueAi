@@ -2568,7 +2568,7 @@ function App() {
                    <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
-                       <span className="px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none">
+                       <span className={`px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none transition-opacity duration-200 ${topBarHovered ? 'opacity-100' : 'opacity-0'}`}>
                          <Keyboard size={10} /> Ctrl+Shift+K
                        </span>
                      </div>
@@ -2627,7 +2627,7 @@ function App() {
                   </div>
                   
                   <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2">
-                    <span className="text-[9px] font-black uppercase text-white/70">Hotkeys</span>
+                    <span className={`text-[9px] font-black uppercase text-white/70 transition-opacity duration-200 ${topBarHovered ? 'opacity-100' : 'opacity-0'}`}>Hotkeys</span>
                     <button 
                       onClick={() => {
                         const newState = !globalHotkeysEnabled;
@@ -2705,7 +2705,7 @@ function App() {
                      title="Next Question (Press Z or 1)"
                      className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0"
                    >
-                     <Play size={12} fill="currentColor" /> NEXT Q. <span className="opacity-70 text-[8px] bg-black/20 px-1 rounded ml-0.5">1</span>
+                     <Play size={12} fill="currentColor" /> NEXT Q. <span className={`text-[8px] bg-black/20 px-1 rounded ml-0.5 transition-opacity duration-200 ${topBarHovered ? 'opacity-70' : 'opacity-0'}`}>1</span>
                    </button>
                   <div className="flex flex-col gap-1.5 shrink-0">
                     <button 
@@ -2719,7 +2719,7 @@ function App() {
                       title="Clear Answer & Return (Press C or 3)"
                       className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
                     >
-                      <Square size={12} fill="currentColor" /> CLOSE <span className="opacity-70 text-[8px] border border-amber-500/30 px-1 rounded ml-0.5">3</span>
+                      <Square size={12} fill="currentColor" /> CLOSE <span className={`text-[8px] border border-amber-500/30 px-1 rounded ml-0.5 transition-opacity duration-200 ${topBarHovered ? 'opacity-70' : 'opacity-0'}`}>3</span>
                     </button>
                     <button
                       onClick={() => {
