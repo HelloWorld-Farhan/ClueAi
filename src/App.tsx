@@ -1114,6 +1114,7 @@ function App() {
 
   const [aiCopied, setAiCopied] = useState(false);
   const [answerHovered, setAnswerHovered] = useState(false);
+  const [topBarHovered, setTopBarHovered] = useState(false);
 
   const [topBarPos, setTopBarPos] = useState({ x: 0, y: 0 });
   const [answerPos, setAnswerPos] = useState({ x: 0, y: 0 });
@@ -2529,10 +2530,14 @@ function App() {
             <div 
               className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-[1050px] max-w-none mx-auto gap-4 p-4 mt-2"
               style={{
-                backgroundColor: altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`,
-                backdropFilter: opacity < 0.05 ? "none" : `blur(${opacity * 30}px)`,
+                backgroundColor: topBarHovered ? (altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`) : 'transparent',
+                backdropFilter: (opacity < 0.05 || !topBarHovered) ? "none" : `blur(${opacity * 30}px)`,
+                borderColor: !topBarHovered ? 'transparent' : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
+                boxShadow: (!topBarHovered) ? 'none' : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
                 transform: `translate(${topBarPos.x}px, ${topBarPos.y}px)`
               }}
+              onMouseEnter={() => setTopBarHovered(true)}
+              onMouseLeave={() => setTopBarHovered(false)}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
@@ -2558,7 +2563,7 @@ function App() {
                 </div>
               </div>
                  <div className="flex-1 min-w-0 pr-4 no-drag">
-                   <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl border border-white/5 shadow-inner">
+                   <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl">
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
                        <span className="px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none">
@@ -4532,7 +4537,7 @@ function App() {
 
                {/* Center: Fake Search Bar / Status */}
                <div className="flex-1 mx-6">
-                  <div className="w-full rounded-[2rem] py-3 px-6 text-[13px] text-white/50 font-semibold flex items-start justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors shadow-inner overflow-hidden min-h-[46px]" style={{ backgroundColor: `rgba(24, 24, 27, ${Math.max(0, opacity)})`, borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
+                  <div className="w-full rounded-[2rem] py-3 px-6 text-[13px] text-white/50 font-semibold flex items-start justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors overflow-hidden min-h-[46px]" style={{ backgroundColor: 'transparent', borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
                      <span className={`tracking-wide whitespace-pre-wrap break-words flex-1 leading-relaxed mt-0.5 ${altColor ? 'text-black/40' : 'text-white'}`}>
                        {!isRecording 
                          ? "Ask me anything..." 
