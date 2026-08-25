@@ -2541,7 +2541,9 @@ function App() {
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
-                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
+                const scrollContainer = target.closest('.custom-scrollbar');
+                const isScrollbarClick = scrollContainer && (e.clientX >= scrollContainer.getBoundingClientRect().right - 20);
+                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !isScrollbarClick) {
                   dragStateRef.current = {
                     panel: 'top',
                     startX: e.clientX,
@@ -2754,7 +2756,9 @@ function App() {
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
-                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
+                const scrollContainer = target.closest('.custom-scrollbar');
+                const isScrollbarClick = scrollContainer && (e.clientX >= scrollContainer.getBoundingClientRect().right - 20);
+                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !isScrollbarClick) {
                   dragStateRef.current = {
                     panel: 'answer',
                     startX: e.clientX,
