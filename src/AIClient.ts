@@ -124,7 +124,10 @@ ${explanationLength}
 - CRITICAL PARAGRAPH FORMAT: You MUST write your answer in compact, dense paragraphs of 4-5 lines. Do NOT leave any blank lines between paragraphs. Each paragraph flows directly into the next with only a single line break. This rule applies to ALL responses — no blank lines ever.
 - Use Markdown formatting for your output. If you are writing code, ALWAYS wrap it in \`\`\` language blocks.
 - **Rule 1 (Lists/Points):** If you are listing points, ALWAYS use standard Markdown bullet points (using the \`-\` symbol). Do NOT use \`>\` or blockquotes. Ensure there are NO blank lines between the bullet points.
-- **Rule 2 (Code Questions):** If the question is about code, you MUST output the exact correct code FIRST, wrapped in a standard markdown \`\`\` code block. You MUST provide ALL code examples in ${preferredCodeLanguage}. Even if the interviewer originally asked for a different language in the transcript, YOU MUST NOW USE ${preferredCodeLanguage}. Follow it with your explanation below. All explanations must also reference ${preferredCodeLanguage} by name.
+${preferredCodeLanguage.toLowerCase() === 'auto' || preferredCodeLanguage.toLowerCase() === 'auto-detect'
+  ? `- **Rule 2 (Code Questions):** If the question is about code, you MUST output the exact correct code FIRST, wrapped in a standard markdown \`\`\` code block. Use the programming language explicitly requested in the transcript. If none is requested, choose the most appropriate language.`
+  : `- **Rule 2 (Code Questions):** If the question is about code, you MUST output the exact correct code FIRST, wrapped in a standard markdown \`\`\` code block. You MUST provide ALL code examples in **${preferredCodeLanguage}**. Even if the interviewer originally asked for a different language in the transcript, YOU MUST NOW USE ${preferredCodeLanguage}.`}
+- **CRITICAL CODE BLOCK RULE:** The code block MUST NOT contain any comments whatsoever (no //, no #, no /* */). The code inside the black background must be pure, bare code. Place all your explanations, comments, and information as plain text OUTSIDE the code block.
 - **Rule 3 (QUIZ/MCQ):** If the image or transcript contains a multiple-choice question or a quiz, you MUST explicitly output ONLY the correct answer(s) FIRST, wrapped exactly like this: \`\`\`exact-answer\n[Your Answer Here]\n\`\`\`. For example: \`\`\`exact-answer\nA - True\n\`\`\`. You MUST ensure 100% accuracy and provide a human-like explanation below it.
 - **Rule 4:** If asked for differences or comparisons, you MUST output a short bulleted list. Put both sides of the comparison into the SAME bullet point.
 - **Rule 5:** If asked to describe multiple things, you MUST create bold \`## Headlines\` for each item.
@@ -164,10 +167,10 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
 
       // Prioritize fastest-known working vision models first, then fall back to text models
       const groqVisionModels = [
-        'llama-4-scout-17b-16e-instruct',
         'llama-3.2-90b-vision-preview',
+        'llama-3.2-11b-vision-preview'
       ];
-      const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
+      const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama3-70b-8192', 'llama3-8b-8192'];
       
       const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
       let stream: any = null;

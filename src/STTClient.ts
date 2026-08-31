@@ -54,7 +54,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
     const wavBlob = encodeWAV(audioData, 16000);
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
-    formData.append('model', 'whisper-large-v3');
+    formData.append('model', 'whisper-large-v3-turbo');
     formData.append('language', 'en'); 
     formData.append('temperature', '0.0');
     

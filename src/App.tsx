@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert} from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
@@ -182,7 +182,7 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 function App() {
 
   const [preferredCodeLanguage, setPreferredCodeLanguage] = useState<string>(() => {
-    return localStorage.getItem('clueai_code_language') || 'Java';
+    return localStorage.getItem('clueai_code_language') || 'Auto';
   });
   const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>(() => {
     return (localStorage.getItem('selected_provider') as any) || 'groq';
@@ -334,6 +334,8 @@ function App() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{top: number, right: number} | null>(null);
   const [isAnswerMinimized, setIsAnswerMinimized] = useState(false);
+  const [isTranscriptMinimized, setIsTranscriptMinimized] = useState(false);
+  const [isTopBarMinimized, setIsTopBarMinimized] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(0); // 0 = stopped, 1-5 = speed level
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
@@ -1148,6 +1150,30 @@ function App() {
   const audioDataRef = useRef<Float32Array>(new Float32Array(0));
   const intervalRef = useRef<any>(null);
 
+  useEffect(() => {
+    // In recording mode: hotkeys are ALWAYS on (no hover check needed).
+    // In AI fullscreen mode: hotkeys are ON only while mouse is over a panel.
+    let shouldEnable = false;
+    if (isRecording && !isTranscriptMinimized) {
+      shouldEnable = true; // always-on during transcript
+    } else if (isAiFullscreen) {
+      if (topBarHovered || answerHovered) shouldEnable = true;
+    }
+
+    if (!shouldEnable) {
+       setGlobalHotkeysEnabled(false);
+       if (typeof ipcRenderer !== 'undefined') {
+         ipcRenderer.invoke('toggle-global-hotkeys', false);
+       }
+    } else {
+       setGlobalHotkeysEnabled(true);
+       if (typeof ipcRenderer !== 'undefined') {
+         ipcRenderer.invoke('toggle-global-hotkeys', true);
+       }
+    }
+  }, [isAiFullscreen, isRecording, isTranscriptMinimized, topBarHovered, answerHovered]);
+
+
   // Stealth Mode click-through handler — throttled to ~20Hz to avoid flooding Electron IPC
   const lastMouseSendRef = useRef<number>(0);
   useEffect(() => {
@@ -1349,26 +1375,45 @@ function App() {
       return;
     }
 
-    // PRE-FLIGHT AUDIO CHECK
+    // PRE-FLIGHT AUDIO CHECK — use real getUserMedia capture level
     try {
-      const state = await ipcRenderer.invoke('get-mic-state');
-      if (state.muted || state.volume < 80) {
-        try {
-          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-          const oscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-          oscillator.type = 'square';
-          oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-          gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-          oscillator.start();
-          setTimeout(() => oscillator.stop(), 300);
-        } catch(e) {}
+      const testStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(testStream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      // Sample for 600ms to get a real RMS reading
+      const rms = await new Promise<number>((resolve) => {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        let maxRms = 0;
+        const start = Date.now();
+        const check = () => {
+          analyser.getByteTimeDomainData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) {
+            const val = (data[i] - 128) / 128;
+            sum += val * val;
+          }
+          const rmsVal = Math.sqrt(sum / data.length);
+          if (rmsVal > maxRms) maxRms = rmsVal;
+          if (Date.now() - start < 600) requestAnimationFrame(check);
+          else resolve(maxRms);
+        };
+        check();
+      });
+      testStream.getTracks().forEach(t => t.stop());
+      audioCtx.close();
+      // If mic is completely silent (rms < 0.002) it's likely muted or broken
+      if (rms < 0.002) {
+        setSysMicVolume(0);
+        setSysMicMuted(true);
         setShowAudioErrorModal(true);
         return;
       }
-    } catch(e) {}
+    } catch(e) {
+      // If getUserMedia fails the mic is not accessible — skip check and let recording handle it
+    }
 
     if (!stealthMode) {
       try {
@@ -1419,6 +1464,8 @@ function App() {
       setProvider('groq');
       switchProvider('groq');
       setIsAnswerMinimized(false);
+      setIsTranscriptMinimized(false);
+      setIsTopBarMinimized(false);
       setGlobalHotkeysEnabled(true);
       setTopBarPos({ x: 0, y: 0 });
       setAnswerPos({ x: 0, y: 0 });
@@ -2142,6 +2189,9 @@ function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // If hotkeys toggle is OFF, block all shortcut keys entirely
+      if (!globalHotkeysEnabled) return;
+
       // Ignore if user is typing in an input or textarea
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         if (e.key === 'Escape') {
@@ -2468,6 +2518,7 @@ function App() {
                   );
                 }}
                 options={[
+                  { value: 'auto', label: 'Auto (Transcript)' },
                   { value: '', label: 'Translate...' },
                   { value: 'python', label: 'Python' },
                   { value: 'java', label: 'Java' },
@@ -2530,16 +2581,16 @@ function App() {
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
             <div 
-              className="flex items-start justify-between border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl w-[1050px] max-w-none mx-auto gap-4 p-4 mt-2"
+              className={`border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-300 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex items-start justify-between w-[1050px] max-w-none mx-auto gap-4 p-4'}`}
               style={{
-                backgroundColor: topBarHovered ? (altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.6 * opacity})`) : 'transparent',
-                backdropFilter: (opacity < 0.05 || !topBarHovered) ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: !topBarHovered ? 'transparent' : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
-                boxShadow: (!topBarHovered) ? 'none' : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
+                backgroundColor: isTopBarMinimized ? undefined : 'transparent',
+                backdropFilter: (isTopBarMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
+                borderColor: isTopBarMinimized ? undefined : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
+                boxShadow: isTopBarMinimized ? undefined : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
                 transform: `translate(${topBarPos.x}px, ${topBarPos.y}px)`
               }}
-              onMouseEnter={() => setTopBarHovered(true)}
-              onMouseLeave={() => setTopBarHovered(false)}
+              onMouseEnter={!isTopBarMinimized ? () => setTopBarHovered(true) : undefined}
+              onMouseLeave={!isTopBarMinimized ? () => setTopBarHovered(false) : undefined}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
@@ -2561,6 +2612,17 @@ function App() {
                 (e.target as HTMLElement).releasePointerCapture(e.pointerId);
               }}
             >
+              {isTopBarMinimized ? (
+                <div 
+                  className="w-full h-full flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-colors"
+                  onClick={() => setIsTopBarMinimized(false)}
+                  title="Expand Question Context"
+                >
+                  <span className="text-2xl select-none group-hover:scale-110 transition-transform">🧠</span>
+                  <div className="absolute inset-0 rounded-full border border-cyan-400/30 group-hover:border-cyan-400/60 animate-[spin_4s_linear_infinite]" />
+                </div>
+              ) : (
+                <>
               <div className="flex items-center gap-3 no-drag shrink-0 pt-2">
                 <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
                   <Move size={16} />
@@ -2571,7 +2633,7 @@ function App() {
                      <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
                        <span className={`px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none transition-opacity duration-200 ${topBarHovered ? 'opacity-100' : 'opacity-0'}`}>
-                         <Keyboard size={10} /> Ctrl+Shift+K
+                         <Keyboard size={10} /> Ctrl+Shift+K — Close AI Panel
                        </span>
                      </div>
                      <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed w-full custom-scrollbar pr-2 max-h-[150px] overflow-y-auto">
@@ -2657,13 +2719,11 @@ function App() {
                   </div>
                   <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
                     <button 
-                      onClick={() => {
-                        setIsAnswerMinimized(!isAnswerMinimized);
-                      }}
-                      className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs flex items-center justify-center"
-                      title={isAnswerMinimized ? "Maximize Window" : "Minimize Window"}
+                      onClick={() => setIsAnswerMinimized(prev => !prev)}
+                      className={`px-2 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-black text-base flex items-center justify-center ${isAnswerMinimized ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
+                      title={isAnswerMinimized ? "Expand Answer Panel" : "Minimize Answer Panel"}
                     >
-                      {isAnswerMinimized ? <Maximize size={14}/> : <Minus size={14}/>}
+                      🗕
                     </button>
                   </div>
                   <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
@@ -2740,27 +2800,29 @@ function App() {
                     </button>
                   </div>
                </div>
+               </>
+              )}
             </div>
             
             {/* AI Answer Content Panel */}
             <div 
-              className={`flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 pointer-events-auto drag-area rounded-[2.5rem] mt-2 mb-4 ${isAnswerMinimized ? 'w-[400px] h-[500px]' : 'w-[1050px] max-w-none max-h-[85vh]'}`}
+              className={`border border-white/10 shrink-0 drag-area pointer-events-auto shadow-2xl mt-2 mb-4 transition-all duration-300 ${isAnswerMinimized ? 'w-[300px] h-[150px] flex p-3 bg-[#09090b]/50 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-[1050px] max-w-none max-h-[85vh] relative rounded-[2.5rem]'}`}
               style={{
-                backgroundColor: isAnswerMinimized ? `rgba(24, 24, 27, ${0.6 * opacity})` : (answerHovered ? (altColor ? `rgba(128, 128, 128, ${0.4 * opacity})` : `rgba(24, 24, 27, ${0.8 * opacity})`) : 'transparent'),
-                backdropFilter: (opacity < 0.05 || (!answerHovered && !isAnswerMinimized)) ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: (!answerHovered && !isAnswerMinimized) ? 'transparent' : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
-                borderWidth: "1px",
-                boxShadow: (!answerHovered && !isAnswerMinimized) ? 'none' : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
+                backgroundColor: isAnswerMinimized ? undefined : 'transparent',
+                backdropFilter: (isAnswerMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
+                borderColor: isAnswerMinimized ? undefined : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
+                borderWidth: isAnswerMinimized ? undefined : "1px",
+                boxShadow: isAnswerMinimized ? undefined : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
                 transform: `translate(${answerPos.x}px, ${answerPos.y}px)`
               }}
-              onMouseEnter={() => setAnswerHovered(true)}
-              onMouseLeave={() => setAnswerHovered(false)}
+              onMouseEnter={!isAnswerMinimized ? () => setAnswerHovered(true) : undefined}
+              onMouseLeave={!isAnswerMinimized ? () => setAnswerHovered(false) : undefined}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
-                const scrollContainer = target.closest('.custom-scrollbar');
-                const isScrollbarClick = scrollContainer && (e.clientX >= scrollContainer.getBoundingClientRect().right - 20);
-                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !isScrollbarClick) {
+                
+                // Allow normal text selection and touch-scrolling by ignoring drags inside the scrollable area
+                if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
                   dragStateRef.current = {
                     panel: 'answer',
                     startX: e.clientX,
@@ -2776,6 +2838,37 @@ function App() {
                 (e.target as HTMLElement).releasePointerCapture(e.pointerId);
               }}
             >
+              {isAnswerMinimized ? (
+                <div 
+                  className="w-full h-full flex flex-col text-white/50 overflow-hidden relative"
+                  onDoubleClick={() => setIsAnswerMinimized(false)}
+                  title="Double-click anywhere to expand"
+                >
+                  <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-bl-lg p-1">
+                    <button onClick={() => setIsAnswerMinimized(false)} className="text-white/50 hover:text-white p-1"><Maximize size={10} /></button>
+                  </div>
+                  <div className="overflow-y-auto pr-1 leading-tight font-medium w-full h-full no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: '9px' }}>
+                    {aiAnswer ? (
+                      <ReactMarkdown components={markdownComponents}>
+                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                      </ReactMarkdown>
+                    ) : (
+                      "Generating..."
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+              {/* Top-right controls: Minimize answer panel */}
+              <div className="absolute top-3 right-3 z-50 no-drag flex items-center gap-1.5">
+                <button
+                  onClick={() => setIsAnswerMinimized(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/20 text-white/50 hover:text-white transition-all shadow-sm text-base"
+                  title="Minimize Answer Panel"
+                >
+                  🗕
+                </button>
+              </div>
               <div className="w-full flex justify-center pt-3 cursor-grab active:cursor-grabbing no-drag opacity-30 hover:opacity-100 transition-opacity">
                  <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
               </div>
@@ -2795,10 +2888,12 @@ function App() {
                     )}
                  </div>
               </div>
+              </>
+              )}
             </div>
           </div>
         ) : (
-          <div className="flex flex-col w-full h-full bg-[#09090b] overflow-hidden pointer-events-auto rounded-3xl p-4">
+          <div className={`flex flex-col w-full h-full overflow-hidden pointer-events-auto rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
@@ -4535,14 +4630,27 @@ function App() {
         {isRecording && (
           <div className="flex-1 flex flex-col gap-6 min-h-0 relative">
             {/* 1. Top Toolbar (The "Floating Pill") */}
-            <div className="flex items-center justify-between bg-[#09090b]/90 backdrop-blur-md rounded-[2rem] px-4 py-2.5 border border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] shrink-0 w-full mx-auto relative z-20">
+            <div 
+              className={`flex items-center justify-between shrink-0 mx-auto relative z-20 drag-area transition-all duration-300 ${isTranscriptMinimized ? 'bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] w-14 h-14 rounded-full p-0 cursor-pointer group border border-white/10' : 'w-fit max-w-full rounded-[2rem] px-4 py-2.5 bg-transparent'}`}
+            >
+              {isTranscriptMinimized ? (
+                <div 
+                  className="w-full h-full flex items-center justify-center text-blue-400 hover:text-blue-300 transition-colors"
+                  onClick={() => setIsTranscriptMinimized(false)}
+                  title="Expand Transcript"
+                >
+                  <MessageSquare size={24} className="group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 rounded-full border border-blue-400/30 group-hover:border-blue-400/60 animate-[spin_4s_linear_infinite]" />
+                </div>
+              ) : (
+                <>
                {/* Left: Mic / Pause */}
                <button onClick={handlePauseToggle} className="flex items-center justify-center w-11 h-11 rounded-full bg-white/5 hover:bg-white/10 transition-colors shadow-inner">
                   <Mic size={20} className={!isPaused ? "animate-pulse text-cyan-400 drop-shadow-md" : "text-white/50"} />
                </button>
 
                {/* Center: Fake Search Bar / Status */}
-               <div className="flex-1 mx-6">
+               <div className="w-[400px] mx-6">
                   <div className="w-full rounded-[2rem] py-3 px-6 text-[13px] text-white/50 font-semibold flex items-start justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors overflow-hidden min-h-[46px]" style={{ backgroundColor: 'transparent', borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
                      <span className={`tracking-wide whitespace-pre-wrap break-words flex-1 leading-relaxed mt-0.5 ${altColor ? 'text-black/40' : 'text-white'}`}>
                        {!isRecording 
@@ -4562,7 +4670,7 @@ function App() {
                   
                   {/* Snapshots inserted inline if any */}
                   {currentSnapshots.length > 0 && (
-                    <div className="flex-none flex gap-3 overflow-x-auto custom-scrollbar relative items-center py-2 px-4 rounded-2xl bg-black/40 border border-white/5 backdrop-blur-md">
+                    <div className="flex-none flex gap-3 overflow-x-auto custom-scrollbar relative items-center py-2 px-4 rounded-2xl bg-transparent border border-white/5 backdrop-blur-md">
                       {currentSnapshots.map((snap, idx) => (
                         <div key={idx} className="relative h-[60px] aspect-video rounded-lg overflow-hidden shadow-sm border border-cyan-500/30 bg-black/80 group shrink-0">
                           <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
@@ -4609,7 +4717,12 @@ function App() {
                   <button onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
                      <Settings size={20} />
                   </button>
+                  <button onClick={() => setIsTranscriptMinimized(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm" title="Minimize Transcript">
+                     <Minus size={20} />
+                  </button>
                </div>
+               </>
+              )}
             </div>
         </div>
       )}
