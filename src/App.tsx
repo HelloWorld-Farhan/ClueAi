@@ -329,6 +329,18 @@ function App() {
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const aiAnswerScrollRef = useRef<HTMLDivElement>(null);
   
+  // Auto-scroll to bottom when new AI answer text arrives
+  useEffect(() => {
+    if (aiAnswerScrollRef.current) {
+      // Small timeout to allow React to render the markdown first
+      setTimeout(() => {
+        if (aiAnswerScrollRef.current) {
+          aiAnswerScrollRef.current.scrollTop = aiAnswerScrollRef.current.scrollHeight;
+        }
+      }, 10);
+    }
+  }, [aiAnswer]);
+  
   const [editTranscript, setEditTranscript] = useState('');
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -2829,7 +2841,7 @@ function App() {
             >
               {isAnswerMinimized ? (
                 <div 
-                  className="w-full h-full flex flex-col text-white/50 overflow-hidden relative"
+                  className={`w-full h-full flex flex-col overflow-hidden relative ${altColor ? 'text-black/80' : 'text-white/90'}`}
                   onDoubleClick={() => setIsAnswerMinimized(false)}
                   title="Double-click anywhere to expand"
                 >
@@ -2860,7 +2872,11 @@ function App() {
                     ><Plus size={10} /></button>
                     <button onClick={() => setIsAnswerMinimized(false)} className="text-white/50 hover:text-white p-1 ml-1" title="Expand"><Maximize size={10} /></button>
                   </div>
-                  <div className="overflow-y-auto pr-1 leading-snug font-medium w-full h-full no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: `${stealthFontSize}px` }}>
+                  <div 
+                    ref={aiAnswerScrollRef}
+                    className="overflow-y-auto pr-1 leading-snug font-bold w-full h-full no-scrollbar" 
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: `${stealthFontSize}px` }}
+                  >
                     {aiAnswer ? (
                       <ReactMarkdown components={markdownComponents}>
                         {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
