@@ -35,7 +35,9 @@ function createWindow() {
   mainWindow.setIgnoreMouseEvents(false);
 
   mainWindow.on('minimize', () => {
-    // Keep hotkeys active while minimized for stealth mode
+    if (hotkeysActive) {
+      unregisterAllHotkeys();
+    }
   });
 
   mainWindow.on('restore', () => {
@@ -45,7 +47,9 @@ function createWindow() {
   });
 
   mainWindow.on('hide', () => {
-    // Keep hotkeys active while hidden for stealth mode
+    if (hotkeysActive) {
+      unregisterAllHotkeys();
+    }
   });
 
   mainWindow.on('show', () => {
@@ -227,7 +231,7 @@ function createWindow() {
   ipcMain.handle('toggle-global-hotkeys', (event, enable) => {
     hotkeysActive = enable;
     unregisterAllHotkeys();
-    if (enable && mainWindow) {
+    if (enable && mainWindow && !mainWindow.isMinimized() && mainWindow.isVisible()) {
       registerAllHotkeys();
     }
   });
