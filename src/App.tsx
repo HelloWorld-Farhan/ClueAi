@@ -3051,7 +3051,7 @@ function App() {
                           setTimeout(() => setModelChangeMsg(''), 3000);
                         }}
                         options={[
-                          { value: 'groq', label: 'Groq (Llama 3 70B)' },
+                          { value: 'groq', label: 'Groq (Llama 3.3 70B)' },
                           { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
                           { value: 'claude', label: 'Claude 3.5 Sonnet' },
                           { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
@@ -3437,7 +3437,7 @@ function App() {
                           setTimeout(() => setModelChangeMsg(''), 3000);
                         }}
                         options={[
-                          { value: 'groq', label: 'Groq (Llama 3 70B)' },
+                          { value: 'groq', label: 'Groq (Llama 3.3 70B)' },
                           { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
                           { value: 'claude', label: 'Claude 3.5 Sonnet' },
                           { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },

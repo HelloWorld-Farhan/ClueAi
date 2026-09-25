@@ -165,18 +165,22 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
 
-      // Prioritize fastest-known working vision models first, then fall back to text models
+      // ---- GROQ MODEL PRIORITY LISTS (updated Sep 2026) ----
+      // Verified working: llama-3.3-70b-versatile, llama-3.1-8b-instant
+      // openai/gpt-oss-* support multimodal (images) as of mid-2026
+      // All llama3-*-8192 decommissioned. llama-4-scout/maverick deprecated July 2026.
+      // llama-3.2-*-vision-preview decommissioned.
       const groqVisionModels = [
-        'meta-llama/llama-4-scout-17b-16e-instruct',
-        'meta-llama/llama-4-maverick-17b-128e-instruct',
-        'llama-3.2-11b-vision-preview'
+        'openai/gpt-oss-20b',
+        'openai/gpt-oss-120b',
+        'llama-3.3-70b-versatile',  // fallback: no vision but will answer without image
+        'llama-3.1-8b-instant'
       ];
       const groqTextModels = [
         'llama-3.3-70b-versatile',
-        'meta-llama/llama-4-scout-17b-16e-instruct',
-        'meta-llama/llama-4-maverick-17b-128e-instruct',
-        'llama3-70b-8192',
-        'llama3-8b-8192'
+        'llama-3.1-8b-instant',
+        'openai/gpt-oss-20b',
+        'openai/gpt-oss-120b'
       ];
       
       const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
