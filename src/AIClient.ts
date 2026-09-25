@@ -95,18 +95,23 @@ export async function getInterviewAnswer(
   try {
     let contextPrompt = '';
     
-    if (personalContext) {
-      contextPrompt += `\n\n--- PERSONAL CONTEXT (HIGH PRIORITY) ---\nThis is about the candidate's strengths, weaknesses, hobbies, and personal background. Use this whenever answering behavioral or personal questions:\n${personalContext}`;
+    const truncate = (text: string, maxLen: number) => text && text.length > maxLen ? text.slice(0, maxLen) + '...' : text || '';
+    const safePersonalContext = truncate(personalContext, 2000);
+    const safeResume1 = truncate(resumeText1, 4000);
+    const safeResume2 = truncate(resumeText2, 4000);
+
+    if (safePersonalContext) {
+      contextPrompt += `\n\n--- PERSONAL CONTEXT (HIGH PRIORITY) ---\nThis is about the candidate's strengths, weaknesses, hobbies, and personal background. Use this whenever answering behavioral or personal questions:\n${safePersonalContext}`;
     }
 
-    if (resumeText1 || resumeText2) {
+    if (safeResume1 || safeResume2) {
       contextPrompt += `\n\n--- RESUME(S) ---\nUse these resumes to answer questions about past experience, projects, and skills.`;
       if (resumePriority === 1) {
-        if (resumeText1) contextPrompt += `\n[HIGH PRIORITY RESUME]\n${resumeText1}`;
-        if (resumeText2) contextPrompt += `\n[SECONDARY RESUME (Fallback)]\n${resumeText2}`;
+        if (safeResume1) contextPrompt += `\n[HIGH PRIORITY RESUME]\n${safeResume1}`;
+        if (safeResume2) contextPrompt += `\n[SECONDARY RESUME (Fallback)]\n${safeResume2}`;
       } else {
-        if (resumeText2) contextPrompt += `\n[HIGH PRIORITY RESUME]\n${resumeText2}`;
-        if (resumeText1) contextPrompt += `\n[SECONDARY RESUME (Fallback)]\n${resumeText1}`;
+        if (safeResume2) contextPrompt += `\n[HIGH PRIORITY RESUME]\n${safeResume2}`;
+        if (safeResume1) contextPrompt += `\n[SECONDARY RESUME (Fallback)]\n${safeResume1}`;
       }
       contextPrompt += `\nFocus heavily on the high priority resume. Only check the fallback if the information is missing from the high priority resume.`;
     }
@@ -145,7 +150,7 @@ CRITICAL EXPERTISE RULE: YOU ARE AN ABSOLUTE EXPERT. Your answers MUST be techni
 CRITICAL CONTEXT RULE: You MUST act as an expert on the provided documents. ONLY draw facts from the uploaded documents. Do not invent outside information if context is provided.
 When asked about yourself, ACT AS THIS PERSON. Use the specific name, education, tools, and past projects from the context. Do NOT give a meta-answer.${contextPrompt}`;
 
-    const MAX_TRANSCRIPT_LENGTH = 12000;
+    const MAX_TRANSCRIPT_LENGTH = 8000;
     const safeTranscript = transcript.length > MAX_TRANSCRIPT_LENGTH 
       ? "..." + transcript.slice(-MAX_TRANSCRIPT_LENGTH) 
       : transcript;
