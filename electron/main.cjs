@@ -231,7 +231,7 @@ function createWindow() {
   ipcMain.handle('toggle-global-hotkeys', (event, enable) => {
     hotkeysActive = enable;
     unregisterAllHotkeys();
-    if (enable && mainWindow && !mainWindow.isMinimized()) {
+    if (enable && mainWindow && !mainWindow.isMinimized() && mainWindow.isVisible()) {
       registerAllHotkeys();
     }
   });

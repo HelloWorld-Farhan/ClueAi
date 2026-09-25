@@ -145,7 +145,12 @@ CRITICAL EXPERTISE RULE: YOU ARE AN ABSOLUTE EXPERT. Your answers MUST be techni
 CRITICAL CONTEXT RULE: You MUST act as an expert on the provided documents. ONLY draw facts from the uploaded documents. Do not invent outside information if context is provided.
 When asked about yourself, ACT AS THIS PERSON. Use the specific name, education, tools, and past projects from the context. Do NOT give a meta-answer.${contextPrompt}`;
 
-    let userPrompt = `Interview transcript so far:\n${transcript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
+    const MAX_TRANSCRIPT_LENGTH = 12000;
+    const safeTranscript = transcript.length > MAX_TRANSCRIPT_LENGTH 
+      ? "..." + transcript.slice(-MAX_TRANSCRIPT_LENGTH) 
+      : transcript;
+
+    let userPrompt = `Interview transcript so far:\n${safeTranscript}\n\nRespond directly to the interviewer as the candidate. Speak your answer now:`;
 
     const hasImages = imageArray && imageArray.length > 0;
     const effectiveProvider = currentProvider;
