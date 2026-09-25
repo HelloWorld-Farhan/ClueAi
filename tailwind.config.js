@@ -34,9 +34,9 @@ export default {
         }
       },
       animation: {
-        'float': 'float 3s ease-in-out infinite',
-        'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'progress': 'progress 2.5s ease-out forwards',
+        'float': 'float 2s ease-in-out infinite',
+        'pulse-glow': 'pulse-glow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'progress': 'progress 1s ease-out forwards',
       }
     },
   },

@@ -1387,7 +1387,7 @@ function App() {
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
-      // Sample for 600ms to get a real RMS reading
+      // Sample for 50ms to get a real RMS reading without lagging the UI
       const rms = await new Promise<number>((resolve) => {
         const data = new Uint8Array(analyser.frequencyBinCount);
         let maxRms = 0;
@@ -1401,7 +1401,7 @@ function App() {
           }
           const rmsVal = Math.sqrt(sum / data.length);
           if (rmsVal > maxRms) maxRms = rmsVal;
-          if (Date.now() - start < 600) requestAnimationFrame(check);
+          if (Date.now() - start < 50) requestAnimationFrame(check);
           else resolve(maxRms);
         };
         check();
@@ -2563,14 +2563,14 @@ function App() {
     <>
       
         <div 
-          className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-300 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
+          className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-150 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
           style={{ transition: 'none' }}
         >
         {isAiFullscreen ? (
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
             <div 
-              className={`border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-300 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex items-start justify-between w-[1050px] max-w-none mx-auto gap-4 p-4'}`}
+              className={`border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-150 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex items-start justify-between w-[1050px] max-w-none mx-auto gap-4 p-4'}`}
               style={{
                 backgroundColor: isTopBarMinimized ? undefined : 'transparent',
                 backdropFilter: (isTopBarMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
@@ -2795,7 +2795,7 @@ function App() {
             
             {/* AI Answer Content Panel */}
             <div 
-              className={`border border-white/10 shrink-0 drag-area pointer-events-auto shadow-2xl mt-2 mb-4 transition-all duration-300 ${isAnswerMinimized ? 'flex p-3 bg-[#09090b]/50 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-[1050px] max-w-none max-h-[85vh] relative rounded-[2.5rem]'}`}
+              className={`border border-white/10 shrink-0 drag-area pointer-events-auto shadow-2xl mt-2 mb-4 transition-all duration-150 ${isAnswerMinimized ? 'flex p-3 bg-[#09090b]/50 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-[1050px] max-w-none max-h-[85vh] relative rounded-[2.5rem]'}`}
               style={{
                 backgroundColor: isAnswerMinimized ? undefined : 'transparent',
                 backdropFilter: (isAnswerMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
@@ -3129,7 +3129,7 @@ function App() {
             <button onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
               <Settings size={16} />
             </button>
-            <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
+            <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-150 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
               <Play size={14} fill="currentColor" /> Start Interview
             </button>
             {/* Minimize / Maximize / Close */}
@@ -4010,7 +4010,7 @@ function App() {
                   </div>
 
                   {/* Resume Context 1 */}
-                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-300">
+                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
                     <div className="flex items-center justify-between mb-4">
                       <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
                         <FileText size={14} className="text-blue-400" /> Resume Context 1
@@ -4049,7 +4049,7 @@ function App() {
                   </div>
 
                   {/* Resume Context 2 */}
-                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-300">
+                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
                     <div className="flex items-center justify-between mb-4">
                       <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
                         <FileText size={14} className="text-cyan-400" /> Resume Context 2
@@ -4088,7 +4088,7 @@ function App() {
                   </div>
 
                   {/* Personal Context */}
-                  <div className="md:col-span-2 bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-300">
+                  <div className="md:col-span-2 bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
                     <div className="mb-4">
                       <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2 mb-1">
                         <User size={14} className="text-fuchsia-400" /> Personal Context
@@ -4350,7 +4350,7 @@ function App() {
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
               <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
               <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br/><br/>Development driven by real users<br/>Faster iteration on features that matter</p>
-              <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-300">✨ View Portfolio &rarr;</button>
+              <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-150">✨ View Portfolio &rarr;</button>
             </div>
             
             <div className="relative h-full w-full">
@@ -4644,7 +4644,7 @@ function App() {
           <div className="flex-1 flex flex-col gap-6 min-h-0 relative">
             {/* 1. Top Toolbar (The "Floating Pill") */}
             <div 
-              className={`flex items-center justify-between shrink-0 mx-auto relative z-20 drag-area transition-all duration-300 ${isTranscriptMinimized ? 'bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] w-14 h-14 rounded-full p-0 cursor-pointer group border border-white/10' : 'w-fit max-w-full rounded-[2rem] px-4 py-2.5 bg-transparent'}`}
+              className={`flex items-center justify-between shrink-0 mx-auto relative z-20 drag-area transition-all duration-150 ${isTranscriptMinimized ? 'bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] w-14 h-14 rounded-full p-0 cursor-pointer group border border-white/10' : 'w-fit max-w-full rounded-[2rem] px-4 py-2.5 bg-transparent'}`}
             >
               {isTranscriptMinimized ? (
                 <div 
@@ -4765,7 +4765,7 @@ function App() {
       {/* Minimum Size Warning Modal */}
       {showMinSizeWarning && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 select-none">
-          <div className="bg-[#09090b]/90 border border-brand-border rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-[#09090b]/90 border border-brand-border rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
               <h3 className="font-black text-lg text-white flex items-center gap-2"><ZoomOut size={18} className="text-brand-accent"/> Size Limit Reached</h3>
             </div>
@@ -4787,7 +4787,7 @@ function App() {
       {/* Stealth Mode Warning Modal (For Starting Interview) */}
       {showStartStealthWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 rounded-3xl blur opacity-40"></div>
             
             <div className="relative bg-[#09090b]/90 border border-red-500/30 rounded-3xl w-full overflow-hidden shadow-[0_0_80px_rgba(225,29,72,0.3)]">
@@ -4826,7 +4826,7 @@ function App() {
               {/* Rename Session Modal */}
         {editingSessionId !== null && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-300">
+            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-150">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
               
               <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full shadow-[0_0_80px_rgba(0,0,0,1)]">
@@ -4863,7 +4863,7 @@ function App() {
         {/* Session Name Prompt Modal Redesign */}
       {showSessionPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
             {/* Glowing Accent Border */}
             <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
             
@@ -4899,7 +4899,7 @@ function App() {
                 </div>
 
                 {!currentSessionId && (
-                  <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-150">
                     <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">New Session Name</label>
                     <input 
                       type="text"
@@ -4981,7 +4981,7 @@ function App() {
           <img 
             src={previewSnapshot} 
             alt="Snapshot Preview" 
-            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300" 
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-150" 
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -5858,7 +5858,7 @@ function App() {
       )}
       {modelChangeMsg && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-          <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-300 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
+          <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-150 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
              <CheckCircle2 size={16} /> {modelChangeMsg}
           </span>
         </div>
@@ -5870,4 +5870,5 @@ function App() {
 }
 
 export default App;
+
 
