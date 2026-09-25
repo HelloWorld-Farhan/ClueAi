@@ -2517,13 +2517,13 @@ function App() {
               style={vscDarkPlus}
               language={match[1]}
               PreTag="div"
-              className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[14px] !bg-black`}
+              className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[0.95em] !bg-black`}
               customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
             />
           </div>
         </div>
       ) : (
-        <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[13px] font-bold">
+        <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[0.9em] font-bold">
           {children}
         </code>
       );
@@ -2532,13 +2532,13 @@ function App() {
       return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
     },
     h1({children, ...props}: any) {
-      return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
+      return <h1 className="m-0 mb-0 text-[1.2em] font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
     },
     h2({children, ...props}: any) {
-      return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
+      return <h2 className="m-0 mb-0 text-[1.1em] font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
     },
     h3({children, ...props}: any) {
-      return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
+      return <h3 className="m-0 mb-0 text-[1em] font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
     },
     ul({children, ...props}: any) {
       return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
