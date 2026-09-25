@@ -1116,7 +1116,6 @@ function App() {
   }, [isAiFullscreen]);
 
   const [aiCopied, setAiCopied] = useState(false);
-  const [answerHovered, setAnswerHovered] = useState(false);
   const [topBarHovered, setTopBarHovered] = useState(false);
 
   const [topBarPos, setTopBarPos] = useState({ x: 0, y: 0 });
@@ -2807,8 +2806,6 @@ function App() {
                 width: isAnswerMinimized ? Math.max(250, 350 + (stealthFontSize - 11.5) * 25) + 'px' : undefined,
                 height: isAnswerMinimized ? Math.max(100, 200 + (stealthFontSize - 11.5) * 15) + 'px' : undefined
               }}
-              onMouseEnter={!isAnswerMinimized ? () => setAnswerHovered(true) : undefined}
-              onMouseLeave={!isAnswerMinimized ? () => setAnswerHovered(false) : undefined}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
