@@ -10,8 +10,10 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:start": "cross-env NODE_ENV=development electron .",
     "start": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:dev\"",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "pack": "npm run build && electron-builder --dir"
   },
   "build": {
     "appId": "com.clueai.app",
@@ -36,7 +38,8 @@
     "files": [
       "dist/**/*",
       "electron/**/*"
-    ]
+    ],
+    "npmRebuild": false
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -70,5 +73,8 @@
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "wait-on": "^7.2.0"
+  },
+  "allowScripts": {
+    "win-audio": true
   }
 }

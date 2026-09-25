@@ -472,28 +472,26 @@ function createWindow() {
       const scaleFactor = primaryDisplay.scaleFactor;
       const { width, height } = primaryDisplay.size;
       
-      const physicalWidth = width * scaleFactor;
-      const physicalHeight = height * scaleFactor;
+      const physicalWidth = Math.round(width * scaleFactor);
+      const physicalHeight = Math.round(height * scaleFactor);
       
-      if (mainWindow && !mainWindow.isMinimized()) {
-        mainWindow.setOpacity(0); // Make invisible but keep focus
-        await new Promise(r => setTimeout(r, 150)); // Wait for OS compositing
-      }
-      
-      // Capture a static frame of the screen safely using physical resolution
+      // STEP 1: Capture screen FIRST, while everything looks normal.
+      // This avoids any OS-level window focus change before capture.
       const sources = await desktopCapturer.getSources({ 
         types: ['screen'], 
         thumbnailSize: { width: physicalWidth, height: physicalHeight },
         fetchWindowIcons: false
       });
       
-      // Delay restoring visibility until snip is finished
-      
-      // Find the specific source or just use the first screen
       let targetSource = sources.find(s => s.id === sourceId) || sources[0];
       if (!targetSource) return null;
       
       const base64Image = targetSource.thumbnail.toDataURL();
+      
+      // STEP 2: NOW hide the main window — after capture is already done.
+      if (mainWindow && !mainWindow.isMinimized()) {
+        mainWindow.setOpacity(0);
+      }
       
       snipWindow = new BrowserWindow({
         width: width,
@@ -503,7 +501,7 @@ function createWindow() {
         frame: false,
         transparent: true,
         alwaysOnTop: true,
-        focusable: false,
+        focusable: true,
         skipTaskbar: true,
         show: false,
         type: 'toolbar',
@@ -518,6 +516,7 @@ function createWindow() {
       });
       
       snipWindow.setAlwaysOnTop(true, 'screen-saver');
+      // Critical: snip window must also be content-protected
       snipWindow.setContentProtection(isStealthMode);
       snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
       
@@ -527,7 +526,7 @@ function createWindow() {
       });
       
       return new Promise((resolve) => {
-        // Auto-abort after 15 seconds to prevent freezing if hidden behind exclusive fullscreen
+        // Auto-abort after 15 seconds to prevent freezing
         const timeout = setTimeout(() => {
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
           if (mainWindow) mainWindow.setOpacity(1);
@@ -542,11 +541,14 @@ function createWindow() {
         });
         
         ipcMain.once('snip-cancel', () => {
+          clearTimeout(timeout);
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          if (mainWindow) mainWindow.setOpacity(1);
           resolve(null);
         });
         
         snipWindow.on('closed', () => {
+          clearTimeout(timeout);
           snipWindow = null;
           if (mainWindow) mainWindow.setOpacity(1);
           resolve(null);

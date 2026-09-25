@@ -76,8 +76,8 @@ window.addEventListener('mouseup', (e) => {
   let targetWidth = width * scaleX;
   let targetHeight = height * scaleY;
 
-  // Max dimension limit for faster AI processing (e.g., max 1024px)
-  const MAX_DIM = 1024;
+  // Max dimension limit for faster AI processing (e.g., max 1280px)
+  const MAX_DIM = 1280;
   if (targetWidth > MAX_DIM || targetHeight > MAX_DIM) {
     const ratio = Math.min(MAX_DIM / targetWidth, MAX_DIM / targetHeight);
     targetWidth *= ratio;
@@ -85,8 +85,8 @@ window.addEventListener('mouseup', (e) => {
   }
   
   const canvas = document.createElement('canvas');
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
+  canvas.width = Math.round(targetWidth);
+  canvas.height = Math.round(targetHeight);
   
   const ctx = canvas.getContext('2d');
   ctx.drawImage(
@@ -95,14 +95,18 @@ window.addEventListener('mouseup', (e) => {
     0, 0, canvas.width, canvas.height // Destination
   );
   
-  // High compression for faster base64 transmission
-  const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+  // High quality JPEG for best AI analysis
+  const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
   
   // Send back
   ipcRenderer.send('snip-complete', croppedDataUrl);
 });
 
-// Cancellation using right-click is handled in mousedown
-// window.addEventListener('keydown') removed to prevent focus stealing
+// ESC key cancellation - critical for snipping window to close cleanly
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    ipcRenderer.send('snip-cancel');
+  }
+});
 
 window.addEventListener('contextmenu', e => e.preventDefault());

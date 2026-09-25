@@ -334,6 +334,7 @@ function App() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{top: number, right: number} | null>(null);
   const [isAnswerMinimized, setIsAnswerMinimized] = useState(false);
+  const [stealthFontSize, setStealthFontSize] = useState<number>(() => Number(localStorage.getItem('clueai_stealth_font_size')) || 11.5);
   const [isTranscriptMinimized, setIsTranscriptMinimized] = useState(false);
   const [isTopBarMinimized, setIsTopBarMinimized] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(0); // 0 = stopped, 1-5 = speed level
@@ -1151,14 +1152,10 @@ function App() {
   const intervalRef = useRef<any>(null);
 
   useEffect(() => {
-    // In recording mode: hotkeys are ALWAYS on (no hover check needed).
-    // In AI fullscreen mode: hotkeys are ON only while mouse is over a panel.
-    let shouldEnable = false;
-    if (isRecording && !isTranscriptMinimized) {
-      shouldEnable = true; // always-on during transcript
-    } else if (isAiFullscreen) {
-      if (topBarHovered || answerHovered) shouldEnable = true;
-    }
+    // During recording OR AI fullscreen: hotkeys are ALWAYS on.
+    // Mouse hover no longer affects hotkey state — it caused hotkeys to turn off
+    // when the mouse moved off the answer panel, which is unexpected behavior.
+    const shouldEnable = isRecording || isAiFullscreen;
 
     if (!shouldEnable) {
        setGlobalHotkeysEnabled(false);
@@ -1171,7 +1168,7 @@ function App() {
          ipcRenderer.invoke('toggle-global-hotkeys', true);
        }
     }
-  }, [isAiFullscreen, isRecording, isTranscriptMinimized, topBarHovered, answerHovered]);
+  }, [isAiFullscreen, isRecording]);
 
 
   // Stealth Mode click-through handler — throttled to ~20Hz to avoid flooding Electron IPC
@@ -1358,13 +1355,21 @@ function App() {
       return;
     }
 
-    const activeKeys = provider === 'groq' ? groqKeys : geminiKeys;
-    const hasActiveKey = activeKeys.some(k => k.trim() !== '');
     const hasGroqKey = groqKeys.some(k => k.trim() !== '');
+    // Check if the currently selected provider has at least one key configured
+    const hasActiveProviderKey = (() => {
+      if (provider === 'groq') return groqKeys.some(k => k.trim());
+      if (provider === 'gemini-flash') return geminiKeys.some(k => k.trim());
+      if (provider === 'claude') return claudeKeys.some(k => k.key.trim());
+      if (provider === 'chatgpt') return chatgptKeys.some(k => k.key.trim());
+      if (provider === 'deepseek') return deepseekKeys.some(k => k.key.trim());
+      // glm and others
+      return glmKeys.some(k => k.key.trim());
+    })();
 
-    if (!hasActiveKey || !hasGroqKey) {
-      if (!hasActiveKey) setAlertMessage({ title: 'API Key Missing', message: 'Please add at least one valid Gemini or Groq API key.', type: 'warning' });
-      else if (!hasGroqKey) setAlertMessage({ title: 'Groq Key Missing', message: 'Please add at least one valid Groq API key for Transcription.', type: 'warning' });
+    if (!hasActiveProviderKey || !hasGroqKey) {
+      if (!hasActiveProviderKey) setAlertMessage({ title: 'API Key Missing', message: `Please add at least one valid API key for the selected provider (${provider}).`, type: 'warning' });
+      else if (!hasGroqKey) setAlertMessage({ title: 'Groq Key Missing', message: 'Please add at least one valid Groq API key for transcription (speech-to-text).', type: 'warning' });
       setLocalSettingsStealth(stealthMode);
       setShowSettings(true);
       return;
@@ -2435,25 +2440,10 @@ function App() {
     return () => cancelAnimationFrame(animationFrameId);
   }, [scrollSpeed, isAiFullscreen]);
 
-  useEffect(() => {
-    let lastIgnore = false;
-    const handleMouseMove = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Identify if we're hovering over the transparent root backgrounds
-      const shouldIgnore = target.classList.contains('click-through-bg') || target.tagName === 'BODY' || target.id === 'root';
-      
-      if (shouldIgnore !== lastIgnore) {
-        lastIgnore = shouldIgnore;
-        ipcRenderer.send('set-ignore-mouse-events', shouldIgnore);
-      }
-    };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      ipcRenderer.send('set-ignore-mouse-events', false);
-    };
-  }, [isAiFullscreen, isRecording]);
+  // NOTE: The click-through / mouse-events logic is handled exclusively by the
+  // pointermove handler above (lines ~1181-1204). The duplicate mousemove handler
+  // that used to exist here caused a race condition — it was overriding the
+  // pointer-based logic and sometimes locking out mouse clicks. Removed.
 
   const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
@@ -2806,14 +2796,16 @@ function App() {
             
             {/* AI Answer Content Panel */}
             <div 
-              className={`border border-white/10 shrink-0 drag-area pointer-events-auto shadow-2xl mt-2 mb-4 transition-all duration-300 ${isAnswerMinimized ? 'w-[300px] h-[150px] flex p-3 bg-[#09090b]/50 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-[1050px] max-w-none max-h-[85vh] relative rounded-[2.5rem]'}`}
+              className={`border border-white/10 shrink-0 drag-area pointer-events-auto shadow-2xl mt-2 mb-4 transition-all duration-300 ${isAnswerMinimized ? 'flex p-3 bg-[#09090b]/50 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-[1050px] max-w-none max-h-[85vh] relative rounded-[2.5rem]'}`}
               style={{
                 backgroundColor: isAnswerMinimized ? undefined : 'transparent',
                 backdropFilter: (isAnswerMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
                 borderColor: isAnswerMinimized ? undefined : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
                 borderWidth: isAnswerMinimized ? undefined : "1px",
                 boxShadow: isAnswerMinimized ? undefined : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
-                transform: `translate(${answerPos.x}px, ${answerPos.y}px)`
+                transform: `translate(${answerPos.x}px, ${answerPos.y}px)`,
+                width: isAnswerMinimized ? Math.max(250, 350 + (stealthFontSize - 11.5) * 25) + 'px' : undefined,
+                height: isAnswerMinimized ? Math.max(100, 200 + (stealthFontSize - 11.5) * 15) + 'px' : undefined
               }}
               onMouseEnter={!isAnswerMinimized ? () => setAnswerHovered(true) : undefined}
               onMouseLeave={!isAnswerMinimized ? () => setAnswerHovered(false) : undefined}
@@ -2844,10 +2836,34 @@ function App() {
                   onDoubleClick={() => setIsAnswerMinimized(false)}
                   title="Double-click anywhere to expand"
                 >
-                  <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-bl-lg p-1">
-                    <button onClick={() => setIsAnswerMinimized(false)} className="text-white/50 hover:text-white p-1"><Maximize size={10} /></button>
+                  <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-bl-lg p-1 flex items-center gap-1">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStealthFontSize(prev => {
+                          const newVal = prev - 0.5;
+                          localStorage.setItem('clueai_stealth_font_size', newVal.toString());
+                          return newVal;
+                        });
+                      }} 
+                      className="text-white/50 hover:text-white p-1"
+                      title="Decrease font size"
+                    ><Minus size={10} /></button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStealthFontSize(prev => {
+                          const newVal = prev + 0.5;
+                          localStorage.setItem('clueai_stealth_font_size', newVal.toString());
+                          return newVal;
+                        });
+                      }} 
+                      className="text-white/50 hover:text-white p-1"
+                      title="Increase font size"
+                    ><Plus size={10} /></button>
+                    <button onClick={() => setIsAnswerMinimized(false)} className="text-white/50 hover:text-white p-1 ml-1" title="Expand"><Maximize size={10} /></button>
                   </div>
-                  <div className="overflow-y-auto pr-1 leading-tight font-medium w-full h-full no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: '9px' }}>
+                  <div className="overflow-y-auto pr-1 leading-snug font-medium w-full h-full no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: `${stealthFontSize}px` }}>
                     {aiAnswer ? (
                       <ReactMarkdown components={markdownComponents}>
                         {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}

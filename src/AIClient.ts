@@ -167,10 +167,17 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
 
       // Prioritize fastest-known working vision models first, then fall back to text models
       const groqVisionModels = [
-        'llama-3.2-90b-vision-preview',
+        'meta-llama/llama-4-scout-17b-16e-instruct',
+        'meta-llama/llama-4-maverick-17b-128e-instruct',
         'llama-3.2-11b-vision-preview'
       ];
-      const groqTextModels = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama3-70b-8192', 'llama3-8b-8192'];
+      const groqTextModels = [
+        'llama-3.3-70b-versatile',
+        'meta-llama/llama-4-scout-17b-16e-instruct',
+        'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'llama3-70b-8192',
+        'llama3-8b-8192'
+      ];
       
       const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
       let stream: any = null;
@@ -190,10 +197,22 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         for (const modelName of modelsToTry) {
           if (abortSignal?.aborted) return;
           try {
-            // Add an 8-second per-model timeout for vision requests to fail fast
-            const modelSignal = hasImages && abortSignal
-              ? AbortSignal.any([abortSignal, AbortSignal.timeout(8000)])
-              : abortSignal;
+            // Safe timeout signal for vision model attempts — falls back gracefully
+            // if AbortSignal.any() isn't available in this Electron/Chromium version
+            let modelSignal = abortSignal;
+            if (hasImages) {
+              try {
+                if (typeof AbortSignal.any === 'function') {
+                  modelSignal = abortSignal 
+                    ? AbortSignal.any([abortSignal, AbortSignal.timeout(12000)])
+                    : AbortSignal.timeout(12000);
+                } else {
+                  modelSignal = AbortSignal.timeout(12000);
+                }
+              } catch (_) {
+                modelSignal = abortSignal;
+              }
+            }
             stream = await client.chat.completions.create({
               model: modelName,
               messages: messages,
@@ -534,7 +553,7 @@ CRITICAL RULE: You MUST output ONLY the translated code. Do NOT output any expla
       currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
       
       const stream = await client.chat.completions.create({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages,
         stream: true,
         temperature: 0.1,
