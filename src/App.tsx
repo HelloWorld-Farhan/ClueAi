@@ -999,18 +999,27 @@ function App() {
     fetchMicName();
   }, []);
 
-  // Only sync mic state while actively recording — avoids wasted IPC calls on the main menu
+  // Sync mic state continuously to keep settings UI aligned with Windows system settings
   useEffect(() => {
-    if (!isRecording) return;
+    // Initial sync
+    ipcRenderer.invoke('get-mic-state').then((state: any) => {
+      if (state) {
+        setSysMicVolume(state.volume);
+        setSysMicMuted(state.muted);
+      }
+    }).catch(() => {});
+
     const audioSyncInterval = setInterval(async () => {
       try {
         const state = await ipcRenderer.invoke('get-mic-state');
-        setSysMicVolume(state.volume);
-        setSysMicMuted(state.muted);
+        if (state) {
+          setSysMicVolume(state.volume);
+          setSysMicMuted(state.muted);
+        }
       } catch (e) {}
     }, 1000);
     return () => clearInterval(audioSyncInterval);
-  }, [isRecording]);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('resume_text', resumeText);
@@ -1391,44 +1400,12 @@ function App() {
       return;
     }
 
-    // PRE-FLIGHT AUDIO CHECK — use real getUserMedia capture level
+    // PRE-FLIGHT AUDIO CHECK
     try {
       const testStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const source = audioCtx.createMediaStreamSource(testStream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      // Sample for 50ms to get a real RMS reading without lagging the UI
-      const rms = await new Promise<number>((resolve) => {
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        let maxRms = 0;
-        const start = Date.now();
-        const check = () => {
-          analyser.getByteTimeDomainData(data);
-          let sum = 0;
-          for (let i = 0; i < data.length; i++) {
-            const val = (data[i] - 128) / 128;
-            sum += val * val;
-          }
-          const rmsVal = Math.sqrt(sum / data.length);
-          if (rmsVal > maxRms) maxRms = rmsVal;
-          if (Date.now() - start < 50) requestAnimationFrame(check);
-          else resolve(maxRms);
-        };
-        check();
-      });
       testStream.getTracks().forEach(t => t.stop());
-      audioCtx.close();
-      // If mic is completely silent (rms < 0.002) it's likely muted or broken
-      if (rms < 0.002) {
-        setSysMicVolume(0);
-        setSysMicMuted(true);
-        setShowAudioErrorModal(true);
-        return;
-      }
     } catch(e) {
-      // If getUserMedia fails the mic is not accessible — skip check and let recording handle it
+      // If getUserMedia fails the mic is not accessible
     }
 
     if (!stealthMode) {
