@@ -2279,6 +2279,12 @@ function App() {
           setIsAiFullscreen(false);
           setIsPaused(false);
           isPausedRef.current = false;
+          setTranscript('');
+          finalizedTranscriptRef.current = '';
+          interimTranscriptRef.current = '';
+          setAiAnswer('');
+          setCurrentSnapshots([]);
+          audioDataRef.current = new Float32Array(0);
         } else {
           handleClearAll();
         }
@@ -2517,13 +2523,13 @@ function App() {
               style={vscDarkPlus}
               language={match[1]}
               PreTag="div"
-              className={`rounded-2xl border !m-0 !p-6 !shadow-xl text-[0.95em] !bg-black`}
-              customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)` }}
+              className={`rounded-2xl border !m-0 !p-6 !shadow-xl !bg-black`}
+              customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)`, fontSize: 'inherit' }}
             />
           </div>
         </div>
       ) : (
-        <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[0.9em] font-bold">
+        <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg font-bold" style={{ fontSize: '0.9em' }}>
           {children}
         </code>
       );
@@ -2532,13 +2538,13 @@ function App() {
       return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
     },
     h1({children, ...props}: any) {
-      return <h1 className="m-0 mb-0 text-[1.2em] font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
+      return <h1 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.2em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
     },
     h2({children, ...props}: any) {
-      return <h2 className="m-0 mb-0 text-[1.1em] font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
+      return <h2 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.1em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
     },
     h3({children, ...props}: any) {
-      return <h3 className="m-0 mb-0 text-[1em] font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
+      return <h3 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
     },
     ul({children, ...props}: any) {
       return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
@@ -2755,6 +2761,12 @@ function App() {
                         setIsAiFullscreen(false);
                         setIsPaused(false);
                         isPausedRef.current = false;
+                        setTranscript('');
+                        finalizedTranscriptRef.current = '';
+                        interimTranscriptRef.current = '';
+                        audioDataRef.current = new Float32Array(0);
+                        setAiAnswer('');
+                        setCurrentSnapshots([]);
                       }}
                       title="Clear Answer & Return (Press C or 3)"
                       className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
