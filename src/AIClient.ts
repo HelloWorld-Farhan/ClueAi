@@ -165,22 +165,22 @@ When asked about yourself, ACT AS THIS PERSON. Use the specific name, education,
         messages.push({ role: 'user', content: userPrompt });
       }
 
-      // ---- GROQ MODEL PRIORITY LISTS (updated Sep 2026) ----
-      // Verified working: llama-3.3-70b-versatile, llama-3.1-8b-instant
-      // openai/gpt-oss-* support multimodal (images) as of mid-2026
-      // All llama3-*-8192 decommissioned. llama-4-scout/maverick deprecated July 2026.
-      // llama-3.2-*-vision-preview decommissioned.
+      // ---- GROQ MODEL PRIORITY LISTS (verified live Sep 2026, free-tier keys) ----
+      // CONFIRMED WORKING via live API test:
+      //   openai/gpt-oss-20b   - fast, supports vision/images
+      //   openai/gpt-oss-120b  - smartest, supports vision/images
+      //   qwen/qwen3.8-27b     - fallback text model
+      // ALL Llama models (including llama-3.3-70b-versatile) return 404 on free-tier.
+      // Both gpt-oss models support image_url content blocks.
       const groqVisionModels = [
         'openai/gpt-oss-20b',
         'openai/gpt-oss-120b',
-        'llama-3.3-70b-versatile',  // fallback: no vision but will answer without image
-        'llama-3.1-8b-instant'
+        'qwen/qwen3.8-27b'   // text-only fallback if vision fails
       ];
       const groqTextModels = [
-        'llama-3.3-70b-versatile',
-        'llama-3.1-8b-instant',
         'openai/gpt-oss-20b',
-        'openai/gpt-oss-120b'
+        'openai/gpt-oss-120b',
+        'qwen/qwen3.8-27b'
       ];
       
       const modelsToTry = hasImages ? groqVisionModels : groqTextModels;
@@ -557,7 +557,7 @@ CRITICAL RULE: You MUST output ONLY the translated code. Do NOT output any expla
       currentGroqIndex = (currentGroqIndex + 1) % groqClients.length;
       
       const stream = await client.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-20b',
         messages,
         stream: true,
         temperature: 0.1,
