@@ -3119,24 +3119,45 @@ function App() {
                 <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
                   Clue<span className="text-cyan-400">AI</span>
                 </span>
-                <button 
-                  onClick={() => setShowUpdateModal(true)}
-                  className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
-                  title="Click to check for updates"
-                >
-                  <span>v{appVersion}</span>
-                </button>
-                {(updateStatus === 'available' || updateStatus === 'downloaded') && (
-                  <button 
+                <div className="flex items-center gap-1.5 ml-1">
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setShowUpdateModal(true)}
-                    className="px-2.5 py-1 rounded-xl font-black text-[10px] flex items-center gap-1.5 uppercase tracking-wider bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 text-emerald-300 border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.35)] animate-pulse hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    title="New version available! Click to view update details"
+                    className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-white/[0.05] hover:bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                    title="Current App Version"
                   >
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <Sparkles size={11} className="text-emerald-300" />
-                    <span>Update {updateInfo.version ? `v${updateInfo.version}` : 'Available'}</span>
-                  </button>
-                )}
+                    <span>v{appVersion}</span>
+                  </motion.button>
+
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setShowUpdateModal(true);
+                      handleCheckForUpdates();
+                    }}
+                    className={`px-2.5 py-0.5 rounded-lg font-black text-[10px] flex items-center gap-1.5 uppercase tracking-wider border transition-all cursor-pointer shadow-sm ${
+                      (updateStatus === 'available' || updateStatus === 'downloaded')
+                        ? 'bg-gradient-to-r from-amber-500/30 via-emerald-500/30 to-cyan-500/30 text-emerald-300 border-emerald-400/60 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse'
+                        : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                    }`}
+                    title={(updateStatus === 'available' || updateStatus === 'downloaded') ? "New Update Available! Click to Install" : "Click to Check for Updates"}
+                  >
+                    {(updateStatus === 'available' || updateStatus === 'downloaded') ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <Sparkles size={11} className="text-emerald-300" />
+                        <span>Update Available</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw size={10} className={`text-cyan-400 ${updateStatus === 'checking' ? 'animate-spin' : ''}`} />
+                        <span>Check Updates</span>
+                      </>
+                    )}
+                  </motion.button>
+                </div>
               </div>
             </div>
 
@@ -5083,7 +5104,7 @@ function App() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: -8 }}
                     transition={{ type: "spring", stiffness: 420, damping: 28 }}
-                    className="w-full max-w-[1040px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
+                    className="w-full max-w-[1080px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
                   >
                     {/* 1. Sleek Controls & Status Ribbon */}
                     <div className="flex items-center justify-between w-full no-drag px-1">
@@ -5173,135 +5194,138 @@ function App() {
                       </div>
 
                       {/* Right: Actions, History, Stop & Window Controls */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-                          <span className="relative flex h-2 w-2">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]">
+                          <span className="relative flex h-1.5 w-1.5">
                             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                            <span className={`relative inline-flex rounded-full h-2 w-2 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
                           </span>
-                          <div className="flex items-end gap-0.5 h-3 px-0.5">
-                            {[7, 14, 18, 11, 5].map((maxH, i) => (
+                          <div className="flex items-end gap-0.5 h-2.5 px-0.5">
+                            {[6, 12, 16, 10, 4].map((maxH, i) => (
                               <motion.span
                                 key={i}
-                                animate={!isPaused ? { height: ['3px', `${maxH}px`, '3px'] } : { height: '3px' }}
+                                animate={!isPaused ? { height: ['2.5px', `${maxH}px`, '2.5px'] } : { height: '2.5px' }}
                                 transition={{ repeat: Infinity, duration: 0.6 + i * 0.12, ease: 'easeInOut' }}
                                 className="w-0.5 bg-cyan-400 rounded-full"
                               />
                             ))}
                           </div>
-                          <span className="text-[9px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
+                          <span className="text-[8.5px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
                         </div>
 
                         <motion.button 
-                          whileHover={{ scale: 1.06, y: -1 }}
-                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={handlePauseToggle}
-                          className={`px-2 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                          className={`px-1.5 py-0.5 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
                           title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
                         >
-                          {isPaused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
+                          {isPaused ? <Play size={8.5} fill="currentColor" /> : <Pause size={8.5} fill="currentColor" />}
                           <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                          <span className="text-[8px] opacity-60 font-mono">1</span>
+                          <span className="text-[7.5px] opacity-60 font-mono">1</span>
                         </motion.button>
 
                         <motion.button 
-                          whileHover={{ scale: 1.06, y: -1 }}
-                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={handleSnipClick}
-                          className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_8px_rgba(6,182,212,0.15)]"
+                          className="px-1.5 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_8px_rgba(6,182,212,0.15)]"
                           title="Snip Screen Question (4 / A)"
                         >
-                          <Crop size={9} />
+                          <Crop size={8.5} />
                           <span>Snip</span>
-                          <span className="text-[8px] opacity-60 font-mono">4</span>
+                          <span className="text-[7.5px] opacity-60 font-mono">4</span>
                         </motion.button>
 
                         <motion.button 
-                          whileHover={{ scale: 1.06, y: -1 }}
-                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={handleClearAll}
-                          className="px-2 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
+                          className="px-1.5 py-0.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer"
                           title="Clear Transcript (3 / C)"
                         >
-                          <Trash2 size={9} />
+                          <Trash2 size={8.5} />
                           <span>Clear</span>
-                          <span className="text-[8px] opacity-60 font-mono">3</span>
+                          <span className="text-[7.5px] opacity-60 font-mono">3</span>
                         </motion.button>
 
                         <motion.button 
-                          whileHover={{ scale: 1.06, y: -1 }}
-                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={() => setShowVirtualKeyboard(true)}
-                          className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          className="px-1.5 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[9.5px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                           title="Edit Transcript (7 / Q)"
                         >
-                          <Edit2 size={9} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
+                          <Edit2 size={8.5} /> Edit <span className="text-[7.5px] opacity-60 font-mono">7</span>
                         </motion.button>
 
                         {currentSessionHistory.length > 0 && (
                           <motion.button 
-                            whileHover={{ scale: 1.06, y: -1 }}
-                            whileTap={{ scale: 0.94 }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             transition={{ type: "spring", stiffness: 500, damping: 25 }}
                             onClick={() => setShowPreviousQuestions(true)}
-                            className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            className="px-1.5 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[9.5px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                             title="Session History (8 / H)"
                           >
-                            <Clock size={9} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
+                            <Clock size={8.5} /> {currentSessionHistory.length} Qs <span className="text-[7.5px] opacity-60 font-mono">8</span>
                           </motion.button>
                         )}
 
                         {/* STOP Recording Session */}
                         <motion.button 
-                          whileHover={{ scale: 1.06, y: -1 }}
-                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={stopRecording} 
-                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                          className="px-2 py-0.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_8px_rgba(244,63,94,0.2)]"
                           title="Stop Recording Session (6 / D)"
                         >
-                          <Square size={9} fill="currentColor" /> STOP <span className="text-[8px] opacity-60 font-mono">6</span>
+                          <Square size={8.5} fill="currentColor" /> STOP <span className="text-[7.5px] opacity-60 font-mono">6</span>
                         </motion.button>
 
-                        {/* Settings Button */}
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
-                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
-                          title="Settings"
-                        >
-                          <Settings size={12} />
-                        </motion.button>
+                        {/* Dedicated Window Controls Cluster (Never Overlaps) */}
+                        <div className="flex items-center gap-0.5 pl-1.5 ml-0.5 border-l border-white/10 shrink-0">
+                          {/* Settings Button */}
+                          <motion.button 
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.9 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                            onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
+                            className="p-1 bg-white/5 hover:bg-white/15 text-white/60 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
+                            title="Settings"
+                          >
+                            <Settings size={11} />
+                          </motion.button>
 
-                        {/* Minimize Dock Button */}
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={() => setIsTranscriptMinimized(true)}
-                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
-                          title="Minimize Dock"
-                        >
-                          <Minus size={12} />
-                        </motion.button>
+                          {/* Minimize Dock Button */}
+                          <motion.button 
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.9 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                            onClick={() => setIsTranscriptMinimized(true)}
+                            className="p-1 bg-white/5 hover:bg-white/15 text-white/60 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
+                            title="Minimize Dock"
+                          >
+                            <Minus size={11} />
+                          </motion.button>
 
-                        {/* Close Window */}
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={closeApp}
-                          className="p-1 bg-white/5 hover:bg-rose-500/20 text-white/50 hover:text-rose-400 rounded-md border border-white/10 transition-colors cursor-pointer"
-                          title="Close App"
-                        >
-                          <X size={12} />
-                        </motion.button>
+                          {/* Close Window */}
+                          <motion.button 
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.9 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                            onClick={closeApp}
+                            className="p-1 bg-white/5 hover:bg-rose-500/25 text-white/60 hover:text-rose-400 rounded-md border border-white/10 transition-colors cursor-pointer"
+                            title="Close App"
+                          >
+                            <X size={11} />
+                          </motion.button>
+                        </div>
                       </div>
                     </div>
 

@@ -25,8 +25,8 @@ let isStealthMode = true;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1040,
-    height: 780,
+    width: 1000,
+    height: 600,
     center: true,
     transparent: true,
     frame: false,
@@ -471,7 +471,7 @@ function createWindow() {
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width } = primaryDisplay.workAreaSize;
       
-      const w = layout === 'horizontal' ? 1040 : 450;
+      const w = layout === 'horizontal' ? 1080 : 450;
       // Low profile compact dock height while listening/transcribing: 175px fits both controls & live transcript perfectly!
       const h = 175;
 
@@ -493,7 +493,7 @@ function createWindow() {
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.workAreaSize;
-      const w = 1040;
+      const w = 1080;
 
       if (isFullscreen) {
         // Expand window downwards to display the full AI Answer view
@@ -523,12 +523,12 @@ function createWindow() {
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.workAreaSize;
 
-      // Restore exact dashboard window size (1040x780) so content is never cut off
-      if (preInterviewBounds && preInterviewBounds.width > 300 && preInterviewBounds.height > 600) {
+      // Restore exact dashboard window size (1000x600) so content fits neatly above taskbar
+      if (preInterviewBounds && preInterviewBounds.width > 300 && preInterviewBounds.height > 500) {
         mainWindow.setBounds(preInterviewBounds);
       } else {
-        const w = 1040;
-        const h = 780;
+        const w = 1000;
+        const h = 600;
         mainWindow.setBounds({
           width: w,
           height: h,
