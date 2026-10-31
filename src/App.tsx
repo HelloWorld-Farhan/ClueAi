@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowUp, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert } from 'lucide-react';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
@@ -1142,7 +1142,6 @@ function App() {
   }, [isAiFullscreen]);
 
   const [aiCopied, setAiCopied] = useState(false);
-  const [topBarHovered, setTopBarHovered] = useState(false);
 
   const [topBarPos, setTopBarPos] = useState({ x: 0, y: 0 });
   const [answerPos, setAnswerPos] = useState({ x: 0, y: 0 });
@@ -2589,16 +2588,14 @@ function App() {
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
             <div 
-              className={`border border-white/10 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-150 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex items-start justify-between w-[1050px] max-w-none mx-auto gap-4 p-4'}`}
+              className={`border border-white/15 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-150 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex flex-col w-full max-w-[940px] mx-auto gap-3 p-4'}`}
               style={{
-                backgroundColor: isTopBarMinimized ? undefined : 'transparent',
+                backgroundColor: isTopBarMinimized ? undefined : (altColor ? 'rgba(255, 255, 255, 0.96)' : 'rgba(12, 13, 20, 0.96)'),
                 backdropFilter: (isTopBarMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: isTopBarMinimized ? undefined : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
-                boxShadow: isTopBarMinimized ? undefined : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
+                borderColor: isTopBarMinimized ? undefined : (altColor ? 'rgba(128, 128, 128, 0.3)' : 'rgba(255, 255, 255, 0.15)'),
+                boxShadow: isTopBarMinimized ? undefined : "0 25px 60px -10px rgba(0, 0, 0, 0.8)",
                 transform: `translate(${topBarPos.x}px, ${topBarPos.y}px)`
               }}
-              onMouseEnter={!isTopBarMinimized ? () => setTopBarHovered(true) : undefined}
-              onMouseLeave={!isTopBarMinimized ? () => setTopBarHovered(false) : undefined}
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
@@ -2631,153 +2628,98 @@ function App() {
                 </div>
               ) : (
                 <>
-              <div className="flex items-center gap-3 no-drag shrink-0 pt-2">
-                <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default">
-                  <Move size={16} />
-                </div>
-              </div>
-                 <div className="flex-1 min-w-0 pr-4 no-drag">
-                   <div className="text-white/80 font-semibold select-text w-full bg-transparent p-3 rounded-xl">
-                     <div className="flex items-center justify-between mb-2">
-                       <div className="flex items-center gap-2 opacity-60 text-[10px] uppercase font-black tracking-widest"><Cpu size={12} /> Question Context</div>
-                       <span className={`px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none transition-opacity duration-200 ${topBarHovered ? 'opacity-100' : 'opacity-0'}`}>
-                         <Keyboard size={10} /> Ctrl+Shift+K — Close AI Panel
-                       </span>
-                     </div>
-                     <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed w-full custom-scrollbar pr-2 max-h-[150px] overflow-y-auto">
-                       {transcript || "No transcript provided."}
-                       {currentSnapshots.length > 0 && (
-                         <div className="mt-3 pt-3 border-t border-white/10">
-                           <div className="flex items-center gap-2 flex-wrap">
-                             {currentSnapshots.map((snap, idx) => (
-                               <div key={idx} className="relative group/snap rounded-lg overflow-hidden border border-white/20 w-16 h-12 shrink-0">
-                                 <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
-                                 <button 
-                                   onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))}
-                                   className="absolute top-0 right-0 p-1 bg-rose-500/90 hover:bg-rose-500 text-white rounded-bl-lg opacity-0 group-hover/snap:opacity-100 transition-opacity"
-                                 >
-                                   <X size={10} />
-                                 </button>
-                               </div>
-                             ))}
-                             
-                             <button
-                               onClick={async () => {
-                                 setIsPaused(true);
-                                 isPausedRef.current = true;
-                                 const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
-                                 if (!base64Img) {
-                                   setIsPaused(false);
-                                   isPausedRef.current = false;
-                                   return;
-                                 }
-                                 setCurrentSnapshots(prev => {
-        const next = [...prev, base64Img];
-        if (next.length > 8) return next.slice(next.length - 8);
-        return next;
-      });
-                                 setIsPaused(false);
-                                 isPausedRef.current = false;
-                               }}
-                               className="w-16 h-12 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg border border-white/20 border-dashed text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
-                               
-                             >
-                               <Plus size={14} />
-                               <span className="text-[8px] uppercase font-bold mt-0.5 tracking-wider">Add</span>
-                             </button>
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-               
-               <div className="flex items-center shrink-0 mt-1 gap-3">
-                  
-                  <div className="bg-fuchsia-500/20 backdrop-blur-md px-3 py-1.5 rounded-md border border-fuchsia-500/30 text-[10px] font-black uppercase tracking-[0.1em] text-fuchsia-300 shadow-sm flex items-center gap-1.5 hidden md:flex">
-                     <Cpu size={12} /> {activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : "AI Answer"}
+                {/* Row 1: Header Toolbar */}
+                <div className="flex items-center justify-between w-full no-drag gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-white/5 rounded-lg text-white/50 border border-white/5 flex items-center justify-center cursor-default">
+                      <Move size={14} />
+                    </div>
+                    <div className="bg-gradient-to-r from-fuchsia-500/20 to-purple-500/20 text-fuchsia-300 border border-fuchsia-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse"></span>
+                      <span>{activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : (provider ? provider.toUpperCase() : "AI Answer")}</span>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center gap-1.5 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner px-2">
-                    <span className={`text-[9px] font-black uppercase text-white/70 transition-opacity duration-200 ${topBarHovered ? 'opacity-100' : 'opacity-0'}`}>Hotkeys</span>
-                    <button 
-                      onClick={() => {
-                        const newState = !globalHotkeysEnabled;
-                        setGlobalHotkeysEnabled(newState);
-                        ipcRenderer.invoke('toggle-global-hotkeys', newState);
-                      }} 
-                      className={`relative w-7 h-4 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
-                      title="Toggle Global Hotkeys"
-                    >
-                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-3' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
-                     <button onClick={() => {
-                       const next = Math.max(10, aiAnswerTextSize - 1);
-                       setAiAnswerTextSize(next);
-                       localStorage.setItem('clueai_answer_size', next.toString());
-                     }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Decrease Text Size">A-</button>
-                     <span className="text-[11px] text-white/50 font-mono w-4 text-center select-none font-black">{aiAnswerTextSize}</span>
-                     <button onClick={() => {
-                       const next = Math.min(40, aiAnswerTextSize + 1);
-                       setAiAnswerTextSize(next);
-                       localStorage.setItem('clueai_answer_size', next.toString());
-                     }} className="px-2 py-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors font-black text-xs" title="Increase Text Size">A+</button>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
-                    <button 
-                      onClick={() => setIsAnswerMinimized(prev => !prev)}
-                      className={`px-2 py-1.5 hover:bg-white/10 rounded-lg transition-colors font-black text-base flex items-center justify-center ${isAnswerMinimized ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
-                      title={isAnswerMinimized ? "Expand Answer Panel" : "Minimize Answer Panel"}
-                    >
-                      🗕
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5 shrink-0 shadow-inner">
+
+                  {/* Right: Actions in single, non-overlapping horizontal group */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Font Size */}
+                    <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10 shrink-0">
+                      <button 
+                        onClick={() => {
+                          const next = Math.max(10, aiAnswerTextSize - 1);
+                          setAiAnswerTextSize(next);
+                          localStorage.setItem('clueai_answer_size', next.toString());
+                        }} 
+                        className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs" 
+                        title="Decrease Text Size"
+                      >
+                        A-
+                      </button>
+                      <span className="text-[11px] text-white/70 font-mono w-4 text-center select-none font-bold">{aiAnswerTextSize}</span>
+                      <button 
+                        onClick={() => {
+                          const next = Math.min(40, aiAnswerTextSize + 1);
+                          setAiAnswerTextSize(next);
+                          localStorage.setItem('clueai_answer_size', next.toString());
+                        }} 
+                        className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs" 
+                        title="Increase Text Size"
+                      >
+                        A+
+                      </button>
+                    </div>
+
+                    {/* Auto Scroll */}
                     <button 
                       onClick={() => setScrollSpeed(prev => (prev === 0 ? 1 : 0))} 
-                      className={`px-2 py-1.5 rounded-lg transition-colors font-black text-xs flex items-center gap-1 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400' : 'hover:bg-white/10 text-white/50 hover:text-white'}`}
+                      className={`px-2.5 py-1 rounded-xl transition-colors font-bold text-xs flex items-center gap-1.5 border border-white/10 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/60 hover:text-white'}`}
                       title="Auto Scroll"
                     >
                       {scrollSpeed > 0 ? <Pause size={12}/> : <ArrowDown size={12}/>}
+                      <span className="text-[10px]">Scroll</span>
                     </button>
-                    {scrollSpeed > 0 && (
-                      <div className="flex items-center gap-0.5 ml-0.5 pr-1">
-                        {[1, 2, 3, 4, 5].map(speed => (
-                          <button
-                            key={speed}
-                            onClick={() => setScrollSpeed(speed)}
-                            className={`w-4 h-4 text-[9px] font-bold rounded flex items-center justify-center ${scrollSpeed === speed ? 'bg-white text-black' : 'hover:bg-white/10 text-white/50'}`}
-                          >
-                            {speed}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                   <button 
-                     onClick={() => {
-                       // Abort any in-progress generation immediately
-                       if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
-                       setIsGenerating(false);
-                       setIsAiFullscreen(false);
-                       setTranscript('');
-                       finalizedTranscriptRef.current = '';
-                       interimTranscriptRef.current = '';
-                       setAiAnswer('');
-                       setCurrentSnapshots([]);
-                       clearAudioBuffer();
-                       listeningSessionIdRef.current++;
-                       setIsPaused(false);
-                       isPausedRef.current = false;
-                     }} 
-                     title="Next Question (Press Z or 1)"
-                     className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0"
-                   >
-                     <Play size={12} fill="currentColor" /> NEXT Q. <span className={`text-[8px] bg-black/20 px-1 rounded ml-0.5 transition-opacity duration-200 ${topBarHovered ? 'opacity-70' : 'opacity-0'}`}>1</span>
-                   </button>
-                  <div className="flex flex-col gap-1.5 shrink-0">
+
+                    {/* Copy Button */}
+                    <button
+                      onClick={() => {
+                        if (!aiAnswer) return;
+                        clipboard.writeText(aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim());
+                        setAiCopied(true);
+                        setTimeout(() => setAiCopied(false), 2000);
+                      }}
+                      className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5"
+                      title="Copy Answer to Clipboard"
+                    >
+                      {aiCopied ? (
+                        <><CheckCircle2 size={13} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
+                      ) : (
+                        <><FileText size={13} /> COPY</>
+                      )}
+                    </button>
+
+                    {/* Next Question Button */}
+                    <button 
+                      onClick={() => {
+                        if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+                        setIsGenerating(false);
+                        setIsAiFullscreen(false);
+                        setTranscript('');
+                        finalizedTranscriptRef.current = '';
+                        interimTranscriptRef.current = '';
+                        setAiAnswer('');
+                        setCurrentSnapshots([]);
+                        clearAudioBuffer();
+                        listeningSessionIdRef.current++;
+                        setIsPaused(false);
+                        isPausedRef.current = false;
+                      }} 
+                      title="Next Question (Press Z or 1)"
+                      className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
+                    >
+                      <Play size={12} fill="currentColor" /> NEXT Q. <span className="text-[9px] bg-black/20 px-1 rounded ml-0.5">1</span>
+                    </button>
+
+                    {/* Close Button */}
                     <button 
                       onClick={() => {
                         if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
@@ -2792,41 +2734,81 @@ function App() {
                         setAiAnswer('');
                         setCurrentSnapshots([]);
                       }}
-                      title="Clear Answer & Return (Press C or 3)"
-                      className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
+                      title="Close Answer (Press C or 3)"
+                      className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
                     >
-                      <Square size={12} fill="currentColor" /> CLOSE <span className={`text-[8px] border border-amber-500/30 px-1 rounded ml-0.5 transition-opacity duration-200 ${topBarHovered ? 'opacity-70' : 'opacity-0'}`}>3</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!aiAnswer) return;
-                        clipboard.writeText(aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim());
-                        setAiCopied(true);
-                        setTimeout(() => setAiCopied(false), 2000);
-                      }}
-                      className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all justify-center w-full"
-                    >
-                      {aiCopied ? (
-                        <><CheckCircle2 size={12} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
-                      ) : (
-                        <><FileText size={12} /> COPY</>
-                      )}
+                      <X size={13} /> CLOSE <span className="text-[9px] bg-white/10 px-1 rounded ml-0.5">3</span>
                     </button>
                   </div>
-               </div>
-               </>
+                </div>
+
+                {/* Row 2: Question Context Box */}
+                <div className="w-full bg-black/50 border border-white/10 rounded-xl p-3 no-drag">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[11px] uppercase tracking-wider">
+                      <Cpu size={12} /> Interviewer Question
+                    </div>
+                    <span className="text-[10px] text-white/40">
+                      Press 1 for Next Q • 3 to Close
+                    </span>
+                  </div>
+                  <div className="text-white text-[13.5px] leading-relaxed max-h-[85px] overflow-y-auto custom-scrollbar select-text pr-2">
+                    {transcript || "Screenshot / Vision analysis provided."}
+                  </div>
+
+                  {/* Inline Snapshots */}
+                  {currentSnapshots.length > 0 && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10 flex-wrap">
+                      {currentSnapshots.map((snap, idx) => (
+                        <div key={idx} className="relative group/snap rounded-lg overflow-hidden border border-white/20 w-16 h-12 shrink-0">
+                          <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
+                          <button 
+                            onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-0 right-0 p-1 bg-rose-500/90 hover:bg-rose-500 text-white rounded-bl-lg opacity-0 group-hover/snap:opacity-100 transition-opacity"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={async () => {
+                          setIsPaused(true);
+                          isPausedRef.current = true;
+                          const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
+                          if (!base64Img) {
+                            setIsPaused(false);
+                            isPausedRef.current = false;
+                            return;
+                          }
+                          setCurrentSnapshots(prev => {
+                            const next = [...prev, base64Img];
+                            if (next.length > 8) return next.slice(next.length - 8);
+                            return next;
+                          });
+                          setIsPaused(false);
+                          isPausedRef.current = false;
+                        }}
+                        className="w-16 h-12 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg border border-white/20 border-dashed text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+                      >
+                        <Plus size={14} />
+                        <span className="text-[8px] uppercase font-bold mt-0.5 tracking-wider">Add</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                </>
               )}
             </div>
             
             {/* AI Answer Content Panel */}
             <div 
-              className={`border border-white/10 shrink-0 drag-area pointer-events-auto shadow-2xl mt-2 mb-4 transition-all duration-150 ${isAnswerMinimized ? 'flex p-3 bg-[#09090b]/50 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-[1050px] max-w-none max-h-[85vh] relative rounded-[2.5rem]'}`}
+              className={`border border-white/15 shrink-0 drag-area pointer-events-auto shadow-2xl mt-1 mb-4 transition-all duration-150 ${isAnswerMinimized ? 'flex p-3 bg-[#09090b]/90 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-full max-w-[940px] max-h-[75vh] relative rounded-2xl shadow-[0_30px_70px_rgba(0,0,0,0.95)]'}`}
               style={{
-                backgroundColor: isAnswerMinimized ? undefined : 'transparent',
+                backgroundColor: isAnswerMinimized ? undefined : (altColor ? 'rgba(255, 255, 255, 0.96)' : 'rgba(10, 11, 16, 0.98)'),
                 backdropFilter: (isAnswerMinimized || opacity < 0.05) ? "none" : `blur(${opacity * 30}px)`,
-                borderColor: isAnswerMinimized ? undefined : (altColor ? `rgba(128, 128, 128, ${0.2 * opacity})` : `rgba(255, 255, 255, ${0.1 * opacity})`),
+                borderColor: isAnswerMinimized ? undefined : (altColor ? 'rgba(128, 128, 128, 0.3)' : 'rgba(255, 255, 255, 0.15)'),
                 borderWidth: isAnswerMinimized ? undefined : "1px",
-                boxShadow: isAnswerMinimized ? undefined : (opacity > 0.1 ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none"),
+                boxShadow: isAnswerMinimized ? undefined : "0 30px 80px -10px rgba(0, 0, 0, 0.9)",
                 transform: `translate(${answerPos.x}px, ${answerPos.y}px)`,
                 width: isAnswerMinimized ? Math.max(250, 350 + (stealthFontSize - 11.5) * 25) + 'px' : undefined,
                 height: isAnswerMinimized ? Math.max(100, 200 + (stealthFontSize - 11.5) * 15) + 'px' : undefined
@@ -2957,51 +2939,50 @@ function App() {
       >
         {/* Header Container */}
       {isRecording ? (
-        // --- INTERVIEW PAGE HEADER (2 ROWS) ---
-        <div className="w-full flex-none bg-brand-bg/80 backdrop-blur-3xl px-4 py-3 border-b border-brand-border flex flex-col gap-3 shadow-[0_2px_20px_rgba(0,0,0,0.5)] relative z-30 drag-area rounded-t-2xl shrink-0">
+        // --- INTERVIEW PAGE HEADER (ELEGANT DOCK BAR) ---
+        <div className="w-full flex-none bg-[#090a10]/95 backdrop-blur-2xl px-4 py-2.5 border-b border-white/10 flex flex-col gap-2 shadow-[0_4px_25px_rgba(0,0,0,0.6)] relative z-30 drag-area rounded-t-2xl shrink-0">
           
-          {/* ROW 1: Status Tags and Window Controls */}
+          {/* ROW 1: Status Badges and Window Controls */}
           <div className="flex items-center justify-between w-full no-drag">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex items-center gap-2">
               {stealthMode ? (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-green-500/10 text-green-400 border-green-500/30">
-                  Stealth: ON
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Stealth ON
                 </span>
               ) : (
-                <span className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider flex items-center gap-1 leading-none bg-red-600 text-white border-red-400 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_rgba(220,38,38,0.8)]">
-                  <AlertTriangle size={10} /> STEALTH OFF: YOU CAN BE SEEN!
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-rose-600/90 text-white border-rose-400 animate-pulse shadow-[0_0_12px_rgba(225,29,72,0.6)]">
+                  <AlertTriangle size={11} /> STEALTH OFF
                 </span>
               )}
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-white/5 text-white/70 border-white/10 uppercase tracking-wider leading-none">
-                Opacity: {Math.round(opacity * 100)}%
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-white/5 text-white/70 border-white/10">
+                Opacity {Math.round(opacity * 100)}%
               </span>
-              <span className="text-[9px] font-bold px-2 py-1 rounded border bg-brand-accent/20 text-brand-accent border-brand-accent/30 uppercase tracking-wider leading-none">
-                Press 7 or Q to edit Transcript
-              </span>
-              <span className="text-[9px] font-bold px-2 py-1 rounded border bg-white text-black border-white uppercase tracking-wider leading-none">
-                Press 0 to change text color
-              </span>
-              <span className="text-[9px] font-bold px-2 py-1 rounded border bg-blue-500/20 text-blue-300 border-blue-500/30 uppercase tracking-wider leading-none flex items-center gap-1">
-                <ArrowUp size={10} /><ArrowDown size={10} /> Alt + Arrows to Scroll
+              <span className="text-[10px] font-medium text-white/40 hidden md:inline-flex items-center gap-1.5 ml-2">
+                <span className="bg-white/10 text-white/70 px-1.5 py-0.2 rounded font-mono text-[9px]">2 / X</span> Generate Answer
+                <span className="mx-1 text-white/20">•</span>
+                <span className="bg-white/10 text-white/70 px-1.5 py-0.2 rounded font-mono text-[9px]">1 / Z</span> Pause
+                <span className="mx-1 text-white/20">•</span>
+                <span className="bg-white/10 text-white/70 px-1.5 py-0.2 rounded font-mono text-[9px]">4 / A</span> Snip
               </span>
             </div>
             
-            {/* Minimize / Maximize / Close (Row 1) */}
+            {/* Window Controls */}
             <div className="flex items-center gap-1">
-              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
-                <ZoomOut size={16} />
+              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Shrink Window (Alt -)">
+                <ZoomOut size={15} />
               </button>
-              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
-                <ZoomIn size={16} />
+              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+                <ZoomIn size={15} />
               </button>
-              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-                <Maximize size={16} />
+              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Toggle Fullscreen">
+                <Maximize size={15} />
               </button>
-              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-                <Minus size={16} />
+              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Minimize">
+                <Minus size={15} />
               </button>
-              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
-                <X size={16} />
+              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/50 hover:text-rose-400 transition-colors" title="Close">
+                <X size={15} />
               </button>
             </div>
           </div>
@@ -4668,106 +4649,181 @@ function App() {
         </div>
       )}
 
-      {/* Main UI */}
+{/* Main UI */}
         {isRecording && (
-          <div className="flex-1 flex flex-col gap-6 min-h-0 relative">
-            {/* 1. Top Toolbar (The "Floating Pill") */}
+          <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4">
+            {/* Redesigned Premium Transcript Command Dock */}
             <div 
-              className={`flex items-center justify-between shrink-0 mx-auto relative z-20 drag-area transition-all duration-150 ${isTranscriptMinimized ? 'bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] w-14 h-14 rounded-full p-0 cursor-pointer group border border-white/10' : 'w-fit max-w-full rounded-[2rem] px-4 py-2.5 bg-transparent'}`}
+              className={`w-full max-w-[920px] mx-auto relative z-20 drag-area transition-all duration-200 ${isTranscriptMinimized ? 'w-14 h-14 bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] rounded-full p-0 cursor-pointer group border border-white/10 flex items-center justify-center' : 'bg-[#0c0d15]/96 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-3'}`}
             >
               {isTranscriptMinimized ? (
                 <div 
-                  className="w-full h-full flex items-center justify-center text-blue-400 hover:text-blue-300 transition-colors"
+                  className="w-full h-full flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-colors"
                   onClick={() => setIsTranscriptMinimized(false)}
                   title="Expand Transcript"
                 >
-                  <MessageSquare size={24} className="group-hover:scale-110 transition-transform" />
-                  <div className="absolute inset-0 rounded-full border border-blue-400/30 group-hover:border-blue-400/60 animate-[spin_4s_linear_infinite]" />
+                  <MessageSquare size={22} className="group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 rounded-full border border-cyan-400/30 group-hover:border-cyan-400/60 animate-[spin_4s_linear_infinite]" />
                 </div>
               ) : (
                 <>
-               {/* Left: Mic / Pause */}
-               <button onClick={handlePauseToggle} className="flex items-center justify-center w-11 h-11 rounded-full bg-white/5 hover:bg-white/10 transition-colors shadow-inner">
-                  <Mic size={20} className={!isPaused ? "animate-pulse text-cyan-400 drop-shadow-md" : "text-white/50"} />
-               </button>
-
-               {/* Center: Fake Search Bar / Status */}
-               <div className="w-[400px] mx-6">
-                  <div className="w-full rounded-[2rem] py-3 px-6 text-[13px] text-white/50 font-semibold flex items-start justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors overflow-hidden min-h-[46px]" style={{ backgroundColor: 'transparent', borderColor: `rgba(255, 255, 255, ${0.1 * opacity})`, borderWidth: '1px' }}>
-                     <span className={`tracking-wide whitespace-pre-wrap break-words flex-1 leading-relaxed mt-0.5 ${altColor ? 'text-black/40' : 'text-white'}`}>
-                       {!isRecording 
-                         ? "Ask me anything..." 
-                         : (transcript 
-                             ? transcript 
-                             : (isGenerating ? "Drafting response..." : (isPaused ? "Paused..." : "Listening to conversation...")))}
-                     </span>
-                     <div className="flex items-center gap-3 shrink-0">
-                         {currentSessionHistory.length > 0 && (
-                            <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white shadow-sm tracking-widest">
-                               {currentSessionHistory.length} <MessageSquare size={12} />
-                            </span>
-                         )}
-                     </div>
-                  </div>
-                  
-                  {/* Snapshots inserted inline if any */}
-                  {currentSnapshots.length > 0 && (
-                    <div className="flex-none flex gap-3 overflow-x-auto custom-scrollbar relative items-center py-2 px-4 rounded-2xl bg-transparent border border-white/5 backdrop-blur-md">
-                      {currentSnapshots.map((snap, idx) => (
-                        <div key={idx} className="relative h-[60px] aspect-video rounded-lg overflow-hidden shadow-sm border border-cyan-500/30 bg-black/80 group shrink-0">
-                          <img src={snap} alt="Snapshot" className="w-full h-full object-contain" />
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                            <button onClick={() => setPreviewSnapshot(snap)} className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur-md transition-colors" title="Preview">
-                              <Eye size={12} />
-                            </button>
-                            <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded backdrop-blur-md transition-colors" title="Remove">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {currentSnapshots.length > 1 && (
-                        <button onClick={() => setCurrentSnapshots([])} className="h-[60px] aspect-square rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors flex flex-col items-center justify-center gap-1 shrink-0" title="Clear All">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                {/* 1. Dock Top Header */}
+                <div className="flex items-center justify-between w-full no-drag pb-1">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex h-2.5 w-2.5">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
+                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
                     </div>
-                  )}
-
-                  {/* 2. Generate Answer Button */}
-                  <div className="flex justify-center mt-3 shrink-0 relative z-20 w-full">
-                       <button onClick={() => { if (!isGenerating) manualTriggerAI(); }} className="w-full max-w-[400px] py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-[13px] font-bold rounded-[1rem] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)] tracking-wide border border-cyan-400/50">
-                          {isGenerating ? <Loader2 size={16} className="animate-spin" /> : (
-                            <div className="flex items-center justify-center gap-2">
-                              <span>Generate Answer</span>
-                              <div className="flex items-center gap-1 opacity-70 ml-1">
-                                <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">2</span>
-                                <span className="text-[9px]">/</span>
-                                <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded leading-none shadow-sm">X</span>
-                              </div>
-                            </div>
-                          )}
-                       </button>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                      <Mic size={13} className={!isPaused ? "animate-pulse" : "text-white/40"} />
+                      {!isPaused ? "Live Transcription" : "Microphone Paused"}
+                    </span>
+                    {isGenerating && (
+                      <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full animate-pulse font-bold flex items-center gap-1">
+                        <Loader2 size={10} className="animate-spin" /> Drafting Answer...
+                      </span>
+                    )}
                   </div>
-               </div>
 
-               {/* Right: Icons */}
-               <div className="flex flex-wrap items-center justify-end gap-2">
-                  <button onClick={() => setShowPreviousQuestions(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
-                     <Clock size={20} />
+                  {/* Header Actions */}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setShowVirtualKeyboard(true)}
+                      className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                      title="Edit Transcript (7 / Q)"
+                    >
+                      <Edit2 size={11} /> Edit <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">7 / Q</span>
+                    </button>
+                    {currentSessionHistory.length > 0 && (
+                      <button 
+                        onClick={() => setShowPreviousQuestions(true)}
+                        className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                        title="Session History"
+                      >
+                        <Clock size={11} /> {currentSessionHistory.length} Qs
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
+                      className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg border border-white/10 transition-colors shadow-sm"
+                      title="Settings"
+                    >
+                      <Settings size={13} />
+                    </button>
+                    <button 
+                      onClick={() => setIsTranscriptMinimized(true)}
+                      className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg border border-white/10 transition-colors shadow-sm"
+                      title="Minimize Transcript"
+                    >
+                      <Minus size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Main High-Contrast Transcript Reading Area */}
+                <div 
+                  ref={transcriptScrollRef}
+                  className="w-full min-h-[58px] max-h-[140px] overflow-y-auto custom-scrollbar bg-black/60 border border-white/10 hover:border-cyan-500/30 rounded-xl p-3 select-text transition-colors shadow-inner no-drag"
+                  style={{ fontSize: `${transcriptTextSize}px` }}
+                >
+                  {transcript ? (
+                    <span className="text-white font-medium leading-relaxed tracking-wide select-text">
+                      {transcript}
+                    </span>
+                  ) : (
+                    <span className="text-white/40 italic flex items-center gap-2 select-none">
+                      <span className="inline-block w-2 h-2 rounded-full bg-cyan-400/50 animate-ping"></span>
+                      Listening to conversation... (Interviewer questions will be transcribed here)
+                    </span>
+                  )}
+                </div>
+
+                {/* Snapshots Bar if any exist */}
+                {currentSnapshots.length > 0 && (
+                  <div className="flex items-center gap-2.5 overflow-x-auto custom-scrollbar py-1.5 px-2 bg-black/40 rounded-xl border border-white/5 no-drag">
+                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                      <Crop size={11} /> Snips:
+                    </span>
+                    {currentSnapshots.map((snap, idx) => (
+                      <div key={idx} className="relative h-[48px] aspect-video rounded-lg overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
+                        <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                          <button onClick={() => setPreviewSnapshot(snap)} className="p-1 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
+                            <Eye size={10} />
+                          </button>
+                          <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-1 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {currentSnapshots.length > 1 && (
+                      <button onClick={() => setCurrentSnapshots([])} className="h-[48px] px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[10px] font-bold shrink-0">
+                        <Trash2 size={12} /> Clear All
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. Bottom Action Toolbar */}
+                <div className="flex items-center justify-between gap-3 pt-1 w-full no-drag">
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={handlePauseToggle}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'}`}
+                      title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
+                    >
+                      {isPaused ? <Play size={11} fill="currentColor" /> : <Pause size={11} fill="currentColor" />}
+                      <span>{isPaused ? 'Resume Mic' : 'Pause Mic'}</span>
+                      <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">1</span>
+                    </button>
+
+                    <button 
+                      onClick={handleSnipClick}
+                      className="px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Snip Screen Question (4 / A)"
+                    >
+                      <Crop size={12} />
+                      <span>Snip Question</span>
+                      <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">4</span>
+                    </button>
+
+                    <button 
+                      onClick={handleClearAll}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Clear Transcript (3 / C)"
+                    >
+                      <Trash2 size={12} />
+                      <span>Clear</span>
+                      <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">3</span>
+                    </button>
+                  </div>
+
+                  {/* Big Glowing Generate Answer Button */}
+                  <button 
+                    onClick={() => { if (!isGenerating) manualTriggerAI(); }}
+                    disabled={isGenerating}
+                    className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wide uppercase rounded-xl shadow-[0_0_25px_rgba(6,182,212,0.45)] border border-cyan-400/40 flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin text-white" />
+                        <span>Generating Answer...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Cpu size={14} className="text-cyan-200" />
+                        <span>Generate Answer</span>
+                        <span className="bg-black/30 text-[10px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-1">2 / X</span>
+                      </>
+                    )}
                   </button>
-                  <button onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm">
-                     <Settings size={20} />
-                  </button>
-                  <button onClick={() => setIsTranscriptMinimized(true)} className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all hover:scale-110 active:scale-95 text-white shadow-sm" title="Minimize Transcript">
-                     <Minus size={20} />
-                  </button>
-               </div>
-               </>
+                </div>
+                </>
               )}
             </div>
-        </div>
-      )}
+          </div>
+        )}
       
       {/* API Key Missing Error Modal */}
       {showApiKeyMissingError && (
