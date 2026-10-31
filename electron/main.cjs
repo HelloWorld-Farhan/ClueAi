@@ -10,11 +10,12 @@ try {
 }
 
 let mainWindow;
+let isStealthMode = true;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 600,
+    width: 1040,
+    height: 780,
     center: true,
     transparent: true,
     frame: false,
@@ -108,8 +109,7 @@ function createWindow() {
 
 
   // Stealth Mode: Hide window from screen sharing software - always on by default
-  let isStealthMode = true;
-  mainWindow.setContentProtection(true); // Hide from OBS, screen sharing, etc.
+  mainWindow.setContentProtection(isStealthMode); // Hide from OBS, screen sharing, etc.
 
   ipcMain.handle('focus-window', () => {
     if (mainWindow) {
@@ -461,9 +461,8 @@ function createWindow() {
       const { width } = primaryDisplay.workAreaSize;
       
       const w = layout === 'horizontal' ? 1040 : 450;
-      // Ultra-low profile compact dock height while listening/transcribing: only ~150px!
-      // This leaves the ENTIRE desktop below completely free for user to work without mouse blocking!
-      const h = 150;
+      // Low profile compact dock height while listening/transcribing: 175px fits both controls & live transcript perfectly!
+      const h = 175;
 
       mainWindow.setBounds({
         width: w,
@@ -496,7 +495,7 @@ function createWindow() {
         });
       } else {
         // Shrink back to low-profile transcription dock at the top
-        const h = 150;
+        const h = 175;
         mainWindow.setBounds({
           width: w,
           height: h,
@@ -513,17 +512,17 @@ function createWindow() {
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.workAreaSize;
 
-      // Restore exact previous window size and position so length never increases unexpectedly
-      if (preInterviewBounds && preInterviewBounds.width > 200 && preInterviewBounds.height > 200) {
+      // Restore exact dashboard window size (1040x780) so content is never cut off
+      if (preInterviewBounds && preInterviewBounds.width > 300 && preInterviewBounds.height > 600) {
         mainWindow.setBounds(preInterviewBounds);
       } else {
-        const w = 1000;
-        const h = 600;
+        const w = 1040;
+        const h = 780;
         mainWindow.setBounds({
           width: w,
           height: h,
           x: Math.round((width - w) / 2),
-          y: Math.round((height - h) / 2)
+          y: Math.max(10, Math.round((height - h) / 2))
         });
       }
       preInterviewBounds = null;

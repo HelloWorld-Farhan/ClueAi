@@ -3002,7 +3002,8 @@ function App() {
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
-            <div className="flex flex-col flex-shrink overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <div className={`flex flex-col ${isRecording ? 'w-full h-full' : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar'}`}>
+      {!isRecording && (
       <div 
         className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
         onPointerDown={(e) => {
@@ -3018,167 +3019,7 @@ function App() {
           (e.target as HTMLElement).releasePointerCapture(e.pointerId);
         }}
       >
-        {/* Header Container */}
-      {isRecording ? (
-        // --- INTERVIEW PAGE HEADER (ELEGANT DOCK BAR) ---
-        <div className="w-full flex-none bg-[#090a10]/95 backdrop-blur-2xl px-4 py-2.5 border-b border-white/10 flex flex-col gap-2 shadow-[0_4px_25px_rgba(0,0,0,0.6)] relative z-30 drag-area rounded-t-2xl shrink-0">
-          
-          {/* ROW 1: Status Badges and Window Controls */}
-          <div className="flex items-center justify-between w-full no-drag">
-            <div className="flex items-center gap-2">
-              {stealthMode ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Stealth ON
-                </span>
-              ) : (
-                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-rose-600/90 text-white border-rose-400 animate-pulse shadow-[0_0_12px_rgba(225,29,72,0.6)]">
-                  <AlertTriangle size={11} /> STEALTH OFF
-                </span>
-              )}
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-white/5 text-white/70 border-white/10">
-                Opacity {Math.round(opacity * 100)}%
-              </span>
-              <span className="text-[10px] font-medium text-white/40 hidden md:inline-flex items-center gap-1.5 ml-2">
-                <span className="bg-white/10 text-white/70 px-1.5 py-0.2 rounded font-mono text-[9px]">2 / X</span> Generate Answer
-                <span className="mx-1 text-white/20">•</span>
-                <span className="bg-white/10 text-white/70 px-1.5 py-0.2 rounded font-mono text-[9px]">1 / Z</span> Pause
-                <span className="mx-1 text-white/20">•</span>
-                <span className="bg-white/10 text-white/70 px-1.5 py-0.2 rounded font-mono text-[9px]">4 / A</span> Snip
-              </span>
-            </div>
-            
-            {/* Window Controls */}
-            <div className="flex items-center gap-1">
-              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Shrink Window (Alt -)">
-                <ZoomOut size={15} />
-              </button>
-              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Enlarge Window (Alt +)">
-                <ZoomIn size={15} />
-              </button>
-              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Toggle Fullscreen">
-                <Maximize size={15} />
-              </button>
-              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors" title="Minimize">
-                <Minus size={15} />
-              </button>
-              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/50 hover:text-rose-400 transition-colors" title="Close">
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-
-          {/* ROW 2: Logo and Primary Controls */}
-          <div className="flex items-center justify-between w-full no-drag">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
-                <Move size={16} />
-              </div>
-              <div className="flex flex-col justify-center shrink-0">
-                <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
-                  <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
-                  <span>ClueAI</span>
-                  <span className="text-white font-mono font-bold text-sm ml-2 px-2 py-0.5 bg-white/10 rounded-md border border-white/20 shadow-inner leading-none">{formatTimer(recordingSeconds)}</span>
-                  <span className="ml-3 px-2 py-0.5 rounded border border-white/10 bg-black/20 text-[9px] font-bold text-white/40 tracking-wider uppercase flex items-center gap-1 pointer-events-none select-none">
-                    <Keyboard size={10} /> Ctrl+Shift+K to minimize/restore
-                  </span>
-                </h1>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <div className="flex items-center gap-3 mr-2 relative">
-                <div className="flex flex-col items-center justify-center mr-2">
-                  <button 
-                    onClick={() => {
-                      const newState = !globalHotkeysEnabled;
-                      setGlobalHotkeysEnabled(newState);
-                      ipcRenderer.invoke('toggle-global-hotkeys', newState);
-                    }} 
-                    className={`relative w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
-                    title="Toggle Global Hotkeys"
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                  <span className="text-[9px] font-black uppercase text-white/70 mt-1">Hotkeys</span>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="relative group">
-                    
-                    <div className="flex flex-col items-center group">
-                      <CustomSelect 
-                        value={provider} 
-                        onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
-                          if (val === 'groq' && !groqKeys.some(k => k.trim())) {
-                            setModelChangeMsg('No API key found in Groq');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'gemini-flash' && !geminiKeys.some(k => k.trim())) {
-                            setModelChangeMsg('No API key found in Gemini Flash');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'claude' && !claudeKeys.some(k => k.key.trim())) {
-                            setModelChangeMsg('No API key found in Claude');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'chatgpt' && !chatgptKeys.some(k => k.key.trim())) {
-                            setModelChangeMsg('No API key found in ChatGPT');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'deepseek' && !deepseekKeys.some(k => k.key.trim())) {
-                            setModelChangeMsg('No API key found in DeepSeek');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          
-                          setProvider(val);
-                          switchProvider(val);
-                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
-                          setModelChangeMsg(`Switched to ${nameMap[val]}`);
-                          setTimeout(() => setModelChangeMsg(''), 3000);
-                        }}
-                        options={[
-                          { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
-                          { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
-                          { value: 'claude', label: 'Claude 3.5 Sonnet' },
-                          { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
-                          { value: 'deepseek', label: 'DeepSeek Coder' }, { value: 'glm', label: 'GLM / NVIDIA' }]}
-                        className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 hover:border-brand-accent/30 rounded-full pl-8 pr-3 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_10px_rgba(0,0,0,0.2)] min-w-[140px]"
-                      icon={<Cpu size={13} className="text-brand-accent pointer-events-none" />}
-                    />
-                    <span className="text-[8px] font-medium text-white/50 mt-0.5 absolute -bottom-3.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Press S or 5</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-              
-              {isPaused ? (
-                <button onClick={handlePauseToggle} title="Next Question (Press Z or 1)" className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] tracking-wide transition-all shadow-[0_0_10px_rgba(34,197,94,0.3)] shrink-0">
-                  <Play size={12} fill="currentColor" /> NEXT Q. <span className="opacity-70 text-[8px] bg-black/20 px-1 rounded ml-0.5">1</span>
-                </button>
-              ) : (
-                <button onClick={handlePauseToggle} title="Pause (Press Z or 1)" className="flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
-                  <Pause size={12} fill="currentColor" /> PAUSE <span className="opacity-70 text-[8px] border border-yellow-500/30 px-1 rounded ml-0.5">1</span>
-                </button>
-              )}
-              <button onClick={handleSnipClick} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
-                <Crop size={12} /> SNIP <span className="opacity-70 text-[8px] border border-cyan-500/30 px-1 rounded ml-0.5">4</span>
-              </button>
-              <button onClick={handleClearAll} title="Clear Transcript (Press C or 3)" className="flex items-center gap-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-brand-subtext border border-slate-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
-                <Trash2 size={12} fill="currentColor" /> CLEAR <span className="opacity-70 text-[8px] border border-slate-500/30 px-1 rounded ml-0.5">3</span>
-              </button>
-              <button onClick={stopRecording} title="Stop Session (Press D or 6)" className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0">
-                <Square size={12} fill="currentColor" /> STOP <span className="opacity-70 text-[8px] border border-rose-500/30 px-1 rounded ml-0.5">6</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // --- MAIN DASHBOARD HEADER (PREMIUM OBSIDIAN GLASS) ---
+        {/* MAIN DASHBOARD HEADER (PREMIUM OBSIDIAN GLASS) */}
         <div className="w-full flex-none bg-[#0a0b12]/90 backdrop-blur-2xl px-5 py-3 border-b border-white/10 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.7)] relative z-30 drag-area rounded-t-2xl shrink-0">
           {/* Left: Brand & User Profile */}
           <div className="flex items-center gap-3.5 no-drag">
@@ -3288,8 +3129,8 @@ function App() {
             </div>
           </div>
         </div>
-      )}
       </div>
+      )}
 
       {/* Full-Screen Info Modal with Framer Motion */}
       <AnimatePresence>
@@ -4510,7 +4351,7 @@ function App() {
 
       {/* Dashboard Empty State */}
       {!isRecording && !showSettings && !showInfo && (
-        <div className="flex-1 flex flex-col gap-6 overflow-hidden mt-2 px-2">
+        <div className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
               <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
@@ -4852,75 +4693,148 @@ function App() {
                   >
                     {/* 1. Sleek Controls & Status Ribbon */}
                     <div className="flex items-center justify-between w-full no-drag px-1">
-                      {/* Left: Live Status & Hotkey Pills */}
+                      {/* Left: Drag Handle, Brand, Timer, Stealth, Hotkeys, Model Selector */}
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-                          <span className="relative flex h-2 w-2">
+                        <div className="p-1 bg-white/5 hover:bg-white/10 rounded text-white/40 hover:text-white/80 cursor-grab active:cursor-grabbing shrink-0" title="Drag Dock">
+                          <Move size={13} />
+                        </div>
+
+                        {/* Brand Logo & Live Recording Timer */}
+                        <div className="flex items-center gap-1.5 shrink-0 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/10 shadow-sm">
+                          <img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded shadow-sm border border-cyan-400/30" />
+                          <span className="text-[11px] font-black text-white">Clue<span className="text-cyan-400">AI</span></span>
+                          <span className="text-cyan-300 font-mono font-bold text-[10px] ml-1 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">{formatTimer(recordingSeconds)}</span>
+                        </div>
+
+                        {/* Stealth Shield Toggle Button */}
+                        <button
+                          onClick={() => {
+                            if (stealthMode) {
+                              setShowStealthWarning(true);
+                            } else {
+                              setStealthMode(true);
+                              ipcRenderer.invoke('set-stealth', true);
+                            }
+                          }}
+                          className={`px-2 py-1 rounded-lg font-bold text-[9.5px] flex items-center gap-1 border transition-all ${
+                            stealthMode
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                              : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'
+                          }`}
+                          title={stealthMode ? "Stealth Shield Active (Click to disable)" : "Stealth Shield OFF (Click to activate)"}
+                        >
+                          {stealthMode ? <ShieldCheck size={11} className="text-emerald-400" /> : <AlertTriangle size={11} className="text-rose-400" />}
+                          <span className="uppercase tracking-wider">{stealthMode ? "Stealth ON" : "Stealth OFF"}</span>
+                        </button>
+
+                        {/* Global Hotkeys Toggle */}
+                        <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-1 rounded-lg shrink-0" title="Toggle Global Hotkeys">
+                          <button 
+                            onClick={() => {
+                              const newState = !globalHotkeysEnabled;
+                              setGlobalHotkeysEnabled(newState);
+                              ipcRenderer.invoke('toggle-global-hotkeys', newState);
+                            }} 
+                            className={`relative w-6 h-3 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
+                          >
+                            <div className={`w-2 h-2 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-3' : 'translate-x-0'}`} />
+                          </button>
+                          <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/60">Hotkeys</span>
+                        </div>
+
+                        {/* Model Selector Dropdown */}
+                        <div className="shrink-0">
+                          <CustomSelect 
+                            value={provider} 
+                            onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
+                              setProvider(val);
+                              switchProvider(val);
+                              const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
+                              setModelChangeMsg(`Switched to ${nameMap[val] || val}`);
+                              setTimeout(() => setModelChangeMsg(''), 3000);
+                            }}
+                            options={[
+                              { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
+                              { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
+                              { value: 'claude', label: 'Claude 3.5 Sonnet' },
+                              { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
+                              { value: 'deepseek', label: 'DeepSeek Coder' },
+                              { value: 'glm', label: 'GLM / NVIDIA' }
+                            ]}
+                            className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[125px]"
+                            icon={<Cpu size={10} className="text-brand-accent pointer-events-none" />}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Right: Actions, History, Stop & Window Controls */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                          <span className="relative flex h-1.5 w-1.5">
                             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                            <span className={`relative inline-flex rounded-full h-2 w-2 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
                           </span>
-                          <span className="text-[10px] font-black uppercase tracking-wider">
-                            {!isPaused ? "Live STT" : "Paused"}
-                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
                         </div>
 
                         <button 
                           onClick={handlePauseToggle}
-                          className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                          className={`px-2 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
                           title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
                         >
-                          {isPaused ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
+                          {isPaused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
                           <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                          <span className="text-[8.5px] opacity-60 font-mono">1</span>
+                          <span className="text-[8px] opacity-60 font-mono">1</span>
                         </button>
 
                         <button 
                           onClick={handleSnipClick}
-                          className="px-2 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
+                          className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
                           title="Snip Screen Question (4 / A)"
                         >
-                          <Crop size={10} />
+                          <Crop size={9} />
                           <span>Snip</span>
-                          <span className="text-[8.5px] opacity-60 font-mono">4</span>
+                          <span className="text-[8px] opacity-60 font-mono">4</span>
                         </button>
 
                         <button 
                           onClick={handleClearAll}
-                          className="px-2 py-0.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
+                          className="px-2 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
                           title="Clear Transcript (3 / C)"
                         >
-                          <Trash2 size={10} />
+                          <Trash2 size={9} />
                           <span>Clear</span>
-                          <span className="text-[8.5px] opacity-60 font-mono">3</span>
+                          <span className="text-[8px] opacity-60 font-mono">3</span>
                         </button>
 
                         <button 
                           onClick={() => setShowVirtualKeyboard(true)}
-                          className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
+                          className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
                           title="Edit Transcript (7 / Q)"
                         >
-                          <Edit2 size={10} /> Edit <span className="text-[8.5px] opacity-60 font-mono">7</span>
+                          <Edit2 size={9} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
                         </button>
 
                         {currentSessionHistory.length > 0 && (
                           <button 
                             onClick={() => setShowPreviousQuestions(true)}
-                            className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
-                            title="Session History"
+                            className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
+                            title="Session History (8 / H)"
                           >
-                            <Clock size={10} /> {currentSessionHistory.length} Qs
+                            <Clock size={9} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
                           </button>
                         )}
 
-                        {isGenerating && (
-                          <span className="text-[9.5px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full animate-pulse font-bold flex items-center gap-1">
-                            <Loader2 size={9} className="animate-spin" /> Drafting Answer...
-                          </span>
-                        )}
-                      </div>
+                        {/* STOP Recording Session */}
+                        <button 
+                          onClick={stopRecording} 
+                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                          title="Stop Recording Session (6 / D)"
+                        >
+                          <Square size={9} fill="currentColor" /> STOP <span className="text-[8px] opacity-60 font-mono">6</span>
+                        </button>
 
-                      {/* Right: Settings and Minimize */}
-                      <div className="flex items-center gap-1.5">
+                        {/* Settings Button */}
                         <button 
                           onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
                           className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
@@ -4928,12 +4842,23 @@ function App() {
                         >
                           <Settings size={12} />
                         </button>
+
+                        {/* Minimize Dock Button */}
                         <button 
                           onClick={() => setIsTranscriptMinimized(true)}
                           className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
-                          title="Minimize Transcript"
+                          title="Minimize Dock"
                         >
                           <Minus size={12} />
+                        </button>
+
+                        {/* Close Window */}
+                        <button 
+                          onClick={closeApp}
+                          className="p-1 bg-white/5 hover:bg-rose-500/20 text-white/50 hover:text-rose-400 rounded-md border border-white/10 transition-colors"
+                          title="Close App"
+                        >
+                          <X size={12} />
                         </button>
                       </div>
                     </div>
@@ -4942,7 +4867,7 @@ function App() {
                     <div className="flex items-center gap-2.5 w-full no-drag">
                       <div 
                         ref={transcriptScrollRef}
-                        className="flex-1 min-h-[42px] max-h-[64px] overflow-y-auto custom-scrollbar bg-black/70 border border-white/12 hover:border-cyan-500/40 rounded-xl px-3.5 py-1.5 select-text transition-colors shadow-inner flex items-center"
+                        className="flex-1 min-h-[46px] max-h-[72px] overflow-y-auto custom-scrollbar bg-black/80 border border-cyan-500/25 hover:border-cyan-400/50 rounded-xl px-4 py-2 select-text transition-colors shadow-inner flex items-center"
                         style={{ fontSize: `${transcriptTextSize}px` }}
                       >
                         {transcript ? (
@@ -4951,7 +4876,7 @@ function App() {
                           </span>
                         ) : (
                           <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-ping"></span>
+                            <span className="inline-block w-2 h-2 rounded-full bg-cyan-400/60 animate-ping"></span>
                             Listening to conversation... (Interviewer questions appear here)
                           </span>
                         )}
@@ -4961,7 +4886,7 @@ function App() {
                       <button 
                         onClick={() => { if (!isGenerating) manualTriggerAI(); }}
                         disabled={isGenerating}
-                        className="h-[42px] px-5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[170px]"
+                        className="h-[46px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[180px]"
                       >
                         {isGenerating ? (
                           <>
