@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -14,10 +14,70 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 
 
 
+// Clean release notes HTML/Markdown formatter to eliminate raw tags
+  const renderReleaseNotes = (notes: any) => {
+    if (!notes) {
+      return (
+        <div className="space-y-2 text-xs text-white/70">
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold">•</span>
+            <span><strong className="text-white">One-Click Modern Silent Installer</strong>: Zero-friction instant installation matching Discord & VS Code.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold">•</span>
+            <span><strong className="text-white">Compact Window Geometry (1000x600)</strong>: Restored comfortable height ensuring window sits neatly above Windows taskbar without Start tooltips.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold">•</span>
+            <span><strong className="text-white">Command Dock De-Crowding</strong>: Ribbon expanded to 1080px with dedicated controls cluster.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold">•</span>
+            <span><strong className="text-white">Dynamic Real-Time STT Audio Waves</strong>: Live audio activity bars reacting during interviews.</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (typeof notes === 'string') {
+      if (notes.includes('<') && notes.includes('>')) {
+        return (
+          <div
+            className="text-xs text-white/80 space-y-2 [&_h2]:text-sm [&_h2]:font-black [&_h2]:text-cyan-300 [&_h2]:mb-1.5 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-blue-300 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_li]:text-white/75 [&_strong]:text-white [&_strong]:font-bold [&_p]:text-white/75 [&_p]:mb-1"
+            dangerouslySetInnerHTML={{ __html: notes }}
+          />
+        );
+      }
+      return <div className="whitespace-pre-wrap text-xs text-white/80 leading-relaxed">{notes}</div>;
+    }
+
+    if (Array.isArray(notes)) {
+      return (
+        <div className="space-y-2 text-xs text-white/80">
+          {notes.map((note: any, idx: number) => {
+            const text = note.note || (typeof note === 'string' ? note : JSON.stringify(note));
+            if (typeof text === 'string' && text.includes('<') && text.includes('>')) {
+              return (
+                <div
+                  key={idx}
+                  className="space-y-1 [&_h2]:text-sm [&_h2]:font-black [&_h2]:text-cyan-300 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-blue-300 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:text-white/75 [&_strong]:text-white"
+                  dangerouslySetInnerHTML={{ __html: text }}
+                />
+              );
+            }
+            return <div key={idx} className="whitespace-pre-wrap leading-relaxed">{text}</div>;
+          })}
+        </div>
+      );
+    }
+
+    return <div className="text-xs text-white/70">{JSON.stringify(notes)}</div>;
+  };
+
 const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
   const [copied, setCopied] = useState(false);
   const [empty, setEmpty] = useState(false);
-  
+
   const handleCopy = () => {
     if (!text || text.trim() === "") {
       setEmpty(true);
@@ -28,12 +88,13 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {copied && <span className="text-green-500 text-[10px] font-bold animate-pulse">Copied!</span>}
       {empty && <span className="text-rose-500 text-[10px] font-bold animate-pulse">No Text</span>}
-      <button 
+      <button
         onClick={handleCopy}
         className={className}
         title={tooltip}
@@ -108,7 +169,7 @@ const validateChatgptKey = async (key: string): Promise<boolean> => {
   return key.trim().length > 0;
 };
 
-const validateDeepseekKey = async (key: string): Promise<{valid: boolean, balance: string}> => {
+const validateDeepseekKey = async (key: string): Promise<{ valid: boolean, balance: string }> => {
   if (!key.trim()) return { valid: false, balance: '' };
   try {
     const response = await fetch('https://api.deepseek.com/user/balance', {
@@ -136,17 +197,17 @@ const validateGlmKey = async (key: string): Promise<boolean> => {
 const CustomSelect = ({ value, onChange, options, className, icon, listClassName }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find((o: any) => o.value === value) || options[0];
-  
+
   return (
     <>
       <div className={`relative ${className || ''}`}>
         {isOpen && (
-          <div 
-            className="fixed inset-0 z-[100]" 
+          <div
+            className="fixed inset-0 z-[100]"
             onPointerDown={(e) => { e.stopPropagation(); setIsOpen(false); }}
           />
         )}
-        <div 
+        <div
           className="flex items-center justify-between gap-2 cursor-pointer w-full relative z-[105]"
           onPointerDown={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
         >
@@ -159,8 +220,8 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
         {isOpen && (
           <div className={`absolute z-[110] left-0 right-0 top-full mt-1.5 bg-[#18181b] border border-white/10 rounded-xl overflow-hidden shadow-2xl max-h-60 overflow-y-auto ${listClassName || ''}`}>
             {options.map((opt: any) => (
-              <div 
-                key={opt.value} 
+              <div
+                key={opt.value}
                 className={`px-4 py-3 hover:bg-white/10 cursor-pointer text-sm transition-colors ${opt.value === value ? 'bg-brand-accent/20 text-white font-bold' : 'text-brand-subtext hover:text-white'}`}
                 onPointerDown={(e) => {
                   e.stopPropagation();
@@ -174,7 +235,7 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
             ))}
           </div>
         )}
-      
+
       </div>
     </>
   );
@@ -189,14 +250,14 @@ function App() {
     return (localStorage.getItem('selected_provider') as any) || 'groq';
   });
   const [groqKeys, setGroqKeys] = useState<string[]>(() => {
-    try { 
-      const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]'); 
+    try {
+      const keys = JSON.parse(localStorage.getItem('groq_api_keys') || '[]');
       return keys.length === 15 ? keys : [...keys, ...Array(15).fill('')].slice(0, 15);
     } catch { return Array(15).fill(''); }
   });
   const [geminiKeys, setGeminiKeys] = useState<string[]>(() => {
-    try { 
-      const keys = JSON.parse(localStorage.getItem('gemini_api_keys') || '[]'); 
+    try {
+      const keys = JSON.parse(localStorage.getItem('gemini_api_keys') || '[]');
       return keys.length === 15 ? keys : [...keys, ...Array(15).fill('')].slice(0, 15);
     } catch { return Array(15).fill(''); }
   });
@@ -207,36 +268,36 @@ function App() {
   const [showGeminiKeys, setShowGeminiKeys] = useState<boolean[]>(Array(15).fill(false));
 
   const [claudeKeys, setClaudeKeys] = useState<TimedApiKey[]>(() => {
-    try { 
-      const keys = JSON.parse(localStorage.getItem('claude_api_keys') || '[]'); 
-      return keys.length === 2 ? keys : [...keys, ...Array(2).fill({key: '', addedAt: 0})].slice(0, 2);
-    } catch { return Array(2).fill({key: '', addedAt: 0}); }
+    try {
+      const keys = JSON.parse(localStorage.getItem('claude_api_keys') || '[]');
+      return keys.length === 2 ? keys : [...keys, ...Array(2).fill({ key: '', addedAt: 0 })].slice(0, 2);
+    } catch { return Array(2).fill({ key: '', addedAt: 0 }); }
   });
   const [chatgptKeys, setChatgptKeys] = useState<TimedApiKey[]>(() => {
-    try { 
-      const keys = JSON.parse(localStorage.getItem('chatgpt_api_keys') || '[]'); 
-      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
-    } catch { return Array(3).fill({key: '', addedAt: 0}); }
+    try {
+      const keys = JSON.parse(localStorage.getItem('chatgpt_api_keys') || '[]');
+      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({ key: '', addedAt: 0 })].slice(0, 3);
+    } catch { return Array(3).fill({ key: '', addedAt: 0 }); }
   });
   const [deepseekKeys, setDeepseekKeys] = useState<TimedApiKey[]>(() => {
-    try { 
-      const keys = JSON.parse(localStorage.getItem('deepseek_api_keys') || '[]'); 
-      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
-    } catch { return Array(3).fill({key: '', addedAt: 0}); }
+    try {
+      const keys = JSON.parse(localStorage.getItem('deepseek_api_keys') || '[]');
+      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({ key: '', addedAt: 0 })].slice(0, 3);
+    } catch { return Array(3).fill({ key: '', addedAt: 0 }); }
   });
-  
+
   const [glmKeys, setGlmKeys] = useState<TimedApiKey[]>(() => {
-    try { 
-      const keys = JSON.parse(localStorage.getItem('glm_api_keys') || '[]'); 
-      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({key: '', addedAt: 0})].slice(0, 3);
-    } catch { return Array(3).fill({key: '', addedAt: 0}); }
+    try {
+      const keys = JSON.parse(localStorage.getItem('glm_api_keys') || '[]');
+      return keys.length === 3 ? keys : [...keys, ...Array(3).fill({ key: '', addedAt: 0 })].slice(0, 3);
+    } catch { return Array(3).fill({ key: '', addedAt: 0 }); }
   });
 
   const [claudeKeyStatus, setClaudeKeyStatus] = useState<KeyValidationState[]>(Array(2).fill('idle'));
   const [chatgptKeyStatus, setChatgptKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
   const [deepseekKeyStatus, setDeepseekKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
   const [glmKeyStatus, setGlmKeyStatus] = useState<KeyValidationState[]>(Array(3).fill('idle'));
-  
+
   const [showClaudeKeys, setShowClaudeKeys] = useState<boolean[]>(Array(2).fill(false));
   const [showChatgptKeys, setShowChatgptKeys] = useState<boolean[]>(Array(3).fill(false));
   const [showDeepseekKeys, setShowDeepseekKeys] = useState<boolean[]>(Array(3).fill(false));
@@ -249,7 +310,7 @@ function App() {
   const [showAudioErrorModal, setShowAudioErrorModal] = useState(false);
   const [activeMicName, setActiveMicName] = useState('Default Microphone');
 
-  
+
   const cleanKeys = (keys: TimedApiKey[], limitDays: number) => {
     return keys.map(k => {
       if (!k.addedAt) return k;
@@ -258,7 +319,7 @@ function App() {
     });
   };
 
-  
+
 
 
   useEffect(() => {
@@ -279,7 +340,7 @@ function App() {
     ipcRenderer.invoke('toggle-mic-mute', newState);
   };
 
-  const [apiAccordion, setApiAccordion] = useState<'groq'|'gemini'|'claude'|'chatgpt'|'deepseek'|'glm'|'none'>('none');
+  const [apiAccordion, setApiAccordion] = useState<'groq' | 'gemini' | 'claude' | 'chatgpt' | 'deepseek' | 'glm' | 'none'>('none');
 
   const [isRecording, setIsRecording] = useState(false);
   // const [isAnswerMaximized, setIsAnswerMaximized] = useState(false);
@@ -302,8 +363,8 @@ function App() {
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
-  
-  const [stealthWarningToast, setStealthWarningToast] = useState<{x: number, y: number, isShieldToast?: boolean} | null>(null);
+
+  const [stealthWarningToast, setStealthWarningToast] = useState<{ x: number, y: number, isShieldToast?: boolean } | null>(null);
 
   const [stealthMode, setStealthMode] = useState(() => {
     try {
@@ -316,21 +377,21 @@ function App() {
   const [showStealthWarning, setShowStealthWarning] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
   const virtualKeyboardTextareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
   const [transcriptTextSize, setTranscriptTextSize] = useState(() => {
     try { return parseInt(localStorage.getItem('clueai_transcript_size') || '15'); } catch { return 15; }
   });
   const [aiAnswerTextSize, setAiAnswerTextSize] = useState(() => {
     try { return parseInt(localStorage.getItem('clueai_answer_size') || '15'); } catch { return 15; }
   });
-  const [currentSessionHistory, setCurrentSessionHistory] = useState<{question: string, answer: string, images?: string[], modelInfo?: string}[]>([]);
+  const [currentSessionHistory, setCurrentSessionHistory] = useState<{ question: string, answer: string, images?: string[], modelInfo?: string }[]>([]);
   const [showPreviousQuestions, setShowPreviousQuestions] = useState(false);
   const [expandedAnswers, setExpandedAnswers] = useState<Record<number, boolean>>({});
-  
+
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const aiAnswerScrollRef = useRef<HTMLDivElement>(null);
   const scrollRafRef = useRef<number | null>(null);
-  
+
   // Auto-scroll to bottom when new AI answer text arrives (smooth, hardware-synced RAF)
   useEffect(() => {
     if (aiAnswerScrollRef.current) {
@@ -346,11 +407,11 @@ function App() {
       if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
     };
   }, [aiAnswer]);
-  
+
   const [editTranscript, setEditTranscript] = useState('');
-  
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{top: number, right: number} | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number, right: number } | null>(null);
   const [isAnswerMinimized, setIsAnswerMinimized] = useState(false);
   const [stealthFontSize, setStealthFontSize] = useState<number>(() => Number(localStorage.getItem('clueai_stealth_font_size')) || 11.5);
   const [isTranscriptMinimized, setIsTranscriptMinimized] = useState(false);
@@ -360,7 +421,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.1.0');
+  const [appVersion, setAppVersion] = useState('5.0.0');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -379,17 +440,17 @@ function App() {
   // The old reminders state is completely removed in favor of reminderProfiles
   const [showReminderPopup, setShowReminderPopup] = useState(false);
   const [showReminderErrors, setShowReminderErrors] = useState(false);
-  
+
   const [showNotesPopup, setShowNotesPopup] = useState(false);
 
   const [showNotesErrors, setShowNotesErrors] = useState(false);
   const [notesForm, setNotesForm] = useState({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
-  const [notesProfiles, setNotesProfiles] = useState<{id: string, notes: string, email: string, date: string, time: string, ampm: string}[]>(() => {
+  const [notesProfiles, setNotesProfiles] = useState<{ id: string, notes: string, email: string, date: string, time: string, ampm: string }[]>(() => {
     try { return JSON.parse(localStorage.getItem('notes_profiles') || '[]'); } catch { return []; }
   });
 
-  const [alertMessage, setAlertMessage] = useState<{title: string, message: string, type: 'error' | 'success' | 'warning'} | null>(null);
-  const [reminderProfiles, setReminderProfiles] = useState<{id: string, name: string, jobTitle: string, email: string, phone: string, date: string, time: string, ampm: string}[]>(() => {
+  const [alertMessage, setAlertMessage] = useState<{ title: string, message: string, type: 'error' | 'success' | 'warning' } | null>(null);
+  const [reminderProfiles, setReminderProfiles] = useState<{ id: string, name: string, jobTitle: string, email: string, phone: string, date: string, time: string, ampm: string }[]>(() => {
     try { return JSON.parse(localStorage.getItem('reminder_profiles') || '[]'); } catch { return []; }
   });
 
@@ -400,13 +461,13 @@ function App() {
   useEffect(() => {
     localStorage.setItem('notes_profiles', JSON.stringify(notesProfiles));
   }, [notesProfiles]);
-  
-  const [reminderForm, setReminderForm] = useState({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
+
+  const [reminderForm, setReminderForm] = useState({ id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM' });
   const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success'>('idle');
   const [reminderPopupMode, setReminderPopupMode] = useState<'create' | 'preview' | 'edit'>('create');
   const [notesPopupMode, setNotesPopupMode] = useState<'create' | 'preview' | 'edit'>('create');
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'reminder' | 'note', name: string, isPast: boolean } | null>(null);
-  
+
   const getDayOfWeek = (dateString: string) => {
     if (!dateString) return '';
     const parts = dateString.split('-');
@@ -424,7 +485,7 @@ function App() {
   const validateDateTime = (dateStr: string, timeStr: string, ampmStr: string) => {
     let dateError = '';
     let timeError = '';
-    
+
     // Date validation
     if (dateStr && dateStr.length === 10) {
       const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
@@ -472,10 +533,10 @@ function App() {
           let [hours, minutes] = timeStr.split(':').map(Number);
           if (ampmStr === 'PM' && hours < 12) hours += 12;
           if (ampmStr === 'AM' && hours === 12) hours = 0;
-          
+
           const inputTime = new Date(today);
           inputTime.setHours(hours, minutes, 0, 0);
-          
+
           if (inputTime <= today) {
             timeError = 'Time cannot be in the past';
           }
@@ -489,47 +550,47 @@ function App() {
   const handleDateChange = (val: string, form: any, setForm: any) => {
     // Let them backspace without auto-filling everything back
     if (val.length < form.date.length) {
-      setForm({...form, date: val});
+      setForm({ ...form, date: val });
       return;
     }
-    
+
     let formatted = val.replace(/[^\d-]/g, '');
-    
+
     if (formatted.length === 1 && parseInt(formatted) > 3) {
       formatted = '0' + formatted;
     }
-    
+
     if (formatted.length === 2 && !formatted.includes('-')) {
       const d = new Date();
       const month = (d.getMonth() + 1).toString().padStart(2, '0');
       const year = d.getFullYear().toString();
       formatted = `${formatted}-${month}-${year}`;
     }
-    
-    setForm({...form, date: formatted.substring(0, 10)});
+
+    setForm({ ...form, date: formatted.substring(0, 10) });
   };
 
   const handleTimeChange = (val: string, form: any, setForm: any) => {
     if (val.length < form.time.length) {
-      setForm({...form, time: val});
+      setForm({ ...form, time: val });
       return;
     }
-    
+
     let formatted = val.replace(/[^\d:]/g, '');
-    
+
     if (formatted.length === 1 && parseInt(formatted) > 1) {
       formatted = '0' + formatted + ':';
     }
-    
+
     if (formatted.length === 2 && !formatted.includes(':')) {
       formatted = formatted + ':';
     }
-    
-    setForm({...form, time: formatted.substring(0, 5)});
-  };
-  
 
-  
+    setForm({ ...form, time: formatted.substring(0, 5) });
+  };
+
+
+
   const [resumeText, setResumeText] = useState(localStorage.getItem('resume_text') || '');
   const [resumeFileName, setResumeFileName] = useState(localStorage.getItem('resume_file_name') || '');
   const [isUploadingResume, setIsUploadingResume] = useState(false);
@@ -555,25 +616,25 @@ function App() {
   const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
   // Snapshot States
   const [currentSnapshots, setCurrentSnapshots] = useState<string[]>([]);
-  
+
   const [previewSnapshot, setPreviewSnapshot] = useState<string | null>(null);
-  
+
 
   // Session History
-    const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
-  const [expandedHistoryItems, setExpandedHistoryItems] = useState<Record<string, {transcript: boolean, answer: boolean}>>({});
-  
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [expandedHistoryItems, setExpandedHistoryItems] = useState<Record<string, { transcript: boolean, answer: boolean }>>({});
+
   const toggleHistoryItem = (sessionId: string, idx: number, type: 'transcript' | 'answer') => {
     const key = `${sessionId}-${idx}`;
     setExpandedHistoryItems(prev => ({
       ...prev,
       [key]: {
-        ...(prev[key] || {transcript: false, answer: false}),
+        ...(prev[key] || { transcript: false, answer: false }),
         [type]: !(prev[key]?.[type])
       }
     }));
   };
-  const [sessions, setSessions] = useState<{id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string, snapshotHistory?: {id: string, image: string, transcriptContext: string}[], history?: {question: string, answer: string, images?: string[], modelInfo?: string}[]}[]>(() => {
+  const [sessions, setSessions] = useState<{ id: string, name: string, time: string, transcript: string, aiAnswer: string, date?: string, snapshotHistory?: { id: string, image: string, transcriptContext: string }[], history?: { question: string, answer: string, images?: string[], modelInfo?: string }[] }[]>(() => {
     try { return JSON.parse(localStorage.getItem('sessions') || '[]'); } catch { return []; }
   });
   const [showSessionPrompt, setShowSessionPrompt] = useState(false);
@@ -582,22 +643,22 @@ function App() {
   // const [showNoInputError, setShowNoInputError] = useState(false);
   const [sessionNameInput, setSessionNameInput] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState('');
-  
+
   const [sessionLog, setSessionLog] = useState('');
   const [interviewTitle, setInterviewTitle] = useState(localStorage.getItem('interview_title') || '');
   const [sessionError, setSessionError] = useState('');
-  
-  const [saveMessages, setSaveMessages] = useState<{type: 'success' | 'invalid' | 'duplicate', text: string}[]>([]);
-  const [deleteMessage, setDeleteMessage] = useState<{provider: string, index: number} | null>(null);
 
-  const [activeAIInfo, setActiveAIInfo] = useState<{provider: string, index: number} | null>(null);
+  const [saveMessages, setSaveMessages] = useState<{ type: 'success' | 'invalid' | 'duplicate', text: string }[]>([]);
+  const [deleteMessage, setDeleteMessage] = useState<{ provider: string, index: number } | null>(null);
+
+  const [activeAIInfo, setActiveAIInfo] = useState<{ provider: string, index: number } | null>(null);
   const [modelChangeMsg, setModelChangeMsg] = useState('');
   const [globalHotkeysEnabled, setGlobalHotkeysEnabled] = useState(true);
 
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-        if (target.closest && target.closest('.stealth-exempt')) return;
+      if (target.closest && target.closest('.stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', false);
@@ -606,7 +667,7 @@ function App() {
     };
     const handleFocusOut = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-        if (target.closest && target.closest('.stealth-exempt')) return;
+      if (target.closest && target.closest('.stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', true);
@@ -627,7 +688,7 @@ function App() {
 
   const claudeValidationCache = useRef<Record<string, boolean>>({});
   const chatgptValidationCache = useRef<Record<string, boolean>>({});
-  const deepseekValidationCache = useRef<Record<string, {valid: boolean, balance: string}>>({});
+  const deepseekValidationCache = useRef<Record<string, { valid: boolean, balance: string }>>({});
   const glmValidationCache = useRef<Record<string, boolean>>({});
 
 
@@ -639,8 +700,8 @@ function App() {
     const invClaude = claudeKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     const invChatgpt = chatgptKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
     const invDeepseek = deepseekKeyStatus.map((s, i) => s === 'invalid' ? i + 1 : -1).filter(i => i !== -1);
-    
-    let msgs: {type: 'success' | 'invalid' | 'duplicate', text: string}[] = [];
+
+    let msgs: { type: 'success' | 'invalid' | 'duplicate', text: string }[] = [];
     if (dupGroq.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Groq Key ${dupGroq.join(' and ')} are duplicates.` });
     if (dupGem.length > 0) msgs.push({ type: 'duplicate', text: `Warning: Gemini Key ${dupGem.join(' and ')} are duplicates.` });
     if (invGroq.length > 0) msgs.push({ type: 'invalid', text: `Error: Groq Key ${invGroq.join(' and ')} are invalid.` });
@@ -663,16 +724,16 @@ function App() {
     localStorage.setItem('glm_api_keys', JSON.stringify(glmKeys));
     initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
     setSTTApiKey(groqKeys.filter(k => k.trim()));
-    
+
     if (msgs.length === 0) {
       msgs.push({ type: 'success', text: 'Saved successfully!' });
     }
-    
+
     setSaveMessages(msgs);
     setTimeout(() => setSaveMessages([]), 8000);
   };
 
-    useEffect(() => { localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys)); }, [groqKeys]);
+  useEffect(() => { localStorage.setItem('groq_api_keys', JSON.stringify(groqKeys)); }, [groqKeys]);
   useEffect(() => { localStorage.setItem('gemini_api_keys', JSON.stringify(geminiKeys)); }, [geminiKeys]);
   useEffect(() => { localStorage.setItem('claude_api_keys', JSON.stringify(claudeKeys)); }, [claudeKeys]);
   useEffect(() => { localStorage.setItem('chatgpt_api_keys', JSON.stringify(chatgptKeys)); }, [chatgptKeys]);
@@ -722,9 +783,9 @@ function App() {
           for (let i = 0; i < 15; i++) {
             const key = groqKeys[i].trim();
             if (key && groqKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
-               if (groqValidationCache.current[key] !== undefined) {
-                 next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
-               }
+              if (groqValidationCache.current[key] !== undefined) {
+                next[i] = groqValidationCache.current[key] ? 'valid' : 'invalid';
+              }
             }
           }
           return next;
@@ -775,9 +836,9 @@ function App() {
           for (let i = 0; i < 15; i++) {
             const key = geminiKeys[i].trim();
             if (key && geminiKeys.findIndex((k, idx) => idx !== i && k.trim() === key) === -1) {
-               if (geminiValidationCache.current[key] !== undefined) {
-                 next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
-               }
+              if (geminiValidationCache.current[key] !== undefined) {
+                next[i] = geminiValidationCache.current[key] ? 'valid' : 'invalid';
+              }
             }
           }
           return next;
@@ -797,7 +858,7 @@ function App() {
           keysToValidate.add(key);
         }
       }
-      
+
       setClaudeKeyStatus(prev => {
         const next = [...prev];
         for (let i = 0; i < 2; i++) {
@@ -845,7 +906,7 @@ function App() {
           keysToValidate.add(key);
         }
       }
-      
+
       setChatgptKeyStatus(prev => {
         const next = [...prev];
         for (let i = 0; i < 3; i++) {
@@ -895,7 +956,7 @@ function App() {
           }
         }
       }
-      
+
       setGlmKeyStatus(prev => {
         const next = [...prev];
         for (let i = 0; i < 3; i++) {
@@ -919,15 +980,15 @@ function App() {
         await Promise.all(Array.from(keysToValidate).map(async (key) => {
           glmValidationCache.current[key] = await validateGlmKey(key);
         }));
-        
+
         setGlmKeyStatus(prev => {
           const next = [...prev];
           for (let i = 0; i < 3; i++) {
             const key = glmKeys[i].key.trim();
             if (key && glmKeys.findIndex((k, idx) => idx !== i && k.key.trim() === key) === -1) {
-               if (glmValidationCache.current[key] !== undefined) {
-                 next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
-               }
+              if (glmValidationCache.current[key] !== undefined) {
+                next[i] = glmValidationCache.current[key] ? 'valid' : 'invalid';
+              }
             }
           }
           return next;
@@ -946,7 +1007,7 @@ function App() {
           keysToValidate.add(key);
         }
       }
-      
+
       setDeepseekKeyStatus(prev => {
         const next = [...prev];
         for (let i = 0; i < 3; i++) {
@@ -968,7 +1029,7 @@ function App() {
         await Promise.all(Array.from(keysToValidate).map(async (key) => {
           deepseekValidationCache.current[key] = await validateDeepseekKey(key);
         }));
-        
+
         setDeepseekKeyStatus(prev => {
           const next = [...prev];
           for (let i = 0; i < 3; i++) {
@@ -981,7 +1042,7 @@ function App() {
           }
           return next;
         });
-        
+
         setDeepseekBalances(prev => {
           const next = [...prev];
           for (let i = 0; i < 3; i++) {
@@ -1004,10 +1065,10 @@ function App() {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const mics = devices.filter(d => d.kind === 'audioinput');
         if (mics.length > 0) {
-           const defaultMic = mics.find(m => m.deviceId === 'default') || mics[0];
-           setActiveMicName(defaultMic.label || 'Default Microphone');
+          const defaultMic = mics.find(m => m.deviceId === 'default') || mics[0];
+          setActiveMicName(defaultMic.label || 'Default Microphone');
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     fetchMicName();
   }, []);
@@ -1020,7 +1081,7 @@ function App() {
         setSysMicVolume(state.volume);
         setSysMicMuted(state.muted);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     const audioSyncInterval = setInterval(async () => {
       try {
@@ -1029,7 +1090,7 @@ function App() {
           setSysMicVolume(state.volume);
           setSysMicMuted(state.muted);
         }
-      } catch (e) {}
+      } catch (e) { }
     }, 1000);
     return () => clearInterval(audioSyncInterval);
   }, []);
@@ -1079,20 +1140,20 @@ function App() {
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (isRecording) {
-         const finalLog = sessionLog + `\n\n[APP_CLOSED_AT:${new Date().toLocaleTimeString()}]\n\n`;
-         if (finalLog.trim()) {
-           const newSession = {
-             id: currentSessionId || Date.now().toString(),
-             name: sessionNameInput || 'Untitled Session',
-             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-             date: new Date().toLocaleDateString(),
-             transcript: finalLog.trim(),
-             aiAnswer: '',
-             history: [...currentSessionHistory]
-           };
-           const newSessions = [newSession, ...sessions.filter(s => s.id !== newSession.id)];
-           localStorage.setItem('sessions', JSON.stringify(newSessions));
-         }
+        const finalLog = sessionLog + `\n\n[APP_CLOSED_AT:${new Date().toLocaleTimeString()}]\n\n`;
+        if (finalLog.trim()) {
+          const newSession = {
+            id: currentSessionId || Date.now().toString(),
+            name: sessionNameInput || 'Untitled Session',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date().toLocaleDateString(),
+            transcript: finalLog.trim(),
+            aiAnswer: '',
+            history: [...currentSessionHistory]
+          };
+          const newSessions = [newSession, ...sessions.filter(s => s.id !== newSession.id)];
+          localStorage.setItem('sessions', JSON.stringify(newSessions));
+        }
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -1103,11 +1164,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('interview_title', interviewTitle);
   }, [interviewTitle]);
-  
-  
-    
 
-  
+
+
+
+
   // Block typing if stealth mode is ON
   useEffect(() => {
     const handleInputAttempt = (e: Event) => {
@@ -1120,20 +1181,20 @@ function App() {
           const rect = target.getBoundingClientRect();
           const modal = target.closest('.w-full.max-w-2xl, .w-full.max-w-4xl, .w-full.max-w-sm, .w-full.max-w-md');
           const shieldBtn = modal ? modal.querySelector('.shield-toggle-btn') : null;
-          
+
           if (shieldBtn) {
             const shieldRect = shieldBtn.getBoundingClientRect();
             setStealthWarningToast({ x: shieldRect.left + (shieldRect.width / 2), y: shieldRect.bottom + 12, isShieldToast: true });
           } else {
             setStealthWarningToast({ x: rect.left + (rect.width / 2), y: rect.bottom + 12, isShieldToast: false });
           }
-          
+
           if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
           (window as any).stealthToastTimeout = setTimeout(() => setStealthWarningToast(null), 2500);
         }
       }
     };
-    
+
     document.addEventListener('mousedown', handleInputAttempt, true);
     document.addEventListener('keydown', handleInputAttempt, true);
     return () => {
@@ -1144,7 +1205,7 @@ function App() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAiFullscreen, setIsAiFullscreen] = useState(false);
-  
+
   useEffect(() => {
     ipcRenderer.send('set-window-maximized', isAiFullscreen);
   }, [isAiFullscreen]);
@@ -1175,7 +1236,7 @@ function App() {
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<any>(null);
-    const aiAbortControllerRef = useRef<AbortController | null>(null);
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -1196,15 +1257,15 @@ function App() {
     const shouldEnable = isRecording || isAiFullscreen;
 
     if (!shouldEnable) {
-       setGlobalHotkeysEnabled(false);
-       if (typeof ipcRenderer !== 'undefined') {
-         ipcRenderer.invoke('toggle-global-hotkeys', false);
-       }
+      setGlobalHotkeysEnabled(false);
+      if (typeof ipcRenderer !== 'undefined') {
+        ipcRenderer.invoke('toggle-global-hotkeys', false);
+      }
     } else {
-       setGlobalHotkeysEnabled(true);
-       if (typeof ipcRenderer !== 'undefined') {
-         ipcRenderer.invoke('toggle-global-hotkeys', true);
-       }
+      setGlobalHotkeysEnabled(true);
+      if (typeof ipcRenderer !== 'undefined') {
+        ipcRenderer.invoke('toggle-global-hotkeys', true);
+      }
     }
   }, [isAiFullscreen, isRecording]);
 
@@ -1226,7 +1287,7 @@ function App() {
         }
         return;
       }
-      
+
       const target = e.target as HTMLElement;
       if (target.closest && target.closest('.stealth-exempt')) {
         if (currentIgnoreRef.current !== false) {
@@ -1238,7 +1299,7 @@ function App() {
       }
 
       const shouldPassThrough = target.classList.contains('click-through-bg') || target === document.body || target === document.documentElement || target.id === 'root';
-      
+
       if (currentIgnoreRef.current !== shouldPassThrough) {
         currentIgnoreRef.current = shouldPassThrough;
         ipcRenderer.send('set-ignore-mouse-events', shouldPassThrough);
@@ -1295,7 +1356,7 @@ function App() {
   useEffect(() => {
     ipcRenderer.invoke('get-app-version').then((v: string) => {
       if (v) setAppVersion(v);
-    }).catch(() => {});
+    }).catch(() => { });
 
     const handleUpdaterStatus = (_event: any, data: any) => {
       if (!data) return;
@@ -1379,7 +1440,7 @@ function App() {
       setSources(s);
       if (s.length > 0) setSelectedSource(s[0].id);
     });
-    
+
     // ALWAYS default to Stealth Mode ON every time the app opens for maximum safety
     setStealthMode(true);
     ipcRenderer.invoke('set-stealth', true);
@@ -1391,24 +1452,24 @@ function App() {
 
   // Dynamically allow focus ONLY when the user needs to type text.
   // When these modals are closed, the app becomes a non-focusable Ghost Overlay to bypass anti-cheat checks.
-    useEffect(() => {
-      const wantsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
-      
-      // When NOT recording (e.g., in the main menu/history tab), the app should always be focusable so users can interact with everything normally.
-      // When RECORDING (stealth mode), the app is generally an unfocusable ghost overlay to avoid detection.
-      // However, if the user opens a modal (wantsFocus), they have accepted the risk and we MUST make it focusable so they can type.
-      const needsFocus = !isRecording || wantsFocus;
-      
-      ipcRenderer.invoke('set-focusable', needsFocus);
-      
-      // Only hijack keys globally if we are recording AND the window is acting as an unfocusable ghost overlay.
-      ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
-    }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording]);
+  useEffect(() => {
+    const wantsFocus = showSessionPrompt || showSettings || showUsernamePrompt || showReminderPopup || showVirtualKeyboard || showNotesPopup || (editingSessionId !== null);
+
+    // When NOT recording (e.g., in the main menu/history tab), the app should always be focusable so users can interact with everything normally.
+    // When RECORDING (stealth mode), the app is generally an unfocusable ghost overlay to avoid detection.
+    // However, if the user opens a modal (wantsFocus), they have accepted the risk and we MUST make it focusable so they can type.
+    const needsFocus = !isRecording || wantsFocus;
+
+    ipcRenderer.invoke('set-focusable', needsFocus);
+
+    // Only hijack keys globally if we are recording AND the window is acting as an unfocusable ghost overlay.
+    ipcRenderer.invoke('toggle-global-hotkeys', !needsFocus && isRecording);
+  }, [showSessionPrompt, showSettings, showUsernamePrompt, showReminderPopup, showVirtualKeyboard, showNotesPopup, editingSessionId, isRecording]);
 
   useEffect(() => {
     if (showVirtualKeyboard) {
       setEditTranscript(transcript);
-      
+
       const focusTextarea = () => {
         if (virtualKeyboardTextareaRef.current) {
           virtualKeyboardTextareaRef.current.focus();
@@ -1416,7 +1477,7 @@ function App() {
           virtualKeyboardTextareaRef.current.selectionEnd = virtualKeyboardTextareaRef.current.value.length;
         }
       };
-      
+
       // Try multiple times to beat the IPC window focus
       setTimeout(focusTextarea, 50);
       setTimeout(focusTextarea, 150);
@@ -1428,7 +1489,7 @@ function App() {
           focusTextarea();
         }
       };
-      
+
       window.addEventListener('keydown', handleGlobalKeydown);
       return () => window.removeEventListener('keydown', handleGlobalKeydown);
     }
@@ -1454,7 +1515,7 @@ function App() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'resume1' | 'resume2' | 'personal') => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (type === 'resume1') setIsUploadingResume(true);
     else if (type === 'resume2') setIsUploadingResume2(true);
     else setIsUploadingPersonalContext(true);
@@ -1462,20 +1523,20 @@ function App() {
     if (type === 'resume1') setResumeFileName(file.name);
     else if (type === 'resume2') setResumeFileName2(file.name);
     else setPersonalContextFileName(file.name);
-    
+
     try {
       let parsedText = '';
       if (file.name.endsWith('.pdf')) {
         const arrayBuffer = await file.arrayBuffer();
         const result = await ipcRenderer.invoke('parse-pdf-buffer', arrayBuffer);
-        
+
         if (result && typeof result === 'object') {
-           if (result.isScanned) {
-              setAlertMessage({ title: 'Image-Only PDF', message: 'Warning: This PDF appears to be a scanned document (images only) without selectable text. CrackIt cannot read text from images. Please upload a text-based PDF or convert this file using an OCR tool first.', type: 'warning' });
-           }
-           parsedText = result.text || '';
+          if (result.isScanned) {
+            setAlertMessage({ title: 'Image-Only PDF', message: 'Warning: This PDF appears to be a scanned document (images only) without selectable text. CrackIt cannot read text from images. Please upload a text-based PDF or convert this file using an OCR tool first.', type: 'warning' });
+          }
+          parsedText = result.text || '';
         } else if (typeof result === 'string') {
-           parsedText = result;
+          parsedText = result;
         }
       } else {
         const reader = new FileReader();
@@ -1484,7 +1545,7 @@ function App() {
           reader.readAsText(file);
         });
       }
-      
+
       if (parsedText) {
         if (type === 'resume1') setResumeText(parsedText);
         else if (type === 'resume2') setResumeText2(parsedText);
@@ -1540,7 +1601,7 @@ function App() {
       setShowSettings(true);
       return;
     }
-    
+
     if (!selectedSource) {
       setAlertMessage({ title: 'Source Missing', message: 'Please select a screen to capture.', type: 'warning' });
       return;
@@ -1550,7 +1611,7 @@ function App() {
     try {
       const testStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       testStream.getTracks().forEach(t => t.stop());
-    } catch(e) {
+    } catch (e) {
       // If getUserMedia fails the mic is not accessible
     }
 
@@ -1566,8 +1627,8 @@ function App() {
         gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
         oscillator.start();
         setTimeout(() => oscillator.stop(), 300);
-      } catch(e) {}
-      
+      } catch (e) { }
+
       setShowStartStealthWarning(true);
       return;
     }
@@ -1609,7 +1670,7 @@ function App() {
       setTopBarPos({ x: 0, y: 0 });
       setAnswerPos({ x: 0, y: 0 });
       ipcRenderer.invoke('toggle-global-hotkeys', true);
-      
+
       if (showSessionPrompt || isStealthBypass) {
         if (!currentSessionId) {
           const name = isStealthBypass ? ('Stealth Session ' + new Date().toLocaleTimeString()) : sessionNameInput.trim();
@@ -1621,15 +1682,15 @@ function App() {
             setSessionError('Session name already exists. Please choose a different name.');
             return;
           }
-          
+
           if (currentSessionId) {
-             const existing = sessions.find(s => s.id === currentSessionId);
-             if (existing) {
-                 setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-             }
+            const existing = sessions.find(s => s.id === currentSessionId);
+            if (existing) {
+              setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+            }
           } else {
-             setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-             setCurrentSessionId(Date.now().toString());
+            setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+            setCurrentSessionId(Date.now().toString());
           }
         }
       } else if (!currentSessionId) {
@@ -1645,26 +1706,26 @@ function App() {
       setIsRecording(true);
       setIsPaused(false);
     }
-    
+
     setSessionError('');
     setShowSessionPrompt(false);
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
-    
+
     initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
     setSTTApiKey(validGroqKeys);
 
-    await initSTT(() => {});
+    await initSTT(() => { });
     clearAudioBuffer();
 
-    try {      
+    try {
       const freshSources = await ipcRenderer.invoke('get-desktop-sources');
       let activeSourceId = selectedSource;
       if (freshSources && freshSources.length > 0) {
-         const found = freshSources.find((s: any) => s.id === selectedSource);
-         if (!found) activeSourceId = freshSources[0].id;
+        const found = freshSources.find((s: any) => s.id === selectedSource);
+        if (!found) activeSourceId = freshSources[0].id;
       }
-      
+
       const desktopStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           mandatory: {
@@ -1708,16 +1769,16 @@ function App() {
 
       const desktopSource = audioCtx.createMediaStreamSource(desktopStream);
       const micSource = audioCtx.createMediaStreamSource(micStream);
-      
+
       const mixer = audioCtx.createGain();
       desktopSource.connect(mixer);
       micSource.connect(mixer);
       const processor = audioCtx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
-      
+
       processor.onaudioprocess = (e) => {
         if (isPausedRef.current) return;
-        
+
         const inputData = e.inputBuffer.getChannelData(0);
         // Fast zero-churn allocation: only allocate the incoming small frame (16KB)
         const chunk = new Float32Array(inputData);
@@ -1754,15 +1815,15 @@ function App() {
     }
   };
 
-  const processAudioRef = useRef<() => void>(() => {});
+  const processAudioRef = useRef<() => void>(() => { });
   const isProcessingRef = useRef(false);
   const silenceFramesRef = useRef(0);
   const isPausedRef = useRef(isPaused);
   isPausedRef.current = isPaused;
   const listeningSessionIdRef = useRef(0);
-  
+
   const processAudio = async () => {
-    if (!streamRef.current) return; 
+    if (!streamRef.current) return;
     if (isPausedRef.current) {
       console.log('Paused');
       return;
@@ -1770,7 +1831,7 @@ function App() {
     if (isProcessingRef.current) return;
 
     if (totalAudioSamplesRef.current < 16000 * 0.5) {
-      return; 
+      return;
     }
 
     isProcessingRef.current = true;
@@ -1796,104 +1857,104 @@ function App() {
       for (let i = 0; i < recentAudio.length; i++) {
         if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
       }
-      
+
       // Dynamic noise gate threshold. Raised to 0.04 to correctly ignore MS Teams static/hum (which sits at ~0.02)
       if (maxVal < 0.04) {
         silenceFramesRef.current += 1;
         // If silent for more than 2 seconds (4 frames of 500ms) and buffer is not empty
         if (silenceFramesRef.current > 4 && totalAudioSamplesRef.current > 0) {
-           logEvent("Silence >2s detected. Committing sentence and flushing STT buffer.");
-           
-           if (interimTranscriptRef.current) {
-             finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
-           }
-           
-           clearAudioBuffer(); // FLUSH buffer!
-           interimTranscriptRef.current = ''; // Reset interim
-           silenceFramesRef.current = 0;
-           
-           if (!isPausedRef.current) {
-             setTranscript(finalizedTranscriptRef.current);
-           }
+          logEvent("Silence >2s detected. Committing sentence and flushing STT buffer.");
+
+          if (interimTranscriptRef.current) {
+            finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
+          }
+
+          clearAudioBuffer(); // FLUSH buffer!
+          interimTranscriptRef.current = ''; // Reset interim
+          silenceFramesRef.current = 0;
+
+          if (!isPausedRef.current) {
+            setTranscript(finalizedTranscriptRef.current);
+          }
         }
         isProcessingRef.current = false;
         return;
       }
-      
+
       logEvent(`Triggering STT. Buffer size: ${(currentAudio.length / 16000).toFixed(2)}s, Max Volume: ${maxVal.toFixed(4)}`);
-      
+
       silenceFramesRef.current = 0; // Reset silence counter since they are speaking
-      
+
       // FORCE COMMIT: If the buffer exceeds 12 seconds, Whisper large-v3-turbo might start dropping earlier sentences.
       // We force a commit here to start a fresh sentence chunk.
       if (currentAudio.length > 16000 * 12) {
-         logEvent("Buffer exceeded 12s. Force-committing to prevent Whisper summarization loss.");
-         if (interimTranscriptRef.current) {
-            finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
-         }
-         clearAudioBuffer();
-         interimTranscriptRef.current = '';
-         if (!isPausedRef.current) {
-            setTranscript(finalizedTranscriptRef.current);
-         }
-         isProcessingRef.current = false;
-         return; // Skip this STT cycle, the next cycle will grab the fresh audio
+        logEvent("Buffer exceeded 12s. Force-committing to prevent Whisper summarization loss.");
+        if (interimTranscriptRef.current) {
+          finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
+        }
+        clearAudioBuffer();
+        interimTranscriptRef.current = '';
+        if (!isPausedRef.current) {
+          setTranscript(finalizedTranscriptRef.current);
+        }
+        isProcessingRef.current = false;
+        return; // Skip this STT cycle, the next cycle will grab the fresh audio
       }
-      
+
       const currentSessionId = listeningSessionIdRef.current;
       const sttStart = Date.now();
       let text = await transcribeAudioChunk(currentAudio, resumeText + ' ' + personalContextText);
       const latency = Date.now() - sttStart;
-      
+
       // If the user clicked Next Question or Clear while we were awaiting STT, discard the stale result
       if (currentSessionId !== listeningSessionIdRef.current) {
-         logEvent("Discarding stale STT result from previous listening session.");
-         return;
+        logEvent("Discarding stale STT result from previous listening session.");
+        return;
       }
-      
+
       logEvent(`STT Latency: ${latency}ms, Raw Text: ${text}`);
-      
+
       // Aggressive filter for common Whisper static hallucinations
       const lowerText = (text || '').trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
       const hallucinations = [
-         'thank you', 'hello', 'food', 'io', 'you', 'test', 'bye', 
-         'tt', 'tep', 'teek', 'teekia', 'technical interview'
+        'thank you', 'hello', 'food', 'io', 'you', 'test', 'bye',
+        'tt', 'tep', 'teek', 'teekia', 'technical interview'
       ];
       if (hallucinations.includes(lowerText) || lowerText.length < 2) {
-         logEvent(`Filtered hallucination: ${text}`);
-         text = ''; // Ignore hallucination
+        logEvent(`Filtered hallucination: ${text}`);
+        text = ''; // Ignore hallucination
       }
-      
+
       // De-duplication logic to fix Whisper repeating phrases in large buffers
       let words = text.split(' ');
       let half = Math.floor(words.length / 2);
       if (half >= 4) {
-         let firstHalf = words.slice(0, half).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
-         let secondHalf = words.slice(-half).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
-         if (firstHalf === secondHalf) {
-            text = words.slice(0, half).join(' ');
-            logEvent(`Filtered duplication: ${text}`);
-         }
+        let firstHalf = words.slice(0, half).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
+        let secondHalf = words.slice(-half).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (firstHalf === secondHalf) {
+          text = words.slice(0, half).join(' ');
+          logEvent(`Filtered duplication: ${text}`);
+        }
       }
-      
+
       if (text && text.startsWith('ERR:')) {
-         console.error('Error during transcription:', text);
-         logEvent(`Transcription ERROR: ${text}`);
+        console.error('Error during transcription:', text);
+        logEvent(`Transcription ERROR: ${text}`);
       } else if (text) {
-         interimTranscriptRef.current = text;
-         if (!isPausedRef.current) {
-            setTranscript((finalizedTranscriptRef.current + ' ' + text).trim());
-         }
+        interimTranscriptRef.current = text;
+        if (!isPausedRef.current) {
+          setTranscript((finalizedTranscriptRef.current + ' ' + text).trim());
+        }
       }
     } finally {
       isProcessingRef.current = false;
     }
   };
-  
+
   processAudioRef.current = processAudio;
 
   // Use a stable ref so the keyboard useEffect never needs to re-register due to this function changing
-  const manualTriggerAIRef = useRef<(overrideSnapshots?: string[], overrideTranscript?: string, overrideLanguage?: string) => Promise<void>>(async () => {});
+  const manualTriggerAIRef = useRef<(overrideSnapshots?: string[], overrideTranscript?: string, overrideLanguage?: string) => Promise<void>>(async () => { });
 
   const manualTriggerAI = async (overrideSnapshots?: string[], overrideTranscript?: string, overrideLanguage?: string) => {
     const snaps = overrideSnapshots || currentSnapshots;
@@ -1904,16 +1965,16 @@ function App() {
     aiAbortControllerRef.current = new AbortController();
     const signal = aiAbortControllerRef.current.signal;
     const currentTranscript = overrideTranscript !== undefined ? overrideTranscript : transcript;
-    
+
     if (!interimTranscriptRef.current && !finalizedTranscriptRef.current && !currentTranscript && snaps.length === 0) {
       return;
     }
-    
+
     setIsPaused(true);
     isPausedRef.current = true;
     setIsGenerating(true);
     setIsAiFullscreen(true);
-    
+
     if (!isLanguageSwitch && (currentTranscript.trim() || snaps.length > 0)) {
       // Only add a new history item if this is NOT a language re-generation
       setCurrentSessionHistory(prev => [...prev, { question: currentTranscript, answer: '', images: [...snaps] }]);
@@ -1922,27 +1983,27 @@ function App() {
       setCurrentSessionHistory(prev => {
         if (prev.length === 0) return prev;
         const newHistory = [...prev];
-        newHistory[newHistory.length - 1] = { 
-          ...newHistory[newHistory.length - 1], 
+        newHistory[newHistory.length - 1] = {
+          ...newHistory[newHistory.length - 1],
           question: currentTranscript, // Update question to reflect any injected language requests
-          answer: '' 
+          answer: ''
         };
         return newHistory;
       });
     }
-    
+
     setAiAnswer('');
     let finalAnswer = '';
     let currentProviderInfo = '';
 
     try {
       await getInterviewAnswer(
-        currentTranscript, 
+        currentTranscript,
         resumeText,
         resumeText2,
         resumePriority,
         personalContextText,
-        interviewTitle, 
+        interviewTitle,
         snaps,
         (chunk) => {
           finalAnswer += chunk;
@@ -1965,7 +2026,7 @@ function App() {
       // ALWAYS reset generating state even if aborted or errored — prevents UI freeze
       setIsGenerating(false);
     }
-    
+
     // Only save to history/log if we got a real answer AND request was not aborted
     if (finalAnswer.trim() && !signal.aborted) {
       setCurrentSessionHistory(prev => {
@@ -2001,13 +2062,13 @@ function App() {
       }
       return; // User cancelled
     }
-    
+
     setCurrentSnapshots(prev => {
-        const next = [...prev, base64Img];
-        if (next.length > 8) return next.slice(next.length - 8);
-        return next;
-      });
-      
+      const next = [...prev, base64Img];
+      if (next.length > 8) return next.slice(next.length - 8);
+      return next;
+    });
+
     if (isAiFullscreen) {
       setIsPaused(false);
       isPausedRef.current = false;
@@ -2015,10 +2076,10 @@ function App() {
   };
 
   const stopRecording = (isSilentRestart: boolean | any = false) => {
-      if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
-      setIsGenerating(false);
+    if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+    setIsGenerating(false);
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
-    
+
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
@@ -2031,18 +2092,18 @@ function App() {
       setIsRecording(false);
       setIsPaused(false);
       setIsAiFullscreen(false);
-      
+
       setCurrentSnapshots([]);
       setCurrentSessionHistory([]);
     }
-    
+
     if (processorRef.current) processorRef.current.disconnect();
     if (audioContextRef.current) audioContextRef.current.close();
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     navigator.mediaDevices.ondevicechange = null;
     streamRef.current = null;
     clearAudioBuffer();
-    
+
     if (!silent) {
       console.log('Idle');
       const finalLog = sessionLog + `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(recordingSeconds)}]\n\n`;
@@ -2059,7 +2120,7 @@ function App() {
         };
         setSessions(prev => [newSession, ...prev.filter(s => s.id !== newSession.id)]);
       }
-      
+
       // Clear everything from the screen so it's perfectly fresh
       setTranscript('');
       setAiAnswer('');
@@ -2094,40 +2155,40 @@ function App() {
     let block = '';
     let sessionStart = '';
     let sessionEnd = '';
-    
+
     for (let line of lines) {
       if (line.includes('[SESSION_START:')) {
-         sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
+        sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
       } else if (line.includes('[SESSION_END:')) {
-         const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
-         sessionEnd = match?.[1] || '';
+        const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
+        sessionEnd = match?.[1] || '';
       } else if (line.includes('--- QUESTION ---')) {
-         if (currentInteraction) interactions.push(currentInteraction);
-         currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
-         block = 'question';
+        if (currentInteraction) interactions.push(currentInteraction);
+        currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
+        block = 'question';
       } else if (line.includes('--- AI ANSWER ---')) {
-         block = 'answer';
+        block = 'answer';
       } else if (line.startsWith('[IMAGE_BASE64:')) {
-         const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
-         if (match && currentInteraction) currentInteraction.images.push(match[1]);
+        const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
+        if (match && currentInteraction) currentInteraction.images.push(match[1]);
       } else if (line.startsWith('[MODEL:')) {
-         const match = line.match(/\[MODEL:(.*?)\]/);
-         if (match && currentInteraction) currentInteraction.modelInfo = match[1];
+        const match = line.match(/\[MODEL:(.*?)\]/);
+        if (match && currentInteraction) currentInteraction.modelInfo = match[1];
       } else {
-         if (currentInteraction) {
-           if (block === 'question') currentInteraction.question += line + '\n';
-           if (block === 'answer') currentInteraction.answer += line + '\n';
-         }
+        if (currentInteraction) {
+          if (block === 'question') currentInteraction.question += line + '\n';
+          if (block === 'answer') currentInteraction.answer += line + '\n';
+        }
       }
     }
     if (currentInteraction) interactions.push(currentInteraction);
-    
+
     const formatMd = (content: string) => {
-       let formatted = content.trim();
-       formatted = formatted.replace(/```[a-z]*\n([\s\S]*?)```/gi, '<pre class="code-block">$1</pre>');
-       formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block">$1</pre>');
-       formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-       return formatted;
+      let formatted = content.trim();
+      formatted = formatted.replace(/```[a-z]*\n([\s\S]*?)```/gi, '<pre class="code-block">$1</pre>');
+      formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block">$1</pre>');
+      formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+      return formatted;
     };
 
     const reversedInteractions = [...interactions].reverse();
@@ -2201,12 +2262,12 @@ function App() {
     `;
 
     reversedInteractions.forEach((int, index) => {
-       const originalIndex = interactions.length - index;
-       const qId = `q-${originalIndex}`;
-       const aId = `a-${originalIndex}`;
-       const iId = `i-${originalIndex}`;
+      const originalIndex = interactions.length - index;
+      const qId = `q-${originalIndex}`;
+      const aId = `a-${originalIndex}`;
+      const iId = `i-${originalIndex}`;
 
-       htmlContent += `
+      htmlContent += `
        <div class="interaction-card">
          <div class="interaction-header">
            <div class="interaction-title">Question ${originalIndex}</div>
@@ -2224,8 +2285,8 @@ function App() {
          </div>
          
          <div id="${qId}" class="section-content question-content active">
-           ${int.images.length > 0 ? 
-              `<div class="images-container">
+           ${int.images.length > 0 ?
+          `<div class="images-container">
                  ${int.images.map(img => `<img src="${img}" class="snapshot-thumb" onclick="openLightbox(this.src)" />`).join('')}
                </div>` : ''}
            <div class="text-content">${formatMd(int.question)}</div>
@@ -2294,15 +2355,15 @@ function App() {
 
   const resumeListening = () => {
     if (currentSnapshots.length > 0) {
-      
+
     }
-    
+
     listeningSessionIdRef.current++; // Invalidate any in-flight STT processing
     setTranscript('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     clearAudioBuffer();
-    
+
     setAiAnswer('');
     setCurrentSnapshots([]);
     setIsPaused(false);
@@ -2325,13 +2386,13 @@ function App() {
 
   const handleClearAll = () => {
     if (currentSnapshots.length > 0) {
-      
+
     }
     listeningSessionIdRef.current++; // Invalidate any in-flight STT processing
-    setTranscript(''); 
+    setTranscript('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
-    clearAudioBuffer(); 
+    clearAudioBuffer();
     setCurrentSnapshots([]);
     setAiAnswer('');
   };
@@ -2367,9 +2428,9 @@ function App() {
         }
         return;
       }
-      
+
       const key = e.key.toLowerCase();
-      
+
       // Resize window shortcuts (Robust using physical key codes)
       if (e.altKey && (e.code === 'Equal' || e.code === 'NumpadAdd' || key === '=' || key === '+' || e.code === 'BracketRight' || key === ']')) {
         e.preventDefault();
@@ -2408,7 +2469,7 @@ function App() {
       }
 
       if (!isRecording && !isAiFullscreen) return;
-      
+
       if (key === '7' || key === 'q') {
         e.preventDefault();
         setShowVirtualKeyboard(true);
@@ -2474,7 +2535,7 @@ function App() {
         if (chatgptKeys.some((k: any) => k.key.trim())) availableProviders.push('chatgpt');
         if (deepseekKeys.some((k: any) => k.key.trim())) availableProviders.push('deepseek');
         if (glmKeys.some((k: any) => k.key.trim())) availableProviders.push('glm');
-        
+
         if (availableProviders.length === 0) {
           setModelChangeMsg('No API keys configured');
           setTimeout(() => setModelChangeMsg(''), 3000);
@@ -2569,13 +2630,13 @@ function App() {
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     ipcRenderer.on('trigger-hotkey', handleIPCHotkey);
-    
+
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
       ipcRenderer.off('trigger-hotkey', handleIPCHotkey);
     };
-  // manualTriggerAI intentionally excluded — we use manualTriggerAIRef.current to avoid
-  // re-registering this expensive listener on every render during AI streaming
+    // manualTriggerAI intentionally excluded — we use manualTriggerAIRef.current to avoid
+    // re-registering this expensive listener on every render during AI streaming
   }, [isRecording, isPaused, isGenerating, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
 
   useEffect(() => {
@@ -2590,11 +2651,11 @@ function App() {
       if (scrollSpeed > 0 && isAiFullscreen && aiAnswerScrollRef.current) {
         // Speed 1: 15 pixels per second
         // Speed 5: 75 pixels per second
-        const pixelsPerSecond = scrollSpeed * 15; 
+        const pixelsPerSecond = scrollSpeed * 15;
         const scrollAmount = (pixelsPerSecond * delta) / 1000;
-        
+
         accumulatedScroll += scrollAmount;
-        
+
         if (accumulatedScroll >= 1) {
           const pixelsToScroll = Math.floor(accumulatedScroll);
           aiAnswerScrollRef.current.scrollBy(0, pixelsToScroll);
@@ -2618,13 +2679,13 @@ function App() {
 
   const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
-     ipcRenderer.invoke('minimize-window');
+    ipcRenderer.invoke('minimize-window');
   };
 
   const handleShrinkWindow = () => {
     const MIN_WIDTH = layout === 'horizontal' ? 950 : 450;
     const MIN_HEIGHT = layout === 'horizontal' ? 450 : 800;
-    
+
     if (window.innerWidth - 50 < MIN_WIDTH || window.innerHeight - 50 < MIN_HEIGHT) {
       setShowMinSizeWarning(true);
     } else {
@@ -2634,7 +2695,7 @@ function App() {
 
   const markdownComponents = useMemo(() => ({
     code(props: any) {
-      const {node, className, children, ...rest} = props;
+      const { node, className, children, ...rest } = props;
       const match = /language-(\w+)/.exec(className || "");
       let codeTextRaw = String(children).replace(/\n$/, "");
       const codeText = codeTextRaw;
@@ -2648,7 +2709,7 @@ function App() {
       return match ? (
         <div className="w-full flex justify-center my-6">
           <div className="relative group/code max-w-4xl w-full">
-            <CopyButton 
+            <CopyButton
               text={codeText}
               className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
               tooltip="Copy code"
@@ -2665,7 +2726,7 @@ function App() {
                   localStorage.setItem('clueai_code_language', langLabel);
                   // Re-generate the FULL answer (code + explanation) in the new language
                   let currentTranscript = finalizedTranscriptRef.current || transcript || '';
-                  
+
                   // Append a note to the transcript so the user sees the language change in the UI history
                   const langNote = `\n[User requested code in ${langLabel}]`;
                   // Remove any previous language note to prevent stacking
@@ -2711,37 +2772,37 @@ function App() {
         </code>
       );
     },
-    p({children, ...props}: any) {
+    p({ children, ...props }: any) {
       return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
     },
-    h1({children, ...props}: any) {
+    h1({ children, ...props }: any) {
       return <h1 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.2em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
     },
-    h2({children, ...props}: any) {
+    h2({ children, ...props }: any) {
       return <h2 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.1em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
     },
-    h3({children, ...props}: any) {
+    h3({ children, ...props }: any) {
       return <h3 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
     },
-    ul({children, ...props}: any) {
+    ul({ children, ...props }: any) {
       return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
     },
-    li({node, children, ...props}: any) {
+    li({ node, children, ...props }: any) {
       return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
     }
   }), [groqKeys, preferredCodeLanguage, transcript, currentSnapshots]);
 
   return (
     <>
-      
-        <div 
-          className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-150 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
-          style={{ transition: 'none' }}
-        >
+
+      <div
+        className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-150 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
+        style={{ transition: 'none' }}
+      >
         {isAiFullscreen ? (
           <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
             {/* Top Bar Panel */}
-            <div 
+            <div
               className={`border border-white/15 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-150 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex flex-col w-full max-w-[940px] mx-auto gap-3 p-4'}`}
               style={{
                 backgroundColor: isTopBarMinimized ? undefined : (altColor ? 'rgba(255, 255, 255, 0.96)' : 'rgba(12, 13, 20, 0.96)'),
@@ -2772,7 +2833,7 @@ function App() {
               }}
             >
               {isTopBarMinimized ? (
-                <div 
+                <div
                   className="w-full h-full flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-colors"
                   onClick={() => setIsTopBarMinimized(false)}
                   title="Expand Question Context"
@@ -2782,189 +2843,180 @@ function App() {
                 </div>
               ) : (
                 <>
-                {/* Row 1: Header Toolbar */}
-                <div className="flex items-center justify-between w-full no-drag gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-white/5 rounded-lg text-white/50 border border-white/5 flex items-center justify-center cursor-default">
-                      <Move size={14} />
-                    </div>
-                    <div className="bg-gradient-to-r from-fuchsia-500/20 to-purple-500/20 text-fuchsia-300 border border-fuchsia-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
-                      <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse"></span>
-                      <span>{activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : (provider ? provider.toUpperCase() : "AI Answer")}</span>
-                    </div>
-                  </div>
-
-                  {/* Right: Actions in single, non-overlapping horizontal group */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Font Size */}
-                    <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10 shrink-0">
-                      <button 
-                        onClick={() => {
-                          const next = Math.max(10, aiAnswerTextSize - 1);
-                          setAiAnswerTextSize(next);
-                          localStorage.setItem('clueai_answer_size', next.toString());
-                        }} 
-                        className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs" 
-                        title="Decrease Text Size"
-                      >
-                        A-
-                      </button>
-                      <span className="text-[11px] text-white/70 font-mono w-4 text-center select-none font-bold">{aiAnswerTextSize}</span>
-                      <button 
-                        onClick={() => {
-                          const next = Math.min(40, aiAnswerTextSize + 1);
-                          setAiAnswerTextSize(next);
-                          localStorage.setItem('clueai_answer_size', next.toString());
-                        }} 
-                        className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs" 
-                        title="Increase Text Size"
-                      >
-                        A+
-                      </button>
+                  {/* Row 1: Header Toolbar */}
+                  <div className="flex items-center justify-between w-full no-drag gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 bg-white/5 rounded-lg text-white/50 border border-white/5 flex items-center justify-center cursor-default">
+                        <Move size={14} />
+                      </div>
+                      <div className="bg-gradient-to-r from-fuchsia-500/20 to-purple-500/20 text-fuchsia-300 border border-fuchsia-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+                        <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse"></span>
+                        <span>{activeAIInfo ? `${activeAIInfo.provider} (Key ${activeAIInfo.index})` : (provider ? provider.toUpperCase() : "AI Answer")}</span>
+                      </div>
                     </div>
 
-                    {/* Auto Scroll */}
-                    <button 
-                      onClick={() => setScrollSpeed(prev => (prev === 0 ? 1 : 0))} 
-                      className={`px-2.5 py-1 rounded-xl transition-colors font-bold text-xs flex items-center gap-1.5 border border-white/10 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/60 hover:text-white'}`}
-                      title="Auto Scroll"
-                    >
-                      {scrollSpeed > 0 ? <Pause size={12}/> : <ArrowDown size={12}/>}
-                      <span className="text-[10px]">Scroll</span>
-                    </button>
+                    {/* Right: Actions in single, non-overlapping horizontal group */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Font Size */}
+                      <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10 shrink-0">
+                        <button
+                          onClick={() => {
+                            const next = Math.max(10, aiAnswerTextSize - 1);
+                            setAiAnswerTextSize(next);
+                            localStorage.setItem('clueai_answer_size', next.toString());
+                          }}
+                          className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs"
+                          title="Decrease Text Size"
+                        >
+                          A-
+                        </button>
+                        <span className="text-[11px] text-white/70 font-mono w-4 text-center select-none font-bold">{aiAnswerTextSize}</span>
+                        <button
+                          onClick={() => {
+                            const next = Math.min(40, aiAnswerTextSize + 1);
+                            setAiAnswerTextSize(next);
+                            localStorage.setItem('clueai_answer_size', next.toString());
+                          }}
+                          className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs"
+                          title="Increase Text Size"
+                        >
+                          A+
+                        </button>
+                      </div>
 
-                    {/* Copy Button */}
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                      onClick={() => {
-                        if (!aiAnswer) return;
-                        clipboard.writeText(aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim());
-                        setAiCopied(true);
-                        setTimeout(() => setAiCopied(false), 2000);
-                      }}
-                      className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                      title="Copy Answer to Clipboard"
-                    >
-                      {aiCopied ? (
-                        <><CheckCircle2 size={13} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
-                      ) : (
-                        <><FileText size={13} /> COPY</>
-                      )}
-                    </motion.button>
-
-                    {/* Next Question Button */}
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                      onClick={() => {
-                        if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
-                        setIsGenerating(false);
-                        setIsAiFullscreen(false);
-                        setTranscript('');
-                        finalizedTranscriptRef.current = '';
-                        interimTranscriptRef.current = '';
-                        setAiAnswer('');
-                        setCurrentSnapshots([]);
-                        clearAudioBuffer();
-                        listeningSessionIdRef.current++;
-                        setIsPaused(false);
-                        isPausedRef.current = false;
-                      }} 
-                      title="Next Question (Press Z or 1)"
-                      className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 cursor-pointer"
-                    >
-                      <Play size={12} fill="currentColor" /> NEXT Q. <span className="text-[9px] bg-black/20 px-1 rounded ml-0.5">1</span>
-                    </motion.button>
-
-                    {/* Close Button */}
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                      onClick={() => {
-                        if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
-                        setIsGenerating(false);
-                        setIsAiFullscreen(false);
-                        setIsPaused(false);
-                        isPausedRef.current = false;
-                        setTranscript('');
-                        finalizedTranscriptRef.current = '';
-                        interimTranscriptRef.current = '';
-                        clearAudioBuffer();
-                        setAiAnswer('');
-                        setCurrentSnapshots([]);
-                      }}
-                      title="Close Answer (Press C or 3)"
-                      className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
-                    >
-                      <X size={13} /> CLOSE <span className="text-[9px] bg-white/10 px-1 rounded ml-0.5">3</span>
-                    </motion.button>
-                  </div>
-                </div>
-
-                {/* Row 2: Ultra-Wide Question Context Box */}
-                <div className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-1.5 no-drag">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[10.5px] uppercase tracking-wider">
-                      <Cpu size={11} /> Interviewer Question
-                    </div>
-                    <span className="text-[9px] text-white/40 font-mono">
-                      Next Q (1) • Close (3)
-                    </span>
-                  </div>
-                  <div className="text-white text-[13px] leading-snug max-h-[52px] overflow-y-auto custom-scrollbar select-text pr-2">
-                    {transcript || "Screenshot / Vision analysis provided."}
-                  </div>
-
-                  {/* Inline Snapshots */}
-                  {currentSnapshots.length > 0 && (
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10 flex-wrap">
-                      {currentSnapshots.map((snap, idx) => (
-                        <div key={idx} className="relative group/snap rounded-lg overflow-hidden border border-white/20 w-16 h-12 shrink-0">
-                          <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
-                          <button 
-                            onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-0 right-0 p-1 bg-rose-500/90 hover:bg-rose-500 text-white rounded-bl-lg opacity-0 group-hover/snap:opacity-100 transition-opacity"
-                          >
-                            <X size={10} />
-                          </button>
-                        </div>
-                      ))}
+                      {/* Auto Scroll */}
                       <button
-                        onClick={async () => {
-                          setIsPaused(true);
-                          isPausedRef.current = true;
-                          const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
-                          if (!base64Img) {
-                            setIsPaused(false);
-                            isPausedRef.current = false;
-                            return;
-                          }
-                          setCurrentSnapshots(prev => {
-                            const next = [...prev, base64Img];
-                            if (next.length > 8) return next.slice(next.length - 8);
-                            return next;
-                          });
+                        onClick={() => setScrollSpeed(prev => (prev === 0 ? 1 : 0))}
+                        className={`px-2.5 py-1 rounded-xl transition-colors font-bold text-xs flex items-center gap-1.5 border border-white/10 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                        title="Auto Scroll"
+                      >
+                        {scrollSpeed > 0 ? <Pause size={12} /> : <ArrowDown size={12} />}
+                        <span className="text-[10px]">Scroll</span>
+                      </button>
+
+                      {/* Copy Button */}
+                      <button
+                        onClick={() => {
+                          if (!aiAnswer) return;
+                          clipboard.writeText(aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim());
+                          setAiCopied(true);
+                          setTimeout(() => setAiCopied(false), 2000);
+                        }}
+                        className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5"
+                        title="Copy Answer to Clipboard"
+                      >
+                        {aiCopied ? (
+                          <><CheckCircle2 size={13} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
+                        ) : (
+                          <><FileText size={13} /> COPY</>
+                        )}
+                      </button>
+
+                      {/* Next Question Button */}
+                      <button
+                        onClick={() => {
+                          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+                          setIsGenerating(false);
+                          setIsAiFullscreen(false);
+                          setTranscript('');
+                          finalizedTranscriptRef.current = '';
+                          interimTranscriptRef.current = '';
+                          setAiAnswer('');
+                          setCurrentSnapshots([]);
+                          clearAudioBuffer();
+                          listeningSessionIdRef.current++;
                           setIsPaused(false);
                           isPausedRef.current = false;
                         }}
-                        className="w-16 h-12 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg border border-white/20 border-dashed text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+                        title="Next Question (Press Z or 1)"
+                        className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
                       >
-                        <Plus size={14} />
-                        <span className="text-[8px] uppercase font-bold mt-0.5 tracking-wider">Add</span>
+                        <Play size={12} fill="currentColor" /> NEXT Q. <span className="text-[9px] bg-black/20 px-1 rounded ml-0.5">1</span>
+                      </button>
+
+                      {/* Close Button */}
+                      <button
+                        onClick={() => {
+                          if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
+                          setIsGenerating(false);
+                          setIsAiFullscreen(false);
+                          setIsPaused(false);
+                          isPausedRef.current = false;
+                          setTranscript('');
+                          finalizedTranscriptRef.current = '';
+                          interimTranscriptRef.current = '';
+                          clearAudioBuffer();
+                          setAiAnswer('');
+                          setCurrentSnapshots([]);
+                        }}
+                        title="Close Answer (Press C or 3)"
+                        className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
+                      >
+                        <X size={13} /> CLOSE <span className="text-[9px] bg-white/10 px-1 rounded ml-0.5">3</span>
                       </button>
                     </div>
-                  )}
-                </div>
+                  </div>
+
+                  {/* Row 2: Ultra-Wide Question Context Box */}
+                  <div className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-1.5 no-drag">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[10.5px] uppercase tracking-wider">
+                        <Cpu size={11} /> Interviewer Question
+                      </div>
+                      <span className="text-[9px] text-white/40 font-mono">
+                        Next Q (1) • Close (3)
+                      </span>
+                    </div>
+                    <div className="text-white text-[13px] leading-snug max-h-[52px] overflow-y-auto custom-scrollbar select-text pr-2">
+                      {transcript || "Screenshot / Vision analysis provided."}
+                    </div>
+
+                    {/* Inline Snapshots */}
+                    {currentSnapshots.length > 0 && (
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10 flex-wrap">
+                        {currentSnapshots.map((snap, idx) => (
+                          <div key={idx} className="relative group/snap rounded-lg overflow-hidden border border-white/20 w-16 h-12 shrink-0">
+                            <img src={snap} alt={`Snapshot ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))}
+                              className="absolute top-0 right-0 p-1 bg-rose-500/90 hover:bg-rose-500 text-white rounded-bl-lg opacity-0 group-hover/snap:opacity-100 transition-opacity"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={async () => {
+                            setIsPaused(true);
+                            isPausedRef.current = true;
+                            const base64Img = await ipcRenderer.invoke('start-snipping', selectedSource);
+                            if (!base64Img) {
+                              setIsPaused(false);
+                              isPausedRef.current = false;
+                              return;
+                            }
+                            setCurrentSnapshots(prev => {
+                              const next = [...prev, base64Img];
+                              if (next.length > 8) return next.slice(next.length - 8);
+                              return next;
+                            });
+                            setIsPaused(false);
+                            isPausedRef.current = false;
+                          }}
+                          className="w-16 h-12 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 rounded-lg border border-white/20 border-dashed text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+                        >
+                          <Plus size={14} />
+                          <span className="text-[8px] uppercase font-bold mt-0.5 tracking-wider">Add</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </div>
-            
+
             {/* AI Answer Content Panel */}
-            <div 
+            <div
               className={`border border-white/15 shrink-0 drag-area pointer-events-auto shadow-2xl mt-1 mb-4 transition-all duration-150 ${isAnswerMinimized ? 'flex p-3 bg-[#09090b]/90 backdrop-blur-md cursor-grab active:cursor-grabbing group overflow-hidden rounded-2xl' : 'flex flex-col overflow-hidden w-full max-w-[940px] max-h-[75vh] relative rounded-2xl shadow-[0_30px_70px_rgba(0,0,0,0.95)]'}`}
               style={{
                 backgroundColor: isAnswerMinimized ? undefined : (altColor ? 'rgba(255, 255, 255, 0.96)' : 'rgba(10, 11, 16, 0.98)'),
@@ -2979,7 +3031,7 @@ function App() {
               onPointerDown={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest && target.closest('.stealth-exempt')) return;
-                
+
                 // Allow normal text selection and touch-scrolling by ignoring drags inside the scrollable area
                 if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null && !target.closest('.custom-scrollbar')) {
                   dragStateRef.current = {
@@ -2998,13 +3050,13 @@ function App() {
               }}
             >
               {isAnswerMinimized ? (
-                <div 
+                <div
                   className={`w-full h-full flex flex-col overflow-hidden relative ${altColor ? 'text-black/80' : 'text-white/90'}`}
                   onDoubleClick={() => setIsAnswerMinimized(false)}
                   title="Double-click anywhere to expand"
                 >
                   <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-bl-lg p-1 flex items-center gap-1">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setStealthFontSize(prev => {
@@ -3012,11 +3064,11 @@ function App() {
                           localStorage.setItem('clueai_stealth_font_size', newVal.toString());
                           return newVal;
                         });
-                      }} 
+                      }}
                       className="text-white/50 hover:text-white p-1"
                       title="Decrease font size"
                     ><Minus size={10} /></button>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setStealthFontSize(prev => {
@@ -3024,15 +3076,15 @@ function App() {
                           localStorage.setItem('clueai_stealth_font_size', newVal.toString());
                           return newVal;
                         });
-                      }} 
+                      }}
                       className="text-white/50 hover:text-white p-1"
                       title="Increase font size"
                     ><Plus size={10} /></button>
                     <button onClick={() => setIsAnswerMinimized(false)} className="text-white/50 hover:text-white p-1 ml-1" title="Expand"><Maximize size={10} /></button>
                   </div>
-                  <div 
+                  <div
                     ref={aiAnswerScrollRef}
-                    className="overflow-y-auto pr-1 leading-snug font-bold w-full h-full no-scrollbar" 
+                    className="overflow-y-auto pr-1 leading-snug font-bold w-full h-full no-scrollbar"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: `${stealthFontSize}px` }}
                   >
                     {aiAnswer ? (
@@ -3046,36 +3098,36 @@ function App() {
                 </div>
               ) : (
                 <>
-              {/* Top-right controls: Minimize answer panel */}
-              <div className="absolute top-3 right-3 z-50 no-drag flex items-center gap-1.5">
-                <button
-                  onClick={() => setIsAnswerMinimized(true)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/20 text-white/50 hover:text-white transition-all shadow-sm text-base"
-                  title="Minimize Answer Panel"
-                >
-                  🗕
-                </button>
-              </div>
-              <div className="w-full flex justify-center pt-3 cursor-grab active:cursor-grabbing no-drag opacity-30 hover:opacity-100 transition-opacity">
-                 <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
-              </div>
-              <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
-                 <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
-                    {aiAnswer ? (
-                      <ReactMarkdown
-                        components={markdownComponents}
-                      >
+                  {/* Top-right controls: Minimize answer panel */}
+                  <div className="absolute top-3 right-3 z-50 no-drag flex items-center gap-1.5">
+                    <button
+                      onClick={() => setIsAnswerMinimized(true)}
+                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/20 text-white/50 hover:text-white transition-all shadow-sm text-base"
+                      title="Minimize Answer Panel"
+                    >
+                      🗕
+                    </button>
+                  </div>
+                  <div className="w-full flex justify-center pt-3 cursor-grab active:cursor-grabbing no-drag opacity-30 hover:opacity-100 transition-opacity">
+                    <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
+                  </div>
+                  <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
+                    <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
+                      {aiAnswer ? (
+                        <ReactMarkdown
+                          components={markdownComponents}
+                        >
                           {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
-                      </ReactMarkdown>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
-                         <Loader2 size={48} className="animate-spin text-cyan-500 mb-4" />
-                         <p className="text-lg animate-pulse">Generating response...</p>
-                      </div>
-                    )}
-                 </div>
-              </div>
-              </>
+                        </ReactMarkdown>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
+                          <Loader2 size={48} className="animate-spin text-cyan-500 mb-4" />
+                          <p className="text-lg animate-pulse">Generating response...</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -3085,3560 +3137,3497 @@ function App() {
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
             <div className={`flex flex-col ${isRecording ? 'w-full h-full' : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar'}`}>
-      {!isRecording && (
-      <div 
-        className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
-        onPointerDown={(e) => {
-          const target = e.target as HTMLElement;
-        if (target.closest && target.closest('.stealth-exempt')) return;
-          if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
-            ipcRenderer.send('start-drag');
-            target.setPointerCapture(e.pointerId);
-          }
-        }}
-        onPointerUp={(e) => {
-          ipcRenderer.send('stop-drag');
-          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-        }}
-      >
-        {/* MAIN DASHBOARD HEADER (PREMIUM OBSIDIAN GLASS) */}
-        <div className="w-full flex-none bg-[#0a0b12]/90 backdrop-blur-2xl px-5 py-3 border-b border-white/10 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.7)] relative z-30 drag-area rounded-t-2xl shrink-0">
-          {/* Left: Brand & User Profile */}
-          <div className="flex items-center gap-3.5 no-drag">
-            <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors" title="Drag Window">
-              <Move size={15} />
-            </div>
-            
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex items-center justify-center">
-                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-lg shadow-sm border border-cyan-400/30" />
-                <div className="absolute -inset-0.5 rounded-lg bg-cyan-500/20 blur-[2px] -z-10" />
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
-                  Clue<span className="text-cyan-400">AI</span>
-                </span>
-                <div className="flex items-center gap-1.5 ml-1">
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowUpdateModal(true)}
-                    className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-white/[0.05] hover:bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
-                    title="Current App Version"
-                  >
-                    <span>v{appVersion}</span>
-                  </motion.button>
-
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setShowUpdateModal(true);
-                      handleCheckForUpdates();
-                    }}
-                    className={`px-2.5 py-0.5 rounded-lg font-black text-[10px] flex items-center gap-1.5 uppercase tracking-wider border transition-all cursor-pointer shadow-sm ${
-                      (updateStatus === 'available' || updateStatus === 'downloaded')
-                        ? 'bg-gradient-to-r from-amber-500/30 via-emerald-500/30 to-cyan-500/30 text-emerald-300 border-emerald-400/60 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse'
-                        : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                    }`}
-                    title={(updateStatus === 'available' || updateStatus === 'downloaded') ? "New Update Available! Click to Install" : "Click to Check for Updates"}
-                  >
-                    {(updateStatus === 'available' || updateStatus === 'downloaded') ? (
-                      <>
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        <Sparkles size={11} className="text-emerald-300" />
-                        <span>Update Available</span>
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw size={10} className={`text-cyan-400 ${updateStatus === 'checking' ? 'animate-spin' : ''}`} />
-                        <span>Check Updates</span>
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              </div>
-            </div>
-
-            {username && (
-              <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-xl px-2.5 py-1 text-white/90 text-xs font-semibold ml-1">
-                <User size={13} className="text-cyan-400" />
-                <span>{username}</span>
-                <button 
-                  onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
-                  className="p-1 hover:bg-white/10 text-white/50 hover:text-cyan-300 rounded-md transition-colors ml-0.5"
-                  title="Rename Profile"
-                >
-                  <Edit2 size={12} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Actions, Stealth Shield, Utilities, Controls */}
-          <div className="flex items-center gap-2.5 no-drag">
-            {/* Unified Stealth Button */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 500, damping: 25 }}
-              onClick={() => {
-                if (stealthMode) {
-                  setShowStealthWarning(true);
-                } else {
-                  setStealthMode(true);
-                  ipcRenderer.invoke('set-stealth', true);
-                }
-              }} 
-              title={stealthMode ? "Stealth Shield Active (Invisible in screen-shares). Click to disable." : "Stealth Shield OFF (You are visible). Click to activate."} 
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-sm border cursor-pointer ${
-                stealthMode 
-                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]' 
-                  : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
-              }`}
-            >
-              {stealthMode ? <ShieldCheck size={14} className="text-emerald-400" /> : <ShieldAlert size={14} className="text-rose-400" />}
-              <span className="tracking-wide uppercase text-[10.5px]">
-                {stealthMode ? "Stealth ON" : "Stealth OFF"}
-              </span>
-            </motion.button>
-
-            {/* Guide Info Button */}
-            <motion.button 
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              transition={{ type: "spring", stiffness: 500, damping: 25 }}
-              onClick={() => setShowInfo(!showInfo)} 
-              className={`p-2 rounded-xl transition-all border cursor-pointer ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
-              title="Information Guide"
-            >
-              <Info size={15} />
-            </motion.button>
-
-            {/* Settings Button */}
-            <motion.button 
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              transition={{ type: "spring", stiffness: 500, damping: 25 }}
-              onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }} 
-              className={`p-2 rounded-xl transition-all border cursor-pointer ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
-              title="Settings & Models"
-            >
-              <Settings size={15} />
-            </motion.button>
-
-            {/* Start Interview Primary CTA */}
-            <motion.button 
-              whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(6,182,212,0.6)" }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 500, damping: 25 }}
-              onClick={handleStartCaptureClick} 
-              className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 cursor-pointer"
-            >
-              <Play size={13} fill="currentColor" /> Start Interview
-            </motion.button>
-
-            {/* Window Controls with Tactile Springs */}
-            <div className="flex items-center gap-1 ml-2 pl-3 border-l border-white/10 shrink-0">
-              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Shrink Window (Alt -)">
-                <ZoomOut size={15} />
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Enlarge Window (Alt +)">
-                <ZoomIn size={15} />
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Fullscreen">
-                <Maximize size={15} />
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Minimize">
-                <Minus size={15} />
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors cursor-pointer" title="Close">
-                <X size={15} />
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </div>
-      )}
-
-      {/* Full-Screen Info Modal with Framer Motion */}
-      <AnimatePresence>
-        {showInfo && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
-              className="w-full max-w-4xl max-h-[92vh] h-full bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden"
-            >
-          <div className="w-full flex-shrink-0 bg-brand-bg/95 pt-8 pb-4 px-8 border-b border-brand-border">
-            <div className="max-w-3xl mx-auto flex justify-between items-end">
-              <div>
-                <h2 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-                  <div className="p-2 bg-brand-accent/20 rounded-xl">
-                    <Info size={28} className="text-brand-accent" />
-                  </div>
-                  Information Guide
-                </h2>
-                <p className="text-brand-subtext text-sm mt-2">Everything you need to know to use ClueAI effectively.</p>
-              </div>
-              <button onClick={() => setShowInfo(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
-                Close <X size={16}/>
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            <div className="max-w-3xl w-full mx-auto space-y-10 pb-10 select-none cursor-default">
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Core Information */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2">
-                  <Info size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">What is ClueAI?</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI is an advanced, ultra-stealthy AI copilot designed to help you ace your interviews and tests. It secretly records system audio and captures screen snapshots, feeding them to state-of-the-art AI models (Groq and Gemini) to provide you with instant, perfectly accurate answers and hints on your screen—all completely invisible to screen sharing software.</p>
-              </div>
-
-              {/* Keyboard Shortcuts */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-4 group hover:border-white/10 transition-colors">
-                <div className="flex items-center gap-3 border-b border-white/10 pb-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center">
-                    <Settings size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Keyboard Shortcuts</h3>
-                    <p className="text-brand-subtext text-xs">Control ClueAI instantly without clicking.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {/* General Hotkeys */}
-                  <div>
-                    <h4 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-2">Interview Controls (Toggleable)</h4>
-                    <p className="text-brand-subtext text-xs leading-relaxed mb-2">
-                      <strong>When active, these block you from typing those specific keys elsewhere.</strong> Toggle them ON/OFF in the Interview Screen.
-                    </p>
-                    <div className="grid grid-cols-2 gap-3 text-[10px]">
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>0 / Num0</strong>: Text color</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>1, Z / Num1</strong>: Pause / Resume</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>2, X / Num2</strong>: Ask AI</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>3, C / Num3</strong>: Clear Transcript</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>4, A / Num4</strong>: Snipping Tool</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>5, S / Num5</strong>: Switch Model</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>6, D / Num6</strong>: Stop Gen</div>
-                      <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>7, Q / Num7</strong>: Edit Text</div>
-                    </div>
-                  </div>
-
-                  {/* Scrolling Shortcuts */}
-                  <div>
-                    <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2">Stealth Scrolling (Always Active)</h4>
-                    <div className="bg-black/30 p-3 rounded-lg border border-white/5">
-                      <p className="text-xs text-brand-subtext leading-relaxed">
-                        Hold <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Alt</kbd> + <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">↑/↓</kbd> or <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">PgUp/PgDn</kbd> to scroll the text boxes during an interview without using your mouse.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Global Launch Shortcut */}
-                  <div>
-                    <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-2">Global Launch (Always Active)</h4>
-                    <div className="bg-black/30 p-3 rounded-lg border border-white/5">
-                      <p className="text-xs text-brand-subtext leading-relaxed">
-                        Press <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Ctrl + Shift + K</kbd> anywhere on your computer to instantly hide/minimize or show ClueAI.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sessions */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center mb-2">
-                  <FileText size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">Sessions & Transcripts</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">Every time you start an interview, ClueAI creates a <strong>Session</strong>. Sessions automatically save your full transcript and all AI answers locally. You can review past sessions by clicking the <strong>History icon</strong> in the dashboard to review what questions were asked and how the AI answered them.</p>
-              </div>
-
-              {/* Reminders */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
-                  <Layout size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">Dashboard Reminders</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">You can schedule upcoming interviews using Reminders. When you click <strong>"Start Interview"</strong> directly from a Reminder, ClueAI injects the candidate's name, role, and details into the AI prompt, making the answers highly personalized.</p>
-              </div>
-
-              {/* Settings */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-zinc-500/20 text-zinc-400 flex items-center justify-center mb-2">
-                  <Settings size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">Settings Configuration</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">In Settings, you can configure your <strong>API Keys</strong> (Groq/Gemini), choose which screen or window to record, and set up your personal resume context. The AI uses your resume to answer behavioral questions from your personal experience.</p>
-              </div>
-
-              {/* Stealth Mode */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2">
-                  <EyeOff size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">Stealth Mode & Security</h3>
-                <p className="text-brand-subtext text-sm leading-relaxed">ClueAI operates at the OS level to hide its window from Discord, Zoom, Teams, and browser screen-sharing. It also disables copying and standard mouse cursors (no hand pointers) to avoid giving away any hints on video streams.</p>
-              </div>
-
-              {/* Interview Buttons */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-2">
-                  <Mic size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">Interview Section Controls</h3>
-                <ul className="text-brand-subtext text-sm leading-relaxed space-y-2 list-disc pl-4">
-                  <li><strong>Next Q. (Pause/Resume):</strong> Temporarily stops audio processing so you can talk to the interviewer without the AI analyzing your voice.</li>
-                  <li><strong>Snip UI:</strong> Takes a visual screenshot of your screen to send to Gemini Vision for coding or visual questions.</li>
-                  <li><strong>Clear:</strong> Wipes the transcript so the AI doesn't get confused by previous topics.</li>
-                  <li><strong>Stop:</strong> Ends the session entirely, saving it to history, and returns you to the Main Dashboard.</li>
-                  <li><strong>Model Selector:</strong> Switch between Groq (Fastest Text) and Gemini (Vision capabilities) instantly.</li>
-                  <li><strong>Hotkeys Toggle:</strong> Temporarily disables global shortcuts so you can type numbers or letters normally in other applications.</li>
-                </ul>
-              </div>
-
-              {/* API Keys Guide */}
-              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center mb-2">
-                  <Key size={20} />
-                </div>
-                <h3 className="text-lg font-bold text-white">How to get API Keys (Free)</h3>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
-                    <div className="space-y-2">
-                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Groq Keys (For Audio & Fast Text)</h4>
-                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://console.groq.com/keys'); }} className="text-blue-400 hover:underline">console.groq.com/keys</a> and log in.</li>
-                        <li>Click on <strong>Create API Key</strong> in the top right.</li>
-                        <li>Copy the key (it starts with `gsk_`).</li>
-                        <li>Paste it into the Groq API Key field in ClueAI Settings.</li>
-                        <li><em>Note: Groq is free but rate-limited. Add multiple keys to avoid interruptions!</em></li>
-                      </ol>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Gemini Keys (For Snapshots)</h4>
-                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://aistudio.google.com/app/apikey'); }} className="text-blue-400 hover:underline">aistudio.google.com/app/apikey</a> and log in.</li>
-                        <li>Click <strong>Create API Key</strong> and select an existing project or create a new one.</li>
-                        <li>Copy the generated key (it starts with `AIzaSy` or `AQ.`).</li>
-                        <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
-                        <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
-                      </ol>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Claude Keys (Best for Coding)</h4>
-                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://console.anthropic.com/settings/keys'); }} className="text-blue-400 hover:underline">console.anthropic.com/settings/keys</a> and log in.</li>
-                        <li><strong>Important:</strong> You must verify a <strong>brand new phone number</strong> (not just an email) to get $5 free. If it doesn't give you $5, Anthropic may have stopped the free promotion in your region.</li>
-                        <li>Click <strong>Create Key</strong> and copy it (starts with `sk-ant-`).</li>
-                        <li>Paste it into the Claude API Key field in ClueAI Settings.</li>
-                      </ol>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting ChatGPT Keys (Smart All-Rounder)</h4>
-                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://platform.openai.com/api-keys'); }} className="text-blue-400 hover:underline">platform.openai.com/api-keys</a> and log in.</li>
-                        <li>Create a new account with a unique phone number for free credits.</li>
-                        <li>Click <strong>Create new secret key</strong> and copy it (starts with `sk-`).</li>
-                        <li>Paste it into the ChatGPT API Key fields (up to 3 for rotation).</li>
-                        <li><em>Note: ChatGPT keys automatically rotate during use to bypass limits.</em></li>
-                      </ol>
-                    </div>
-                    <div className="space-y-2 md:col-span-2 lg:col-span-1">
-                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting DeepSeek Keys (Lightning Fast Code)</h4>
-                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://platform.deepseek.com/api_keys'); }} className="text-blue-400 hover:underline">platform.deepseek.com/api_keys</a> and log in.</li>
-                        <li>Click <strong>Create new API key</strong> and copy it.</li>
-                        <li>DeepSeek is extremely cheap but requires adding a small balance (Top-up).</li>
-                        <li>Paste it into the DeepSeek API Key fields (up to 3 for rotation).</li>
-                        <li><em>Note: Your DeepSeek account balance is automatically checked and shown!</em></li>
-                      </ol>
-                    </div>
-                    <div className="space-y-2 md:col-span-2 lg:col-span-1">
-                      <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting NVIDIA / GLM Keys (Free Llama 3)</h4>
-                      <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
-                        <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://build.nvidia.com/meta/llama-3_1-70b-instruct'); }} className="text-blue-400 hover:underline">build.nvidia.com</a> for NVIDIA NIM or <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://bigmodel.cn/'); }} className="text-blue-400 hover:underline">bigmodel.cn</a> for GLM.</li>
-                        <li>NVIDIA NIM gives you 1,000 free API credits automatically upon signup!</li>
-                        <li>GLM gives you 25,000,000 free API tokens upon signup!</li>
-                        <li>Click <strong>Get API Key</strong> on either site and copy the generated key.</li>
-                        <li>Paste it directly into the GLM/NVIDIA API Key fields (it automatically detects which provider you pasted).</li>
-                      </ol>
-                    </div>
-                  </div>
-              </div>
-            </div>
-          </div>
-          </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Full-Screen Update Center Modal with Framer Motion */}
-      <AnimatePresence>
-        {showUpdateModal && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
-          >
-            <motion.div 
-              initial={{ scale: 0.94, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 15 }}
-              transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="bg-[#0c0d16] border border-cyan-500/30 w-full max-w-xl rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(6,182,212,0.15)] flex flex-col gap-5 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shadow-inner">
-                    <Sparkles size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                      ClueAI Update Center
-                    </h2>
-                    <p className="text-xs text-white/50">On-demand updates powered by GitHub Releases</p>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setShowUpdateModal(false)}
-                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Version Comparison Cards */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Current Version</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-black text-white">v{appVersion}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/70 border border-white/15">Installed</span>
-                  </div>
-                </div>
-
-                <div className={`border rounded-2xl p-4 flex flex-col gap-1 ${
-                  updateStatus === 'available' || updateStatus === 'downloaded'
-                    ? 'bg-emerald-500/10 border-emerald-500/30'
-                    : 'bg-white/[0.03] border-white/10'
-                }`}>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Latest Available</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-black text-white">
-                      v{updateInfo.version || appVersion}
-                    </span>
-                    {updateStatus === 'available' || updateStatus === 'downloaded' ? (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
-                        New Release
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                        Up to Date
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Display Banner */}
-              {updateStatus === 'checking' && (
-                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4 flex items-center gap-3">
-                  <Loader2 size={18} className="animate-spin text-cyan-400 shrink-0" />
-                  <span className="text-xs text-cyan-200 font-medium">Checking GitHub Releases for new updates...</span>
-                </div>
-              )}
-
-              {updateStatus === 'not-available' && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3">
-                  <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-                  <div>
-                    <p className="text-xs text-emerald-200 font-bold">You are using the latest version of ClueAI!</p>
-                    <p className="text-[11px] text-emerald-200/60 mt-0.5">No new updates available at this time.</p>
-                  </div>
-                </div>
-              )}
-
-              {updateStatus === 'error' && (
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 flex items-center gap-3">
-                  <AlertTriangle size={18} className="text-rose-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-rose-200 font-bold">Update Check Notice</p>
-                    <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not reach GitHub Releases'}</p>
-                  </div>
-                  <button 
-                    onClick={handleCheckForUpdates} 
-                    className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer"
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              {/* Download Progress Bar */}
-              {updateStatus === 'downloading' && (
-                <div className="bg-white/[0.04] border border-cyan-500/30 rounded-2xl p-4 flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin text-cyan-400" />
-                      Downloading Update Package...
-                    </span>
-                    <span className="font-mono text-cyan-300 font-bold">{downloadProgress.percent}%</span>
-                  </div>
-                  
-                  {/* Progress track */}
-                  <div className="w-full h-2.5 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5">
-                    <div 
-                      className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 rounded-full transition-all duration-200" 
-                      style={{ width: `${downloadProgress.percent}%` }}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-white/50 font-mono">
-                    <span>Speed: {Math.round(downloadProgress.bytesPerSecond / 1024)} KB/s</span>
-                    <span>
-                      {(downloadProgress.transferred / (1024 * 1024)).toFixed(1)} MB / {(downloadProgress.total / (1024 * 1024)).toFixed(1)} MB
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Release Notes / What's New */}
-              <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col gap-2">
-                <h3 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                  <FileText size={13} />
-                  What's New in {updateInfo.version ? `v${updateInfo.version}` : `v${appVersion}`}
-                </h3>
-                
-                <div className="max-h-48 overflow-y-auto custom-scrollbar pr-1 text-xs text-white/70 space-y-1.5 leading-relaxed">
-                  {updateInfo.releaseNotes ? (
-                    typeof updateInfo.releaseNotes === 'string' ? (
-                      <div className="whitespace-pre-wrap">{updateInfo.releaseNotes}</div>
-                    ) : Array.isArray(updateInfo.releaseNotes) ? (
-                      updateInfo.releaseNotes.map((note: any, idx: number) => (
-                        <div key={idx} className="whitespace-pre-wrap">{note.note || note}</div>
-                      ))
-                    ) : (
-                      <div>{JSON.stringify(updateInfo.releaseNotes)}</div>
-                    )
-                  ) : (
-                    <>
-                      <div className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">•</span>
-                        <span><strong>Unified Ultra-Wide Command Dock</strong>: Prominent live speech transcription reading area with instant generate CTA.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">•</span>
-                        <span><strong>Automated Update Center</strong>: On-demand checking, release notes preview, live progress, and seamless self-restart.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">•</span>
-                        <span><strong>Expanded Dashboard Bounds</strong>: Increased viewport to 1040x780 to eliminate cutoff on reminders and history cards.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">•</span>
-                        <span><strong>Main Process Stability</strong>: Globalized stealth protection state and resolved all potential reference errors.</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons Footer */}
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={handleCheckForUpdates}
-                  disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                >
-                  <RefreshCw size={13} className={updateStatus === 'checking' ? 'animate-spin' : ''} />
-                  <span>Check Again</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowUpdateModal(false)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
-
-                  {updateStatus === 'downloaded' ? (
-                    <button
-                      onClick={handleRestartToInstall}
-                      className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] border border-emerald-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 animate-pulse cursor-pointer"
-                    >
-                      <Sparkles size={14} />
-                      <span>Restart & Install Now</span>
-                    </button>
-                  ) : updateStatus === 'available' ? (
-                    <button
-                      onClick={handleDownloadUpdate}
-                      className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-                    >
-                      <Download size={14} />
-                      <span>Download Update</span>
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Full-Screen Settings Modal with Framer Motion & Perfect Sizing */}
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden"
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
-              className={`w-full max-w-4xl max-h-[92vh] h-full min-h-0 bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
-            <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
-              <div className="flex items-center gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
-                      <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localSettingsStealth ? 'Stealth ON' : 'Stealth OFF'}>
-                        {localSettingsStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
-                      </button>
-                    </div>
-                    <p className="text-white/50 text-xs mt-1">Configure your shortcuts, AI models, and stealth mode.</p>
-                  </div>
-                  <span className="hidden md:flex px-2.5 py-1 rounded-md border border-white/10 bg-black/30 text-[10px] font-bold text-white/50 tracking-wider uppercase items-center gap-1.5 pointer-events-none select-none">
-                    <Keyboard size={12} /> Ctrl+Shift+K to minimize/restore
-                  </span>
-                </div>
-              <div className="flex items-center gap-3">
-                {deleteMsg && <span className="text-rose-400 font-bold text-xs bg-rose-500/10 px-3 py-1.5 rounded border border-rose-500/20">{deleteMsg}</span>}
-                <button onClick={() => setShowSettings(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors shadow-sm">
-                  <X size={18}/>
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-black/[0.02]">
-              <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
-              
-
-            <section>
-              <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16}/> Provider & Display</h3>
-              <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Default AI Provider</label>
-                  <CustomSelect 
-                        value={provider} 
-                        onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
-                          if (val === 'groq' && !groqKeys.some(k => k.trim())) {
-                            setModelChangeMsg('No API key found in Groq');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'gemini-flash' && !geminiKeys.some(k => k.trim())) {
-                            setModelChangeMsg('No API key found in Gemini Flash');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'claude' && !claudeKeys.some(k => k.key.trim())) {
-                            setModelChangeMsg('No API key found in Claude');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'chatgpt' && !chatgptKeys.some(k => k.key.trim())) {
-                            setModelChangeMsg('No API key found in ChatGPT');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          if (val === 'deepseek' && !deepseekKeys.some(k => k.key.trim())) {
-                            setModelChangeMsg('No API key found in DeepSeek');
-                            setTimeout(() => setModelChangeMsg(''), 3000);
-                            return;
-                          }
-                          
-                          setProvider(val);
-                          switchProvider(val);
-                          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
-                          setModelChangeMsg(`Switched to ${nameMap[val]}`);
-                          setTimeout(() => setModelChangeMsg(''), 3000);
-                        }}
-                        options={[
-                          { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
-                          { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
-                          { value: 'claude', label: 'Claude 3.5 Sonnet' },
-                          { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
-                          { value: 'deepseek', label: 'DeepSeek Coder' }, { value: 'glm', label: 'GLM / NVIDIA' }]}
-                    className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Capture Screen</label>
-                  <CustomSelect 
-                    value={selectedSource} 
-                    onChange={(val: any) => setSelectedSource(val)} 
-                    options={sources.map(s => ({ value: s.id, label: s.name }))}
-                    className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-brand-subtext mb-2">Stealth Mode (Hide from Screen Share)</label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <div className="relative">
-                      <input type="checkbox" className="sr-only" checked={stealthMode} onChange={e => {
-                        const val = e.target.checked;
-                        if (!val) {
-                          setShowStealthWarning(true);
-                        } else {
-                          setStealthMode(true);
-                          ipcRenderer.invoke('set-stealth', true);
-                        }
-                      }} />
-                      <div className={`block w-12 h-6 rounded-full transition-colors ${stealthMode ? 'bg-brand-accentSec' : 'bg-brand-border'}`}></div>
-                      <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${stealthMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                    </div>
-                    <span className="text-sm text-brand-subtext">
-                      {stealthMode ? 'Enabled (May cause crashes on some PCs)' : 'Disabled (App is visible in screen share)'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </section>
-            
-            {/* Interview Content Settings */}
-            <section>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Layout size={16}/> Interview Layout & Content
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Transcript Size */}
-                  <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mb-3">
-                      <FileText size={16} />
-                    </div>
-                    <label className="block text-xs font-bold text-white uppercase mb-2">Transcript Font Size</label>
-                    <div className="flex items-center gap-2 mt-auto">
-                      <input 
-                        type="range" 
-                        min="10" 
-                        max="40"
-                        value={transcriptTextSize}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 15;
-                          setTranscriptTextSize(val);
-                          localStorage.setItem('clueai_transcript_size', val.toString());
-                        }}
-                        className="flex-1 accent-brand-accent h-1.5 bg-brand-bg rounded-lg appearance-none cursor-pointer"
-                      />
-                      <span className="text-sm font-mono font-bold text-brand-accent bg-brand-bg px-2 py-1 rounded-md border border-brand-border">{transcriptTextSize}px</span>
-                    </div>
-                  </div>
-
-
-                </div>
-            </section>
-
-            {/* API Keys Configuration */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><Cpu size={16}/> API Keys</h3>
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col items-end gap-1">
-                    {saveMessages.map((msg, i) => (
-                      <span key={i} className={`text-xs font-bold animate-in fade-in ${
-                        msg.type === 'invalid' ? 'text-rose-500' :
-                        msg.type === 'duplicate' ? 'text-yellow-500' :
-                        'text-green-400'
-                      }`}>
-                        {msg.text}
-                      </span>
-                    ))}
-                  </div>
-                  <button onClick={saveApiKeys} className="flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accentSec text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_0_10px_rgba(6,182,212,0.3)]">
-                    <Save size={14} /> Save API Keys
-                  </button>
-                </div>
-              </div>
-              <div className="bg-brand-accent/10 border border-brand-accent/30 rounded-xl p-4 mb-4 flex items-start gap-3 shadow-sm">
-                <Info className="text-brand-accent mt-0.5 shrink-0" size={18} />
-                <div className="text-sm text-brand-subtext leading-relaxed">
-                  <strong className="text-white block mb-1">Why 15 API Keys?</strong>
-                  To bypass rate limits and keep your usage completely free, ClueAI distributes requests across multiple API keys. 
-                  If you provide 6 keys, ClueAI will intelligently rotate through all 6 to keep you safely within free limits. 
-                  The more keys you provide, the more seamless and free your interview experience will be!
-                </div>
-              </div>
-              <div className="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
-                {/* Groq Accordion */}
-                <div className="border-b border-brand-border last:border-b-0">
-                  <button onClick={() => setApiAccordion(apiAccordion === 'groq' ? 'none' : 'groq')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
-                    <div>
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">Groq Keys</h4>
-                      <p className="text-xs text-brand-subtext mt-1">{groqKeys.filter(k=>k.trim()).length} keys loaded (Used for STT & LLM)</p>
-                    </div>
-                    {apiAccordion === 'groq' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
-                  </button>
-                  
-                  {apiAccordion === 'groq' && (
-                    <div className="p-5 bg-brand-card space-y-3">
-                      {Array.from({ length: 15 }).map((_, i) => (
-                        <div key={`groq-${i}`}>
-                          <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                          <div className="relative">
-                            <input 
-                              type={showGroqKeys[i] ? "text" : "password"} 
-                              value={groqKeys[i]} 
-                              onChange={e => {
-                                const newKeys = [...groqKeys];
-                                newKeys[i] = e.target.value;
-                                setGroqKeys(newKeys);
-                              }}
-                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                              placeholder={`gsk_...`}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                              {groqKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                              {groqKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
-                              {groqKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
-                              {groqKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
-                              <button onClick={() => {
-                                const newShow = [...showGroqKeys];
-                                newShow[i] = !newShow[i];
-                                setShowGroqKeys(newShow);
-                              }} className="text-brand-subtext hover:text-white transition-colors">
-                                {showGroqKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
-                              </button>
-                                    <button onClick={() => {
-                                      if (groqKeys[i]) {
-                                        clipboard.writeText(groqKeys[i]);
-                                      }
-                                    }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
-                                      <Copy size={14} />
-                                    </button>
-                                    <button onClick={async () => {
-                                      try {
-                                        const text = clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...groqKeys];
-                                          newKeys[i] = text.trim();
-                                          setGroqKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
-                                      <ClipboardPaste size={14} />
-                                    </button>
-                              <button onClick={() => {
-                                const newKeys = [...groqKeys];
-                                newKeys[i] = '';
-                                setGroqKeys(newKeys);
-                                setDeleteMessage({ provider: 'groq', index: i });
-                                setTimeout(() => setDeleteMessage(null), 3000);
-                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          {deleteMessage?.provider === 'groq' && deleteMessage?.index === i && (
-                            <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Gemini Accordion */}
-                <div className="border-b border-brand-border last:border-b-0">
-                  <button onClick={() => setApiAccordion(apiAccordion === 'gemini' ? 'none' : 'gemini')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
-                    <div>
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">Gemini Keys</h4>
-                      <p className="text-xs text-brand-subtext mt-1">{geminiKeys.filter(k=>k.trim()).length} keys loaded (Used for LLM)</p>
-                    </div>
-                    {apiAccordion === 'gemini' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
-                  </button>
-                  
-                  {apiAccordion === 'gemini' && (
-                    <div className="p-5 bg-brand-card space-y-3">
-                      {Array.from({ length: 15 }).map((_, i) => (
-                        <div key={`gemini-${i}`}>
-                          <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                          <div className="relative">
-                            <input 
-                              type={showGeminiKeys[i] ? "text" : "password"} 
-                              value={geminiKeys[i]} 
-                              onChange={e => {
-                                const newKeys = [...geminiKeys];
-                                newKeys[i] = e.target.value;
-                                setGeminiKeys(newKeys);
-                              }}
-                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                              placeholder={`AIza... or AQ...`}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                              {geminiKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                              {geminiKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
-                              {geminiKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
-                              {geminiKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
-                              <button onClick={() => {
-                                const newShow = [...showGeminiKeys];
-                                newShow[i] = !newShow[i];
-                                setShowGeminiKeys(newShow);
-                              }} className="text-brand-subtext hover:text-white transition-colors">
-                                {showGeminiKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
-                              </button>
-                                    <button onClick={() => {
-                                      if (geminiKeys[i]) {
-                                        clipboard.writeText(geminiKeys[i]);
-                                      }
-                                    }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
-                                      <Copy size={14} />
-                                    </button>
-                                    <button onClick={async () => {
-                                      try {
-                                        const text = clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...geminiKeys];
-                                          newKeys[i] = text.trim();
-                                          setGeminiKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
-                                      <ClipboardPaste size={14} />
-                                    </button>
-                              <button onClick={() => {
-                                const newKeys = [...geminiKeys];
-                                newKeys[i] = '';
-                                setGeminiKeys(newKeys);
-                                setDeleteMessage({ provider: 'gemini', index: i });
-                                setTimeout(() => setDeleteMessage(null), 3000);
-                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          {deleteMessage?.provider === 'gemini' && deleteMessage?.index === i && (
-                            <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              
-                  {/* Claude Accordion */}
-                  <div className="border-b border-brand-border last:border-b-0">
-                    <button onClick={() => setApiAccordion(apiAccordion === 'claude' ? 'none' : 'claude')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
-                      <div>
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">Claude Keys (Anthropic)</h4>
-                        <p className="text-xs text-brand-subtext mt-1">{claudeKeys.filter(k=>k.key.trim()).length} key loaded (14 Day Limit)</p>
-                      </div>
-                      {apiAccordion === 'claude' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
-                    </button>
-                    {apiAccordion === 'claude' && (
-                      <div className="p-5 bg-brand-card space-y-3">
-                        {Array.from({ length: 2 }).map((_, i) => {
-                          return (
-                          <div key={`claude-${i}`}>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                            </div>
-                            <div className="relative">
-                              <input 
-                                type={showClaudeKeys[i] ? "text" : "password"} 
-                                value={claudeKeys[i].key} 
-                                onChange={e => {
-                                  const newKeys = [...claudeKeys];
-                                  newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
-                                  setClaudeKeys(newKeys);
-                                }}
-                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                                placeholder={`sk-ant-...`}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                {claudeKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                                {claudeKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
-                                {claudeKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
-                                <button onClick={() => {
-                                  const newShow = [...showClaudeKeys];
-                                  newShow[i] = !newShow[i];
-                                  setShowClaudeKeys(newShow);
-                                }} className="text-brand-subtext hover:text-white transition-colors">
-                                  {showClaudeKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
-                                </button>
-                                    <button onClick={async () => {
-                                      try {
-                                        const text = clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...claudeKeys];
-                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
-                                          setClaudeKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
-                                      <ClipboardPaste size={14} />
-                                    </button>
-                                <button onClick={() => {
-                                  const newKeys = [...claudeKeys];
-                                  newKeys[i] = { key: '', addedAt: 0 };
-                                  setClaudeKeys(newKeys);
-                                  setDeleteMessage({ provider: 'claude', index: i });
-                                  setTimeout(() => setDeleteMessage(null), 3000);
-                                }} className="text-rose-500 hover:text-rose-400 transition-colors">
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                            {deleteMessage?.provider === 'claude' && deleteMessage?.index === i && (
-                              <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
-                            )}
-                          </div>
-                        )})}
-                      </div>
-                    )}
-                  </div>
-                  {/* GLM Accordion */}
-                  <div className="border-b border-brand-border last:border-b-0">
-                    <button onClick={() => setApiAccordion(apiAccordion === 'glm' ? 'none' : 'glm')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
-                      <div>
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">GLM / NVIDIA Keys</h4>
-                        <p className="text-xs text-brand-subtext mt-1">{glmKeys.filter(k=>k.key.trim()).length} keys loaded (Used for LLM)</p>
-                      </div>
-                      {apiAccordion === 'glm' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
-                    </button>
-                    
-                    {apiAccordion === 'glm' && (
-                      <div className="p-5 bg-brand-card space-y-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={`glm-${i}`}>
-                            <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                            <div className="relative">
-                                <input 
-                                  type={showGlmKeys[i] ? "text" : "password"} 
-                                  value={glmKeys[i].key} 
-                                  onChange={e => {
-                                    const newKeys = [...glmKeys];
-                                    newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
-                                    setGlmKeys(newKeys);
-                                  }}
-                                  
-                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                                  placeholder={`nvapi- or Zhipu key`}
-                                />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                  {glmKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                                  {glmKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
-                                  {glmKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
-                                  {glmKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
-                                  <button onClick={() => {
-                                    const newShow = [...showGlmKeys];
-                                    newShow[i] = !newShow[i];
-                                    setShowGlmKeys(newShow);
-                                  }} className="text-brand-subtext hover:text-white transition-colors">
-                                    {showGlmKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
-                                  </button>
-                                    <button onClick={async () => {
-                                      try {
-                                        const text = clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...glmKeys];
-                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
-                                          setGlmKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
-                                      <ClipboardPaste size={14} />
-                                    </button>
-                                  <button onClick={() => {
-                                    const newKeys = [...glmKeys];
-                                    newKeys[i] = { key: '', addedAt: 0 };
-                                    setGlmKeys(newKeys);
-                                    setDeleteMessage({ provider: 'glm', index: i });
-                                    setTimeout(() => setDeleteMessage(null), 3000);
-                                  }} className="text-rose-500 hover:text-rose-400 transition-colors">
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                            </div>
-                            {deleteMessage?.provider === 'glm' && deleteMessage?.index === i && (
-                              <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-
-                  {/* ChatGPT Accordion */}
-                  <div className="border-b border-brand-border last:border-b-0">
-                    <button onClick={() => setApiAccordion(apiAccordion === 'chatgpt' ? 'none' : 'chatgpt')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
-                      <div>
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">ChatGPT Keys (OpenAI)</h4>
-                        <p className="text-xs text-brand-subtext mt-1">{chatgptKeys.filter(k=>k.key.trim()).length} keys loaded (90 Day Limit)</p>
-                      </div>
-                      {apiAccordion === 'chatgpt' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
-                    </button>
-                    {apiAccordion === 'chatgpt' && (
-                      <div className="p-5 bg-brand-card space-y-3">
-                        {Array.from({ length: 3 }).map((_, i) => {
-                          return (
-                          <div key={`chatgpt-${i}`}>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                            </div>
-                            <div className="relative">
-                              <input 
-                                type={showChatgptKeys[i] ? "text" : "password"} 
-                                value={chatgptKeys[i].key} 
-                                onChange={e => {
-                                  const newKeys = [...chatgptKeys];
-                                  newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
-                                  setChatgptKeys(newKeys);
-                                }}
-                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                                placeholder={`sk-...`}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                {chatgptKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                                {chatgptKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
-                                {chatgptKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
-                                <button onClick={() => {
-                                  const newShow = [...showChatgptKeys];
-                                  newShow[i] = !newShow[i];
-                                  setShowChatgptKeys(newShow);
-                                }} className="text-brand-subtext hover:text-white transition-colors">
-                                  {showChatgptKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
-                                </button>
-                                    <button onClick={async () => {
-                                      try {
-                                        const text = clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...chatgptKeys];
-                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
-                                          setChatgptKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
-                                      <ClipboardPaste size={14} />
-                                    </button>
-                                <button onClick={() => {
-                                  const newKeys = [...chatgptKeys];
-                                  newKeys[i] = { key: '', addedAt: 0 };
-                                  setChatgptKeys(newKeys);
-                                  setDeleteMessage({ provider: 'chatgpt', index: i });
-                                  setTimeout(() => setDeleteMessage(null), 3000);
-                                }} className="text-rose-500 hover:text-rose-400 transition-colors">
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )})}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* DeepSeek Accordion */}
-                  <div className="border-b border-brand-border last:border-b-0">
-                    <button onClick={() => setApiAccordion(apiAccordion === 'deepseek' ? 'none' : 'deepseek')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
-                      <div>
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">DeepSeek Keys</h4>
-                        <p className="text-xs text-brand-subtext mt-1">{deepseekKeys.filter(k=>k.key.trim()).length} keys loaded</p>
-                      </div>
-                      {apiAccordion === 'deepseek' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
-                    </button>
-                    {apiAccordion === 'deepseek' && (
-                      <div className="p-5 bg-brand-card space-y-3">
-                        {Array.from({ length: 3 }).map((_, i) => {
-                          return (
-                          <div key={`deepseek-${i}`}>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
-                              <div className="flex gap-2">
-                                {deepseekBalances[i] && <span className="text-[10px] font-bold text-green-400">Bal: ${deepseekBalances[i]}</span>}
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <input 
-                                type={showDeepseekKeys[i] ? "text" : "password"} 
-                                value={deepseekKeys[i].key} 
-                                onChange={e => {
-                                  const newKeys = [...deepseekKeys];
-                                  newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
-                                  setDeepseekKeys(newKeys);
-                                }}
-                                className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all" 
-                                placeholder={`sk-...`}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                {deepseekKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
-                                {deepseekKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
-                                {deepseekKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
-                                <button onClick={() => {
-                                  const newShow = [...showDeepseekKeys];
-                                  newShow[i] = !newShow[i];
-                                  setShowDeepseekKeys(newShow);
-                                }} className="text-brand-subtext hover:text-white transition-colors">
-                                  {showDeepseekKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
-                                </button>
-                                    <button onClick={async () => {
-                                      try {
-                                        const text = clipboard.readText();
-                                        if (text && text.trim()) {
-                                          const newKeys = [...deepseekKeys];
-                                          newKeys[i] = { key: text.trim(), addedAt: Date.now() };
-                                          setDeepseekKeys(newKeys);
-                                        }
-                                      } catch(e) {}
-                                    }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
-                                      <ClipboardPaste size={14} />
-                                    </button>
-                                <button onClick={() => {
-                                  const newKeys = [...deepseekKeys];
-                                  newKeys[i] = { key: '', addedAt: 0 };
-                                  setDeepseekKeys(newKeys);
-                                  
-                                  const newBals = [...deepseekBalances];
-                                  newBals[i] = '';
-                                  setDeepseekBalances(newBals);
-                                  
-                                  setDeleteMessage({ provider: 'deepseek', index: i });
-                                  setTimeout(() => setDeleteMessage(null), 3000);
-                                }} className="text-rose-500 hover:text-rose-400 transition-colors">
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )})}
-                      </div>
-                    )}
-                  </div>
-</div>
-            </section>
-
-            {/* Interview Context */}
-            <section>
-              <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Interview Context</h3>
-              <div className="bg-brand-card p-6 rounded-2xl border border-brand-border shadow-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Interview Title */}
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-black text-brand-subtext uppercase tracking-widest mb-2 flex items-center gap-2">
-                      <Layout size={14} className="text-brand-accent" /> Title of Interview
-                    </label>
-                    <input 
-                      type="text" 
-                      value={interviewTitle} 
-                      onChange={e => setInterviewTitle(e.target.value)} 
-                      className="w-full bg-brand-bg/50 border border-brand-border rounded-xl px-4 py-3 text-sm outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/50 text-white transition-all placeholder:text-white/20" 
-                      placeholder="e.g. Senior Backend Developer" 
-                    />
-                  </div>
-
-                  {/* Resume Context 1 */}
-                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
-                    <div className="flex items-center justify-between mb-4">
-                      <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
-                        <FileText size={14} className="text-blue-400" /> Resume Context 1
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-brand-text cursor-pointer hover:text-brand-accent transition-colors">
-                        <input type="radio" name="resumePriority" checked={resumePriority === 1} onChange={() => setResumePriority(1)} className="accent-brand-accent cursor-pointer" />
-                        <span className={resumePriority === 1 ? 'text-brand-accent' : ''}>High Priority</span>
-                      </label>
-                    </div>
-                    
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg cursor-pointer transition-all text-xs font-bold">
-                          {isUploadingResume ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
-                          {isUploadingResume ? 'Analyzing...' : 'Upload PDF/TXT'}
-                          <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume1')} disabled={isUploadingResume} />
-                        </label>
-                        {resumeFileName && !isUploadingResume && (
-                          <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
-                            <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
-                              <FileText size={12} className="shrink-0" /> {resumeFileName}
-                            </span>
-                            <button onClick={() => handleDeleteFile('resume1')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <textarea 
-                        value={resumeText} 
-                        onChange={(e) => setResumeText(e.target.value)} 
-                        className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-blue-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
-                        placeholder="Paste your resume text here or upload a file..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Resume Context 2 */}
-                  <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
-                    <div className="flex items-center justify-between mb-4">
-                      <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
-                        <FileText size={14} className="text-cyan-400" /> Resume Context 2
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-brand-text cursor-pointer hover:text-brand-accent transition-colors">
-                        <input type="radio" name="resumePriority" checked={resumePriority === 2} onChange={() => setResumePriority(2)} className="accent-brand-accent cursor-pointer" />
-                        <span className={resumePriority === 2 ? 'text-brand-accent' : ''}>High Priority</span>
-                      </label>
-                    </div>
-                    
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg cursor-pointer transition-all text-xs font-bold">
-                          {isUploadingResume2 ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
-                          {isUploadingResume2 ? 'Analyzing...' : 'Upload PDF/TXT'}
-                          <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume2')} disabled={isUploadingResume2} />
-                        </label>
-                        {resumeFileName2 && !isUploadingResume2 && (
-                          <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
-                            <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
-                              <FileText size={12} className="shrink-0" /> {resumeFileName2}
-                            </span>
-                            <button onClick={() => handleDeleteFile('resume2')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <textarea 
-                        value={resumeText2} 
-                        onChange={(e) => setResumeText2(e.target.value)} 
-                        className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-cyan-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
-                        placeholder="Paste your second resume text here or upload a file..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Personal Context */}
-                  <div className="md:col-span-2 bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
-                    <div className="mb-4">
-                      <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2 mb-1">
-                        <User size={14} className="text-fuchsia-400" /> Personal Context
-                      </label>
-                      <p className="text-[10px] text-brand-subtext/70 italic">High Priority: This document should contain information about yourself (strengths, weaknesses, hobbies, background).</p>
-                    </div>
-                    
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3 w-1/2">
-                        <label className="flex items-center justify-center gap-2 px-4 py-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400 rounded-lg cursor-pointer transition-all text-xs font-bold shrink-0">
-                          {isUploadingPersonalContext ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} 
-                          {isUploadingPersonalContext ? 'Analyzing...' : 'Upload PDF/TXT'}
-                          <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'personal')} disabled={isUploadingPersonalContext} />
-                        </label>
-                        {personalContextFileName && !isUploadingPersonalContext && (
-                          <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
-                            <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
-                              <FileText size={12} className="shrink-0" /> {personalContextFileName}
-                            </span>
-                            <button onClick={() => handleDeleteFile('personal')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <textarea 
-                        value={personalContextText} 
-                        onChange={(e) => setPersonalContextText(e.target.value)} 
-                        className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-fuchsia-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
-                        placeholder="Paste your personal context here (strengths, weaknesses, background) or upload a file..."
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Sound Settings */}
-            <section>
-              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Mic size={16}/> System Sound Settings</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-5">
-                <div className="flex items-center justify-between pb-4 border-b border-brand-border">
-                  <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Active Microphone</h4>
-                    <p className="text-xs text-brand-accentSec font-mono truncate max-w-[250px]">{activeMicName}</p>
-                  </div>
-                  <button 
-                    onClick={() => shell.openExternal('ms-settings:sound')}
-                    className="px-4 py-2 bg-brand-secondary hover:bg-white/10 border border-brand-border text-brand-text rounded-lg text-xs font-bold transition-colors"
-                  >
-                    Change in Windows Settings
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Microphone Volume</h4>
-                    <p className="text-xs text-brand-subtext">Automatically synced with Windows system settings</p>
-                  </div>
-                  <div className="flex items-center gap-3 w-1/2">
-                    <span className="text-xs font-mono text-brand-subtext w-8 text-right">{sysMicVolume}%</span>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="100" 
-                      value={sysMicVolume} 
-                      onChange={handleMicVolumeChange} 
-                      className="w-full accent-brand-accent" 
-                      disabled={sysMicMuted}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-4 border-t border-brand-border">
-                  <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Microphone Mute</h4>
-                    <p className="text-xs text-brand-subtext">Toggle microphone on or off at the system level</p>
-                  </div>
-                  <button 
-                    onClick={handleMicMuteToggle}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${sysMicMuted ? 'bg-rose-500/20 text-rose-500 border border-rose-500/50' : 'bg-brand-secondary border border-brand-border text-white hover:bg-white/10'}`}
-                  >
-                    {sysMicMuted ? 'Unmute' : 'Mute'}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Software Updates Section */}
-            <section>
-              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Sparkles size={16} className="text-cyan-400" /> Software Updates</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold text-white">ClueAI Version</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                      v{appVersion}
-                    </span>
-                    {(updateStatus === 'available' || updateStatus === 'downloaded') && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
-                        Update Available: v{updateInfo.version}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-brand-subtext">Free on-demand updates powered directly via official GitHub Releases.</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setShowSettings(false);
-                      setShowUpdateModal(true);
-                      if (updateStatus === 'idle') handleCheckForUpdates();
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${
-                      updateStatus === 'available' || updateStatus === 'downloaded'
-                        ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:scale-105 active:scale-95 animate-pulse border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10 hover:border-cyan-400/40'
-                    }`}
-                  >
-                    <Sparkles size={13} />
-                    <span>{updateStatus === 'available' || updateStatus === 'downloaded' ? 'View & Install Update' : 'Check for Updates'}</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Display */}
-            <section>
-              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><LayoutPanelTop size={16}/> Display Settings</h3>
-              <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-3">Window Opacity ({Math.round(opacity * 100)}%)</label>
-                  <input type="range" min="0.2" max="1.0" step="0.05" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} className="w-full accent-brand-accent" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-3">Layout Style</label>
-                  <button onClick={() => setLayout(layout === 'vertical' ? 'horizontal' : 'vertical')} className="w-full bg-brand-secondary border border-brand-border hover:bg-white/10 py-2.5 rounded-lg text-xs font-bold text-brand-text transition-all">Toggle Vertical / Horizontal</button>
-                </div>
-              </div>
-            </section>
-
-            {/* Keyboard Shortcuts */}
-            <section className="pb-10">
-              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Cpu size={16}/> All Shortcut Keys</h3>
-              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-3">
-                
-                {/* Interview Controls */}
-                <div className="space-y-2 mb-6">
-                  <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3">Interview Controls</h4>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Pause / Resume <span className="text-xs text-white/40 font-normal">(Use 1 or Z)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold border border-yellow-500/30">Z</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">1</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Ask AI (Trigger) <span className="text-xs text-white/40 font-normal">(Use 2 or X)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg text-xs font-bold border border-purple-500/30">X</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">2</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Clear Transcript <span className="text-xs text-white/40 font-normal">(Use 3 or C)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-lg text-xs font-bold border border-orange-500/30">C</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">3</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Snipping Tool <span className="text-xs text-white/40 font-normal">(Use 4 or A)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-lg text-xs font-bold border border-cyan-500/30">A</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">4</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                      <span className="text-sm text-white/90 font-medium flex items-center gap-2">Edit Transcript <span className="text-xs text-white/40 font-normal">(Use 7 or Q)</span></span>
-                      <div className="flex gap-2">
-                        <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/30">Q</span>
-                        <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">7</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                      <span className="text-sm text-white/90 font-medium flex items-center gap-2">Toggle Text Color <span className="text-xs text-white/40 font-normal">(Use 0)</span></span>
-                      <div className="flex gap-2">
-                        <span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30">0</span>
-                      </div>
-                    </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Switch Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-brand-accent/20 text-brand-accent px-3 py-1 rounded-lg text-xs font-bold border border-brand-accent/30">S</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">5</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Stop Generation <span className="text-xs text-white/40 font-normal">(Use 6 or D)</span></span>
-                    <div className="flex gap-2">
-                      <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-lg text-xs font-bold border border-red-500/30">D</span>
-                      <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">6</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Window Controls */}
-                <div className="space-y-2 mb-6">
-                  <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
-                  <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + +</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
-                    <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + -</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                    <span className="text-sm text-white/90 font-medium">Move Window</span>
-                    <div className="flex gap-2">
-                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↑</span>
-                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↓</span>
-                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">←</span>
-                      <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">→</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Global Launch Shortcut */}
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mt-6">
-                  <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
-                    <Cpu size={16} /> Global Launch Shortcut
-                  </h4>
-                  <p className="text-xs text-blue-200/70 leading-relaxed mb-3">
-                    You can open ClueAI instantly from anywhere using a custom Windows Shortcut Key!
-                  </p>
-                  <ol className="text-xs text-blue-200/60 list-decimal pl-4 space-y-1.5">
-                    <li>Search for <strong>ClueAI</strong> in your Windows Start Menu.</li>
-                    <li>Right-click the app and select <strong>Open file location</strong>.</li>
-                    <li>Right-click the ClueAI Shortcut file and select <strong>Properties</strong>.</li>
-                    <li>In the <strong>Shortcut</strong> tab, click inside the <strong>Shortcut key</strong> box.</li>
-                    <li>Press your desired keys (e.g. <code>Ctrl + Alt + L</code>) and click OK.</li>
-                  </ol>
-                </div>
-              </div>
-            </section>
-            </div>
-            </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Audio Error Modal */}
-      {showAudioErrorModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-brand-bg rounded-2xl w-full max-w-md shadow-2xl border border-rose-500/50 flex flex-col overflow-hidden relative">
-            <div className="bg-rose-500/10 p-6 flex flex-col items-center text-center border-b border-rose-500/20">
-              <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mb-4">
-                <AlertTriangle size={32} className="text-rose-500" />
-              </div>
-              <h2 className="text-xl font-black text-rose-500 uppercase tracking-wide mb-2">Critical Audio Error</h2>
-              <p className="text-brand-subtext text-sm mb-4 leading-relaxed">
-                Your microphone is currently {sysMicMuted ? 'muted' : `too quiet (Volume: ${sysMicVolume}%)`}. 
-                <br/><br/>
-                The AI will not be able to hear you properly during the interview. Please adjust your system settings.
-              </p>
-              <button 
-                onClick={() => {
-                  setShowAudioErrorModal(false);
-                  minimizeApp();
-                  setTimeout(() => {
-                    try {
-                      const { exec } = (window as any).require('child_process');
-                      exec('powershell -Command "Start-Process \'ms-settings:sound\' -WindowStyle Maximized"');
-                    } catch (e) {
-                      shell.openExternal('ms-settings:sound');
+              {!isRecording && (
+                <div
+                  className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
+                  onPointerDown={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest && target.closest('.stealth-exempt')) return;
+                    if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.closest('button') === null) {
+                      ipcRenderer.send('start-drag');
+                      target.setPointerCapture(e.pointerId);
                     }
-                  }, 500);
-                }}
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-rose-500/20 transition-all uppercase tracking-widest text-sm"
-              >
-                Correct It Now
-              </button>
-            </div>
-            <button 
-              onClick={() => setShowAudioErrorModal(false)}
-              className="absolute top-3 right-3 p-1.5 bg-black/20 hover:bg-black/40 rounded-lg text-white/50 hover:text-white transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Dashboard Empty State with Staggered Framer Motion */}
-      {!isRecording && !showSettings && !showInfo && !showUpdateModal && (
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6"
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <motion.div 
-              whileHover={{ y: -4, scale: 1.008, boxShadow: "0 25px 45px -12px rgba(37,99,235,0.4)" }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/40 flex flex-col items-center justify-center text-center cursor-default h-full backdrop-blur-xl"
-            >
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
-              <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
-              <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br/><br/>Development driven by real users<br/>Faster iteration on features that matter</p>
-              <motion.button 
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
-                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} 
-                className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 transition-colors cursor-pointer"
-              >
-                ✨ View Portfolio &rarr;
-              </motion.button>
-            </motion.div>
-            
-            <div className="relative h-full w-full">
-              <motion.div 
-                whileHover={{ y: -4, scale: 1.008, boxShadow: "0 25px 45px -12px rgba(14,165,233,0.4)" }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl p-4 overflow-hidden shadow-lg border border-blue-400/40 flex flex-col cursor-default backdrop-blur-xl"
-              >
-                <div className="flex flex-col mb-3 w-full shrink-0">
-                <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-xl w-full mb-3">
-                  <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
-                    <CheckCircle2 size={12} />
-                  </div>
-                  Interview and Notes Reminder
-                </h3>
-                <div className="flex justify-center items-center gap-4 w-full px-2">
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                    onClick={() => {
-                      setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
-                      setLocalReminderStealth(stealthMode);
-                      setReminderPopupMode('create');
-                      setShowReminderPopup(true);
-                    }} 
-                    className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
-                  >
-                    <Plus size={14}/> Create Reminder
-                  </motion.button>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                    onClick={() => {
-                      setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
-                      setLocalNotesStealth(stealthMode);
-                      setNotesPopupMode('create');
-                      setShowNotesPopup(true);
-                    }} 
-                    className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
-                  >
-                    <Plus size={14}/> New Note
-                  </motion.button>
-                </div>
-              </div>
-
-              <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                {(() => {
-                  const combined = [
-                    ...reminderProfiles.map(p => ({ ...p, type: 'reminder' as const })),
-                    ...notesProfiles.map(p => ({ ...p, type: 'note' as const }))
-                  ].sort((a, b) => Number(b.id) - Number(a.id));
-                  
-                  if (combined.length === 0) {
-                    return <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders or notes saved yet.</p>;
-                  }
-                  
-                  return combined.map(prof => {
-                    // Check status
-                    let isPast = false;
-                    try {
-                      const [d, m, y] = prof.date.split('-');
-                      const [h, min] = prof.time.split(':');
-                      let hours = parseInt(h);
-                      if (prof.ampm === 'PM' && hours < 12) hours += 12;
-                      if (prof.ampm === 'AM' && hours === 12) hours = 0;
-                      const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
-                      isPast = new Date() > targetDate;
-                    } catch(e) {}
-
-                    if (prof.type === 'reminder') {
-                      return (
-                        <div 
-                          key={prof.id} 
-                          className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                          onClick={() => {
-                            setReminderForm(prof as any);
-                            setLocalReminderStealth(stealthMode);
-                            setReminderPopupMode('preview');
-                            setShowReminderPopup(true);
-                          }}
-                        >
-                          <div className="flex flex-col flex-1 min-w-0 pr-3">
-                            <span className="font-bold text-xs text-white truncate flex items-center gap-2">
-                                {prof.name}
-                                {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
-                            </span>
-                            <span className="text-[10px] text-blue-200 font-bold truncate">Reminder <span className="opacity-70 font-normal">• {prof.jobTitle}</span></span>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
-                              <button 
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  setItemToDelete({ id: prof.id, type: 'reminder', name: prof.name, isPast });
-                                }} 
-                                className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X size={14}/>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div 
-                          key={prof.id} 
-                          className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                          onClick={() => {
-                            setNotesForm(prof as any);
-                            setLocalNotesStealth(stealthMode);
-                            setNotesPopupMode('preview');
-                            setShowNotesPopup(true);
-                          }}
-                        >
-                          <div className="flex flex-col flex-1 min-w-0 pr-1">
-                            <span className="font-bold text-xs text-white truncate flex items-center gap-2">
-                                Note
-                                {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
-                            </span>
-                            <span className="text-[10px] text-teal-200 font-bold truncate">Note <span className="opacity-70 font-normal">• {prof.email}</span></span>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
-                              <button 
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  setItemToDelete({ id: prof.id, type: 'note', name: 'Note Scheduled', isPast });
-                                }} 
-                                className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
-                              >
-                                <X size={14}/>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  });
-                })()}
-              </div>
-            </motion.div>
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-3 mt-4 pb-4">
-            <h3 className="text-brand-subtext font-bold mb-3 text-sm px-2">Yesterday</h3>
-                          <div className="space-y-3">
-                {sessions.length === 0 ? (
-                  <div className="text-brand-subtext text-sm italic px-2 py-4">No sessions saved yet. Start capturing to see history here!</div>
-                ) : sessions.map((session) => (
-                  <motion.div layout whileHover={{ scale: 1.004, backgroundColor: "rgba(255, 255, 255, 0.04)" }} transition={{ duration: 0.15 }} key={session.id} className={`flex flex-col bg-brand-secondary/30 rounded-xl border border-brand-border group relative ${openMenuId === session.id ? "z-50 overflow-visible" : "z-10 overflow-hidden"}`}>
-                    <div 
-                      className="flex justify-between items-center py-3 px-4 hover:bg-brand-secondary/80 cursor-pointer"
-                      onClick={() => setExpandedSessionId(expandedSessionId === session.id ? null : session.id)}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {expandedSessionId === session.id ? <ChevronDown size={16} className="text-brand-subtext shrink-0"/> : <ChevronRight size={16} className="text-brand-subtext shrink-0"/>}
-                        <span className="text-brand-text font-bold text-sm truncate">{session.name}</span>
+                  }}
+                  onPointerUp={(e) => {
+                    ipcRenderer.send('stop-drag');
+                    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                  }}
+                >
+                  {/* MAIN DASHBOARD HEADER (PREMIUM OBSIDIAN GLASS) */}
+                  <div className="w-full flex-none bg-[#0a0b12]/90 backdrop-blur-2xl px-5 py-3 border-b border-white/10 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.7)] relative z-30 drag-area rounded-t-2xl shrink-0">
+                    {/* Left: Brand & User Profile */}
+                    <div className="flex items-center gap-3.5 no-drag">
+                      <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors" title="Drag Window">
+                        <Move size={15} />
                       </div>
-                      
-                      <div className="flex items-center gap-6 text-brand-subtext text-xs font-mono shrink-0">
-                        <span>{session.time}</span>
-                        <button onClick={(e) => { 
-                          e.stopPropagation(); 
-                          if (openMenuId === session.id) {
-                            setOpenMenuId(null);
-                            setMenuPos(null);
-                          } else {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setOpenMenuId(session.id);
-                            setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
-                          }
-                        }} className="p-1 hover:bg-white/10 rounded-md transition-colors">
-                          <MoreVertical size={16} />
-                        </button>
-                      </div>
-                      
-                      {openMenuId === session.id && menuPos && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); setMenuPos(null); }}></div>
-                          <div 
-                            className="fixed bg-brand-secondary border border-brand-border rounded-lg shadow-xl z-[100] overflow-hidden min-w-[120px]"
-                            style={{ top: menuPos.top + 4, right: menuPos.right }}
+
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative flex items-center justify-center">
+                          <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-lg shadow-sm border border-cyan-400/30" />
+                          <div className="absolute -inset-0.5 rounded-lg bg-cyan-500/20 blur-[2px] -z-10" />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+                            Clue<span className="text-cyan-400">AI</span>
+                          </span>
+                          <button
+                            onClick={() => setShowUpdateModal(true)}
+                            className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                            title="Current App Version"
                           >
-                            <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingSessionId(session.id); setEditingSessionName(session.name); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors">
-                              <FileText size={14} /> Rename
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); exportSession(session); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors border-t border-brand-border">
-                              <Download size={14} /> Export
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 transition-colors border-t border-brand-border">
-                              <Trash2 size={14} /> Delete
-                            </button>
-                          </div>
-                        </>
+                            <span>v{appVersion}</span>
+                          </button>
+
+                          {/* ClueAI Blue-Glowing Dynamic Update Pill */}
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              setShowUpdateModal(true);
+                              if (updateStatus === 'idle') handleCheckForUpdates();
+                            }}
+                            className={`px-3 py-1 rounded-xl font-black text-[10.5px] flex items-center gap-1.5 uppercase tracking-wider transition-all cursor-pointer border ${
+                              updateStatus === 'downloading'
+                                ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-500 text-white border-cyan-300/80 shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
+                                : updateStatus === 'downloaded'
+                                ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-white border-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.8)] animate-pulse'
+                                : updateStatus === 'available'
+                                ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-400 text-white border-cyan-400/80 shadow-[0_0_20px_rgba(6,182,212,0.6)] animate-pulse'
+                                : updateStatus === 'checking'
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                                : 'bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-300 border-cyan-500/30 hover:border-cyan-400/60 hover:shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                            }`}
+                            title="ClueAI Update Center"
+                          >
+                            {updateStatus === 'downloading' ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin text-cyan-200" />
+                                <span>Downloading {downloadProgress.percent}%</span>
+                              </>
+                            ) : updateStatus === 'downloaded' ? (
+                              <>
+                                <Sparkles size={12} className="text-cyan-200" />
+                                <span>Restart & Install v{updateInfo.version || appVersion}</span>
+                              </>
+                            ) : updateStatus === 'available' ? (
+                              <>
+                                <span className="w-2 h-2 rounded-full bg-cyan-200 animate-ping" />
+                                <Sparkles size={12} className="text-cyan-200" />
+                                <span>Update v{updateInfo.version} Available</span>
+                              </>
+                            ) : updateStatus === 'checking' ? (
+                              <>
+                                <RefreshCw size={11} className="animate-spin text-cyan-400" />
+                                <span>Checking...</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw size={11} className="text-cyan-400" />
+                                <span>Check Updates</span>
+                              </>
+                            )}
+                          </motion.button>
+                        </div>
+                      </div>
+
+                      {username && (
+                        <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-xl px-2.5 py-1 text-white/90 text-xs font-semibold ml-1">
+                          <User size={13} className="text-cyan-400" />
+                          <span>{username}</span>
+                          <button
+                            onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
+                            className="p-1 hover:bg-white/10 text-white/50 hover:text-cyan-300 rounded-md transition-colors ml-0.5"
+                            title="Rename Profile"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        </div>
                       )}
                     </div>
-                    
-                    {/* Expanded Session History Accordion */}
-                    {expandedSessionId === session.id && (
-                      <div className="border-t border-brand-border bg-black/40 p-4 space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
-                        {(!session.history || session.history.length === 0) ? (
-                          <div className="text-white/30 text-xs italic">No questions recorded in this session.</div>
-                        ) : session.history.map((item, idx) => {
-                          const stateKey = `${session.id}-${idx}`;
-                          const isTranscriptExpanded = expandedHistoryItems[stateKey]?.transcript;
-                          const isAnswerExpanded = expandedHistoryItems[stateKey]?.answer;
-                          
-                          return (
-                            <div key={idx} className="bg-white/5 border border-white/5 rounded-lg overflow-hidden">
-                              
-                              {/* Transcript Header */}
-                              <div 
-                                className="px-4 py-3 bg-white/5 hover:bg-white/10 cursor-pointer flex justify-between items-center transition-colors"
-                                onClick={() => toggleHistoryItem(session.id, idx, 'transcript')}
-                              >
-                                <h4 className="text-xs font-bold text-cyan-400 flex items-center gap-2">
-                                  {isTranscriptExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
-                                  {idx + 1}st question - Transcript
-                                </h4>
-                                {item.modelInfo && (
-                                  <span className="text-[10px] font-mono text-fuchsia-400 bg-fuchsia-400/10 border border-fuchsia-400/20 px-2 py-0.5 rounded-full">
-                                  {item.modelInfo}
-                                  </span>
-                                )}
-                              </div>
-                              
-                              {/* Transcript Body */}
-                              {isTranscriptExpanded && (
-                                <div className="p-4 text-xs text-white/80 whitespace-pre-wrap font-medium border-t border-white/5">
-                                  {item.images && item.images.length > 0 && (
-                                    <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
-                                      {item.images.map((img, i) => (
-                                        <img key={i} src={img} className="h-24 rounded border border-white/10" alt="snapshot" />
-                                      ))}
-                                    </div>
-                                  )}
-                                  {item.question || "No transcript"}
-                                </div>
-                              )}
-                              
-                              {/* Answer Header */}
-                              <div 
-                                className="px-4 py-3 bg-brand-accentSec/30 hover:bg-brand-accentSec/50 cursor-pointer flex items-center gap-2 transition-colors border-t border-white/5"
-                                onClick={() => toggleHistoryItem(session.id, idx, 'answer')}
-                              >
-                                <h4 className="text-xs font-bold text-brand-accent flex items-center gap-2">
-                                  {isAnswerExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
-                                  Answer of {idx + 1} - Generate Ai
-                                </h4>
-                              </div>
-                              
-                              {/* Answer Body */}
-                              {isAnswerExpanded && (
-                                <div className="p-4 text-xs text-white/90 border-t border-white/5 bg-black/50 overflow-x-auto">
-                                  <ReactMarkdown 
-                                    components={{
-                                      code({node, inline, className, children, ...props}: any) {
-                                        const match = /language-(\w+)/.exec(className || '');
-                                        return !inline && match ? (
-                                          <SyntaxHighlighter
-                                            style={vscDarkPlus as any}
-                                            language={match[1]}
-                                            PreTag="div"
-                                            {...props}
-                                          >
-                                            {String(children).replace(/\n$/, '')}
-                                          </SyntaxHighlighter>
-                                        ) : (
-                                          <code className="bg-brand-secondary/80 text-brand-accent px-1.5 py-0.5 rounded text-[11px]" {...props}>
-                                            {children}
-                                          </code>
-                                        )
-                                      }
-                                    }}
-                                  >
-                                    {item.answer ? item.answer.replace(/(?:\r?\n)+/g, '\n').trim() : "No answer generated"}
-                                  </ReactMarkdown>
-                                </div>
-                              )}
-                              
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-          </div>
-        </motion.div>
-      )}
 
-{/* Main UI */}
-        {isRecording && (
-          <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto">
-            {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
-            <div className="w-full flex justify-center items-center relative z-20">
-              <AnimatePresence mode="popLayout" initial={false}>
-                {isTranscriptMinimized ? (
-                  <motion.div
-                    key="minimized-dock"
-                    layout
-                    initial={{ opacity: 0, scale: 0.85, y: -8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.85, y: -8 }}
-                    transition={{ type: "spring", stiffness: 450, damping: 30 }}
-                    onClick={() => setIsTranscriptMinimized(false)}
-                    className="drag-area cursor-pointer group bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 rounded-full px-5 py-2.5 shadow-[0_12px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.25)] flex items-center gap-3.5 hover:border-cyan-400 hover:scale-105 transition-all select-none"
-                    title="Click to expand transcription dock"
-                  >
-                    <div className="flex items-center gap-1.5 text-cyan-400">
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
-                      </span>
-                      <div className="flex items-end gap-0.5 h-3">
-                        <span className="w-0.5 h-2 bg-cyan-400 animate-pulse rounded-full" />
-                        <span className="w-0.5 h-3 bg-cyan-300 animate-pulse delay-75 rounded-full" />
-                        <span className="w-0.5 h-1.5 bg-cyan-500 animate-pulse delay-150 rounded-full" />
+                    {/* Right: Actions, Stealth Shield, Utilities, Controls */}
+                    <div className="flex items-center gap-2.5 no-drag">
+                      {/* Unified Stealth Button */}
+                      <button
+                        onClick={() => {
+                          if (stealthMode) {
+                            setShowStealthWarning(true);
+                          } else {
+                            setStealthMode(true);
+                            ipcRenderer.invoke('set-stealth', true);
+                          }
+                        }}
+                        title={stealthMode ? "Stealth Shield Active (Invisible in screen-shares). Click to disable." : "Stealth Shield OFF (You are visible). Click to activate."}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm border ${stealthMode
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                          : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
+                          }`}
+                      >
+                        {stealthMode ? <ShieldCheck size={14} className="text-emerald-400" /> : <ShieldAlert size={14} className="text-rose-400" />}
+                        <span className="tracking-wide uppercase text-[10.5px]">
+                          {stealthMode ? "Stealth ON" : "Stealth OFF"}
+                        </span>
+                      </button>
+
+                      {/* Guide Info Button */}
+                      <button
+                        onClick={() => setShowInfo(!showInfo)}
+                        className={`p-2 rounded-xl transition-all border ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+                        title="Information Guide"
+                      >
+                        <Info size={15} />
+                      </button>
+
+                      {/* Settings Button */}
+                      <button
+                        onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }}
+                        className={`p-2 rounded-xl transition-all border ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+                        title="Settings & Models"
+                      >
+                        <Settings size={15} />
+                      </button>
+
+                      {/* Start Interview Primary CTA */}
+                      <button
+                        onClick={handleStartCaptureClick}
+                        className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40"
+                      >
+                        <Play size={13} fill="currentColor" /> Start Interview
+                      </button>
+
+                      {/* Window Controls */}
+                      <div className="flex items-center gap-1 ml-2 pl-3 border-l border-white/10 shrink-0">
+                        <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Shrink Window (Alt -)">
+                          <ZoomOut size={15} />
+                        </button>
+                        <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+                          <ZoomIn size={15} />
+                        </button>
+                        <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Fullscreen">
+                          <Maximize size={15} />
+                        </button>
+                        <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Minimize">
+                          <Minus size={15} />
+                        </button>
+                        <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors" title="Close">
+                          <X size={15} />
+                        </button>
                       </div>
                     </div>
-                    <span className="text-xs font-black text-white/90 tracking-wide uppercase flex items-center gap-1.5">
-                      {!isPaused ? "Live STT Active" : "STT Paused"}
-                    </span>
-                    <span className="text-[10px] font-bold text-cyan-400/90 bg-cyan-500/15 border border-cyan-500/30 px-2.5 py-0.5 rounded-full group-hover:bg-cyan-500/30 group-hover:text-cyan-200 transition-colors flex items-center gap-1">
-                      Expand ▾
-                    </span>
-                  </motion.div>
-                ) : (
+                  </div>
+                </div>
+              )}
+
+              {/* Full-Screen Info Modal with Framer Motion */}
+              <AnimatePresence>
+                {showInfo && (
                   <motion.div
-                    key="expanded-dock"
-                    layout
-                    initial={{ opacity: 0, scale: 0.96, y: -8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96, y: -8 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 28 }}
-                    className="w-full max-w-[1080px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
-                    {/* 1. Sleek Controls & Status Ribbon */}
-                    <div className="flex items-center justify-between w-full no-drag px-1">
-                      {/* Left: Drag Handle, Brand, Timer, Stealth, Hotkeys, Model Selector */}
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-white/5 hover:bg-white/10 rounded text-white/40 hover:text-white/80 cursor-grab active:cursor-grabbing shrink-0" title="Drag Dock">
-                          <Move size={13} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.94, y: 15 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.94, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className="w-full max-w-4xl max-h-[92vh] h-full bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden"
+                    >
+                      <div className="w-full flex-shrink-0 bg-brand-bg/95 py-4 px-6 border-b border-brand-border">
+                        <div className="max-w-3xl mx-auto flex justify-between items-end">
+                          <div>
+                            <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
+                              <div className="p-2 bg-brand-accent/20 rounded-xl">
+                                <Info size={28} className="text-brand-accent" />
+                              </div>
+                              Information Guide
+                            </h2>
+                            <p className="text-brand-subtext text-sm mt-2">Everything you need to know to use ClueAI effectively.</p>
+                          </div>
+                          <button onClick={() => setShowInfo(false)} className="bg-brand-secondary hover:bg-brand-border hover:scale-105 active:scale-95 text-brand-text px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
+                            Close <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="max-w-3xl w-full mx-auto space-y-10 pb-10 select-none cursor-default">
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Core Information */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2">
+                                <Info size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">What is ClueAI?</h3>
+                              <p className="text-brand-subtext text-sm leading-relaxed">ClueAI is an advanced, ultra-stealthy AI copilot designed to help you ace your interviews and tests. It secretly records system audio and captures screen snapshots, feeding them to state-of-the-art AI models (Groq and Gemini) to provide you with instant, perfectly accurate answers and hints on your screen—all completely invisible to screen sharing software.</p>
+                            </div>
+
+                            {/* Keyboard Shortcuts */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-4 group hover:border-white/10 transition-colors">
+                              <div className="flex items-center gap-3 border-b border-white/10 pb-3 mb-2">
+                                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center">
+                                  <Settings size={20} />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-bold text-white">Keyboard Shortcuts</h3>
+                                  <p className="text-brand-subtext text-xs">Control ClueAI instantly without clicking.</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                {/* General Hotkeys */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-2">Interview Controls (Toggleable)</h4>
+                                  <p className="text-brand-subtext text-xs leading-relaxed mb-2">
+                                    <strong>When active, these block you from typing those specific keys elsewhere.</strong> Toggle them ON/OFF in the Interview Screen.
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-3 text-[10px]">
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>0 / Num0</strong>: Text color</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>1, Z / Num1</strong>: Pause / Resume</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>2, X / Num2</strong>: Ask AI</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>3, C / Num3</strong>: Clear Transcript</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>4, A / Num4</strong>: Snipping Tool</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>5, S / Num5</strong>: Switch Model</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>6, D / Num6</strong>: Stop Gen</div>
+                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>7, Q / Num7</strong>: Edit Text</div>
+                                  </div>
+                                </div>
+
+                                {/* Scrolling Shortcuts */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2">Stealth Scrolling (Always Active)</h4>
+                                  <div className="bg-black/30 p-3 rounded-lg border border-white/5">
+                                    <p className="text-xs text-brand-subtext leading-relaxed">
+                                      Hold <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Alt</kbd> + <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">↑/↓</kbd> or <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">PgUp/PgDn</kbd> to scroll the text boxes during an interview without using your mouse.
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Global Launch Shortcut */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-2">Global Launch (Always Active)</h4>
+                                  <div className="bg-black/30 p-3 rounded-lg border border-white/5">
+                                    <p className="text-xs text-brand-subtext leading-relaxed">
+                                      Press <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Ctrl + Shift + K</kbd> anywhere on your computer to instantly hide/minimize or show ClueAI.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Sessions */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center mb-2">
+                                <FileText size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">Sessions & Transcripts</h3>
+                              <p className="text-brand-subtext text-sm leading-relaxed">Every time you start an interview, ClueAI creates a <strong>Session</strong>. Sessions automatically save your full transcript and all AI answers locally. You can review past sessions by clicking the <strong>History icon</strong> in the dashboard to review what questions were asked and how the AI answered them.</p>
+                            </div>
+
+                            {/* Reminders */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
+                                <Layout size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">Dashboard Reminders</h3>
+                              <p className="text-brand-subtext text-sm leading-relaxed">You can schedule upcoming interviews using Reminders. When you click <strong>"Start Interview"</strong> directly from a Reminder, ClueAI injects the candidate's name, role, and details into the AI prompt, making the answers highly personalized.</p>
+                            </div>
+
+                            {/* Settings */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-zinc-500/20 text-zinc-400 flex items-center justify-center mb-2">
+                                <Settings size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">Settings Configuration</h3>
+                              <p className="text-brand-subtext text-sm leading-relaxed">In Settings, you can configure your <strong>API Keys</strong> (Groq/Gemini), choose which screen or window to record, and set up your personal resume context. The AI uses your resume to answer behavioral questions from your personal experience.</p>
+                            </div>
+
+                            {/* Stealth Mode */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2">
+                                <EyeOff size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">Stealth Mode & Security</h3>
+                              <p className="text-brand-subtext text-sm leading-relaxed">ClueAI operates at the OS level to hide its window from Discord, Zoom, Teams, and browser screen-sharing. It also disables copying and standard mouse cursors (no hand pointers) to avoid giving away any hints on video streams.</p>
+                            </div>
+
+                            {/* Interview Buttons */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-2">
+                                <Mic size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">Interview Section Controls</h3>
+                              <ul className="text-brand-subtext text-sm leading-relaxed space-y-2 list-disc pl-4">
+                                <li><strong>Next Q. (Pause/Resume):</strong> Temporarily stops audio processing so you can talk to the interviewer without the AI analyzing your voice.</li>
+                                <li><strong>Snip UI:</strong> Takes a visual screenshot of your screen to send to Gemini Vision for coding or visual questions.</li>
+                                <li><strong>Clear:</strong> Wipes the transcript so the AI doesn't get confused by previous topics.</li>
+                                <li><strong>Stop:</strong> Ends the session entirely, saving it to history, and returns you to the Main Dashboard.</li>
+                                <li><strong>Model Selector:</strong> Switch between Groq (Fastest Text) and Gemini (Vision capabilities) instantly.</li>
+                                <li><strong>Hotkeys Toggle:</strong> Temporarily disables global shortcuts so you can type numbers or letters normally in other applications.</li>
+                              </ul>
+                            </div>
+
+                            {/* API Keys Guide */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-3 md:col-span-2 group hover:border-white/10 transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center mb-2">
+                                <Key size={20} />
+                              </div>
+                              <h3 className="text-lg font-bold text-white">How to get API Keys (Free)</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
+                                <div className="space-y-2">
+                                  <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Groq Keys (For Audio & Fast Text)</h4>
+                                  <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                                    <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://console.groq.com/keys'); }} className="text-blue-400 hover:underline">console.groq.com/keys</a> and log in.</li>
+                                    <li>Click on <strong>Create API Key</strong> in the top right.</li>
+                                    <li>Copy the key (it starts with `gsk_`).</li>
+                                    <li>Paste it into the Groq API Key field in ClueAI Settings.</li>
+                                    <li><em>Note: Groq is free but rate-limited. Add multiple keys to avoid interruptions!</em></li>
+                                  </ol>
+                                </div>
+                                <div className="space-y-2">
+                                  <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Gemini Keys (For Snapshots)</h4>
+                                  <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                                    <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://aistudio.google.com/app/apikey'); }} className="text-blue-400 hover:underline">aistudio.google.com/app/apikey</a> and log in.</li>
+                                    <li>Click <strong>Create API Key</strong> and select an existing project or create a new one.</li>
+                                    <li>Copy the generated key (it starts with `AIzaSy` or `AQ.`).</li>
+                                    <li>Paste it into the Gemini API Key field in ClueAI Settings.</li>
+                                    <li><em>Note: Gemini is extremely powerful for visual coding questions!</em></li>
+                                  </ol>
+                                </div>
+                                <div className="space-y-2">
+                                  <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting Claude Keys (Best for Coding)</h4>
+                                  <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                                    <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://console.anthropic.com/settings/keys'); }} className="text-blue-400 hover:underline">console.anthropic.com/settings/keys</a> and log in.</li>
+                                    <li><strong>Important:</strong> You must verify a <strong>brand new phone number</strong> (not just an email) to get $5 free. If it doesn't give you $5, Anthropic may have stopped the free promotion in your region.</li>
+                                    <li>Click <strong>Create Key</strong> and copy it (starts with `sk-ant-`).</li>
+                                    <li>Paste it into the Claude API Key field in ClueAI Settings.</li>
+                                  </ol>
+                                </div>
+                                <div className="space-y-2">
+                                  <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting ChatGPT Keys (Smart All-Rounder)</h4>
+                                  <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                                    <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://platform.openai.com/api-keys'); }} className="text-blue-400 hover:underline">platform.openai.com/api-keys</a> and log in.</li>
+                                    <li>Create a new account with a unique phone number for free credits.</li>
+                                    <li>Click <strong>Create new secret key</strong> and copy it (starts with `sk-`).</li>
+                                    <li>Paste it into the ChatGPT API Key fields (up to 3 for rotation).</li>
+                                    <li><em>Note: ChatGPT keys automatically rotate during use to bypass limits.</em></li>
+                                  </ol>
+                                </div>
+                                <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                                  <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting DeepSeek Keys (Lightning Fast Code)</h4>
+                                  <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                                    <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://platform.deepseek.com/api_keys'); }} className="text-blue-400 hover:underline">platform.deepseek.com/api_keys</a> and log in.</li>
+                                    <li>Click <strong>Create new API key</strong> and copy it.</li>
+                                    <li>DeepSeek is extremely cheap but requires adding a small balance (Top-up).</li>
+                                    <li>Paste it into the DeepSeek API Key fields (up to 3 for rotation).</li>
+                                    <li><em>Note: Your DeepSeek account balance is automatically checked and shown!</em></li>
+                                  </ol>
+                                </div>
+                                <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                                  <h4 className="text-white font-bold text-sm border-b border-white/10 pb-2">Getting NVIDIA / GLM Keys (Free Llama 3)</h4>
+                                  <ol className="text-brand-subtext text-xs leading-relaxed space-y-2 list-decimal pl-4">
+                                    <li>Go to <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://build.nvidia.com/meta/llama-3_1-70b-instruct'); }} className="text-blue-400 hover:underline">build.nvidia.com</a> for NVIDIA NIM or <a href="#" onClick={(e) => { e.preventDefault(); ipcRenderer.invoke('minimize-window'); shell.openExternal('https://bigmodel.cn/'); }} className="text-blue-400 hover:underline">bigmodel.cn</a> for GLM.</li>
+                                    <li>NVIDIA NIM gives you 1,000 free API credits automatically upon signup!</li>
+                                    <li>GLM gives you 25,000,000 free API tokens upon signup!</li>
+                                    <li>Click <strong>Get API Key</strong> on either site and copy the generated key.</li>
+                                    <li>Paste it directly into the GLM/NVIDIA API Key fields (it automatically detects which provider you pasted).</li>
+                                  </ol>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Full-Screen Update Center Modal with Framer Motion */}
+              <AnimatePresence>
+                {showUpdateModal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.92, opacity: 0, y: 15 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.92, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                      className="bg-[#0c0d16]/95 backdrop-blur-3xl border border-cyan-500/40 w-full max-w-xl rounded-3xl p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] flex flex-col gap-3.5 relative max-h-[86vh] overflow-hidden"
+                    >
+                      {/* Fixed Modal Header */}
+                      <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center shadow-inner">
+                            <Sparkles size={20} className="text-cyan-300" />
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                              ClueAI Update Center
+                            </h2>
+                            <p className="text-xs text-white/50">Official real-time updates powered by GitHub Releases</p>
+                          </div>
                         </div>
 
-                        {/* Brand Logo & Live Recording Timer */}
-                        <div className="flex items-center gap-1.5 shrink-0 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/10 shadow-sm">
-                          <img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded shadow-sm border border-cyan-400/30" />
-                          <span className="text-[11px] font-black text-white">Clue<span className="text-cyan-400">AI</span></span>
-                          <span className="text-cyan-300 font-mono font-bold text-[10px] ml-1 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">{formatTimer(recordingSeconds)}</span>
+                        <button
+                          onClick={() => setShowUpdateModal(false)}
+                          className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      {/* Scrollable Center Body */}
+                      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-3.5 pr-1">
+                        {/* Version Comparison Cards */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 flex flex-col gap-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Current Installed</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl font-black text-white">v{appVersion}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/70 border border-white/15">Active</span>
+                            </div>
+                          </div>
+
+                          <div className={`border rounded-2xl p-3.5 flex flex-col gap-1 ${
+                            updateStatus === 'available' || updateStatus === 'downloaded'
+                              ? 'bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+                              : 'bg-white/[0.03] border-white/10'
+                          }`}>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Latest Available</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl font-black text-white">
+                                v{updateInfo.version || appVersion}
+                              </span>
+                              {updateStatus === 'available' || updateStatus === 'downloaded' ? (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse">
+                                  New Release
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                  Up to Date
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        {(updateStatus === 'available' || updateStatus === 'downloaded') && (
-                          <button 
-                            onClick={() => setShowUpdateModal(true)}
-                            className="px-2 py-0.5 rounded-lg font-black text-[9px] flex items-center gap-1 uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse shrink-0 cursor-pointer"
-                            title="New version available! Click to update"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                            <Sparkles size={10} />
-                            <span>Update Available</span>
-                          </button>
+
+                        {/* Status Display Banner */}
+                        {updateStatus === 'checking' && (
+                          <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-2xl p-3.5 flex items-center gap-3">
+                            <Loader2 size={18} className="animate-spin text-cyan-400 shrink-0" />
+                            <span className="text-xs text-cyan-200 font-medium">Checking GitHub Releases repository for latest packages...</span>
+                          </div>
                         )}
 
-                        {/* Stealth Shield Toggle Button */}
+                        {updateStatus === 'not-available' && (
+                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3.5 flex items-center gap-3">
+                            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                            <div>
+                              <p className="text-xs text-emerald-200 font-bold">You are using the latest version of ClueAI!</p>
+                              <p className="text-[11px] text-emerald-200/60 mt-0.5">Your system is fully up to date.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {updateStatus === 'error' && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3.5 flex items-center gap-3">
+                            <AlertTriangle size={18} className="text-rose-400 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-rose-200 font-bold">Update Notice</p>
+                              <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not verify GitHub Releases'}</p>
+                            </div>
+                            <button
+                              onClick={handleCheckForUpdates}
+                              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Real-Time Download Progress Bar */}
+                        {updateStatus === 'downloading' && (
+                          <div className="bg-white/[0.04] border border-cyan-500/40 rounded-2xl p-4 flex flex-col gap-2.5 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-white flex items-center gap-2">
+                                <Loader2 size={15} className="animate-spin text-cyan-400" />
+                                Downloading Update Package...
+                              </span>
+                              <span className="font-mono text-cyan-300 font-bold px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/30">
+                                {downloadProgress.percent}%
+                              </span>
+                            </div>
+
+                            {/* Progress track */}
+                            <div className="w-full h-3 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5 relative">
+                              <div
+                                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 rounded-full transition-all duration-200 shadow-[0_0_12px_rgba(6,182,212,0.8)]"
+                                style={{ width: `${Math.max(downloadProgress.percent, 3)}%` }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px] text-white/60 font-mono">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                                Speed: {downloadProgress.bytesPerSecond > 1024 * 1024
+                                  ? `${(downloadProgress.bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`
+                                  : `${Math.round(downloadProgress.bytesPerSecond / 1024)} KB/s`}
+                              </span>
+                              <span>
+                                {(downloadProgress.transferred / (1024 * 1024)).toFixed(1)} MB / {(downloadProgress.total / (1024 * 1024)).toFixed(1)} MB
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Release Notes / What's New with HTML Tag Stripping & Clean Formatting */}
+                        <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col gap-2">
+                          <h3 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                            <FileText size={13} />
+                            What's New in {updateInfo.version ? `v${updateInfo.version}` : `v${appVersion}`}
+                          </h3>
+
+                          <div className="max-h-40 overflow-y-auto custom-scrollbar pr-1 leading-relaxed">
+                            {renderReleaseNotes(updateInfo.releaseNotes)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Fixed Footer Action Buttons */}
+                      <div className="flex items-center justify-between pt-3 border-t border-white/10 shrink-0">
                         <button
-                          onClick={() => {
-                            if (stealthMode) {
-                              setShowStealthWarning(true);
-                            } else {
-                              setStealthMode(true);
-                              ipcRenderer.invoke('set-stealth', true);
-                            }
-                          }}
-                          className={`px-2 py-1 rounded-lg font-bold text-[9.5px] flex items-center gap-1 border transition-all ${
-                            stealthMode
-                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
-                              : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'
-                          }`}
-                          title={stealthMode ? "Stealth Shield Active (Click to disable)" : "Stealth Shield OFF (Click to activate)"}
+                          onClick={handleCheckForUpdates}
+                          disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                         >
-                          {stealthMode ? <ShieldCheck size={11} className="text-emerald-400" /> : <AlertTriangle size={11} className="text-rose-400" />}
-                          <span className="uppercase tracking-wider">{stealthMode ? "Stealth ON" : "Stealth OFF"}</span>
+                          <RefreshCw size={13} className={updateStatus === 'checking' ? 'animate-spin' : ''} />
+                          <span>Check Again</span>
                         </button>
 
-                        {/* Global Hotkeys Toggle */}
-                        <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-1 rounded-lg shrink-0" title="Toggle Global Hotkeys">
-                          <button 
-                            onClick={() => {
-                              const newState = !globalHotkeysEnabled;
-                              setGlobalHotkeysEnabled(newState);
-                              ipcRenderer.invoke('toggle-global-hotkeys', newState);
-                            }} 
-                            className={`relative w-6 h-3 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowUpdateModal(false)}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                           >
-                            <div className={`w-2 h-2 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-3' : 'translate-x-0'}`} />
+                            Close
                           </button>
-                          <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/60">Hotkeys</span>
+
+                          {updateStatus === 'downloaded' ? (
+                            <button
+                              onClick={handleRestartToInstall}
+                              className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_20px_rgba(6,182,212,0.6)] border border-cyan-300/60 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 animate-pulse cursor-pointer"
+                            >
+                              <Sparkles size={14} />
+                              <span>Restart & Install Now</span>
+                            </button>
+                          ) : updateStatus === 'available' ? (
+                            <button
+                              onClick={handleDownloadUpdate}
+                              className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                            >
+                              <Download size={14} />
+                              <span>Download Update</span>
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Full-Screen Settings Modal with Framer Motion & Perfect Sizing */}
+              <AnimatePresence>
+                {showSettings && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden"
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.94, y: 15 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.94, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className={`w-full max-w-4xl max-h-[92vh] h-full min-h-0 bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
+                      <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
+                              <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localSettingsStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                                {localSettingsStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                              </button>
+                            </div>
+                            <p className="text-white/50 text-xs mt-1">Configure your shortcuts, AI models, and stealth mode.</p>
+                          </div>
+                          <span className="hidden md:flex px-2.5 py-1 rounded-md border border-white/10 bg-black/30 text-[10px] font-bold text-white/50 tracking-wider uppercase items-center gap-1.5 pointer-events-none select-none">
+                            <Keyboard size={12} /> Ctrl+Shift+K to minimize/restore
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {deleteMsg && <span className="text-rose-400 font-bold text-xs bg-rose-500/10 px-3 py-1.5 rounded border border-rose-500/20">{deleteMsg}</span>}
+                          <button onClick={() => setShowSettings(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors shadow-sm">
+                            <X size={18} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-black/[0.02]">
+                        <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
+
+
+                          <section>
+                            <h3 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-4 flex items-center gap-2"><Settings size={16} /> Provider & Display</h3>
+                            <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
+                              <div>
+                                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Default AI Provider</label>
+                                <CustomSelect
+                                  value={provider}
+                                  onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
+                                    if (val === 'groq' && !groqKeys.some(k => k.trim())) {
+                                      setModelChangeMsg('No API key found in Groq');
+                                      setTimeout(() => setModelChangeMsg(''), 3000);
+                                      return;
+                                    }
+                                    if (val === 'gemini-flash' && !geminiKeys.some(k => k.trim())) {
+                                      setModelChangeMsg('No API key found in Gemini Flash');
+                                      setTimeout(() => setModelChangeMsg(''), 3000);
+                                      return;
+                                    }
+                                    if (val === 'claude' && !claudeKeys.some(k => k.key.trim())) {
+                                      setModelChangeMsg('No API key found in Claude');
+                                      setTimeout(() => setModelChangeMsg(''), 3000);
+                                      return;
+                                    }
+                                    if (val === 'chatgpt' && !chatgptKeys.some(k => k.key.trim())) {
+                                      setModelChangeMsg('No API key found in ChatGPT');
+                                      setTimeout(() => setModelChangeMsg(''), 3000);
+                                      return;
+                                    }
+                                    if (val === 'deepseek' && !deepseekKeys.some(k => k.key.trim())) {
+                                      setModelChangeMsg('No API key found in DeepSeek');
+                                      setTimeout(() => setModelChangeMsg(''), 3000);
+                                      return;
+                                    }
+
+                                    setProvider(val);
+                                    switchProvider(val);
+                                    const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
+                                    setModelChangeMsg(`Switched to ${nameMap[val]}`);
+                                    setTimeout(() => setModelChangeMsg(''), 3000);
+                                  }}
+                                  options={[
+                                    { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
+                                    { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
+                                    { value: 'claude', label: 'Claude 3.5 Sonnet' },
+                                    { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
+                                    { value: 'deepseek', label: 'DeepSeek Coder' }, { value: 'glm', label: 'GLM / NVIDIA' }]}
+                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Capture Screen</label>
+                                <CustomSelect
+                                  value={selectedSource}
+                                  onChange={(val: any) => setSelectedSource(val)}
+                                  options={sources.map(s => ({ value: s.id, label: s.name }))}
+                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-brand-subtext mb-2">Stealth Mode (Hide from Screen Share)</label>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                  <div className="relative">
+                                    <input type="checkbox" className="sr-only" checked={stealthMode} onChange={e => {
+                                      const val = e.target.checked;
+                                      if (!val) {
+                                        setShowStealthWarning(true);
+                                      } else {
+                                        setStealthMode(true);
+                                        ipcRenderer.invoke('set-stealth', true);
+                                      }
+                                    }} />
+                                    <div className={`block w-12 h-6 rounded-full transition-colors ${stealthMode ? 'bg-brand-accentSec' : 'bg-brand-border'}`}></div>
+                                    <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${stealthMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                  </div>
+                                  <span className="text-sm text-brand-subtext">
+                                    {stealthMode ? 'Enabled (May cause crashes on some PCs)' : 'Disabled (App is visible in screen share)'}
+                                  </span>
+                                </label>
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* Interview Content Settings */}
+                          <section>
+                            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                              <Layout size={16} /> Interview Layout & Content
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Transcript Size */}
+                              <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-5 rounded-2xl border border-white/5 shadow-lg flex flex-col group hover:border-white/10 transition-colors">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mb-3">
+                                  <FileText size={16} />
+                                </div>
+                                <label className="block text-xs font-bold text-white uppercase mb-2">Transcript Font Size</label>
+                                <div className="flex items-center gap-2 mt-auto">
+                                  <input
+                                    type="range"
+                                    min="10"
+                                    max="40"
+                                    value={transcriptTextSize}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 15;
+                                      setTranscriptTextSize(val);
+                                      localStorage.setItem('clueai_transcript_size', val.toString());
+                                    }}
+                                    className="flex-1 accent-brand-accent h-1.5 bg-brand-bg rounded-lg appearance-none cursor-pointer"
+                                  />
+                                  <span className="text-sm font-mono font-bold text-brand-accent bg-brand-bg px-2 py-1 rounded-md border border-brand-border">{transcriptTextSize}px</span>
+                                </div>
+                              </div>
+
+
+                            </div>
+                          </section>
+
+                          {/* API Keys Configuration */}
+                          <section>
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2"><Cpu size={16} /> API Keys</h3>
+                              <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-end gap-1">
+                                  {saveMessages.map((msg, i) => (
+                                    <span key={i} className={`text-xs font-bold animate-in fade-in ${msg.type === 'invalid' ? 'text-rose-500' :
+                                      msg.type === 'duplicate' ? 'text-yellow-500' :
+                                        'text-green-400'
+                                      }`}>
+                                      {msg.text}
+                                    </span>
+                                  ))}
+                                </div>
+                                <button onClick={saveApiKeys} className="flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accentSec text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                                  <Save size={14} /> Save API Keys
+                                </button>
+                              </div>
+                            </div>
+                            <div className="bg-brand-accent/10 border border-brand-accent/30 rounded-xl p-4 mb-4 flex items-start gap-3 shadow-sm">
+                              <Info className="text-brand-accent mt-0.5 shrink-0" size={18} />
+                              <div className="text-sm text-brand-subtext leading-relaxed">
+                                <strong className="text-white block mb-1">Why 15 API Keys?</strong>
+                                To bypass rate limits and keep your usage completely free, ClueAI distributes requests across multiple API keys.
+                                If you provide 6 keys, ClueAI will intelligently rotate through all 6 to keep you safely within free limits.
+                                The more keys you provide, the more seamless and free your interview experience will be!
+                              </div>
+                            </div>
+                            <div className="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+                              {/* Groq Accordion */}
+                              <div className="border-b border-brand-border last:border-b-0">
+                                <button onClick={() => setApiAccordion(apiAccordion === 'groq' ? 'none' : 'groq')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">Groq Keys</h4>
+                                    <p className="text-xs text-brand-subtext mt-1">{groqKeys.filter(k => k.trim()).length} keys loaded (Used for STT & LLM)</p>
+                                  </div>
+                                  {apiAccordion === 'groq' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                                </button>
+
+                                {apiAccordion === 'groq' && (
+                                  <div className="p-5 bg-brand-card space-y-3">
+                                    {Array.from({ length: 15 }).map((_, i) => (
+                                      <div key={`groq-${i}`}>
+                                        <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                                        <div className="relative">
+                                          <input
+                                            type={showGroqKeys[i] ? "text" : "password"}
+                                            value={groqKeys[i]}
+                                            onChange={e => {
+                                              const newKeys = [...groqKeys];
+                                              newKeys[i] = e.target.value;
+                                              setGroqKeys(newKeys);
+                                            }}
+                                            className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all"
+                                            placeholder={`gsk_...`}
+                                          />
+                                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            {groqKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                            {groqKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                            {groqKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                            {groqKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
+                                            <button onClick={() => {
+                                              const newShow = [...showGroqKeys];
+                                              newShow[i] = !newShow[i];
+                                              setShowGroqKeys(newShow);
+                                            }} className="text-brand-subtext hover:text-white transition-colors">
+                                              {showGroqKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                            </button>
+                                            <button onClick={() => {
+                                              if (groqKeys[i]) {
+                                                clipboard.writeText(groqKeys[i]);
+                                              }
+                                            }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
+                                              <Copy size={14} />
+                                            </button>
+                                            <button onClick={async () => {
+                                              try {
+                                                const text = clipboard.readText();
+                                                if (text && text.trim()) {
+                                                  const newKeys = [...groqKeys];
+                                                  newKeys[i] = text.trim();
+                                                  setGroqKeys(newKeys);
+                                                }
+                                              } catch (e) { }
+                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                              <ClipboardPaste size={14} />
+                                            </button>
+                                            <button onClick={() => {
+                                              const newKeys = [...groqKeys];
+                                              newKeys[i] = '';
+                                              setGroqKeys(newKeys);
+                                              setDeleteMessage({ provider: 'groq', index: i });
+                                              setTimeout(() => setDeleteMessage(null), 3000);
+                                            }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                              <Trash2 size={14} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                        {deleteMessage?.provider === 'groq' && deleteMessage?.index === i && (
+                                          <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Gemini Accordion */}
+                              <div className="border-b border-brand-border last:border-b-0">
+                                <button onClick={() => setApiAccordion(apiAccordion === 'gemini' ? 'none' : 'gemini')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">Gemini Keys</h4>
+                                    <p className="text-xs text-brand-subtext mt-1">{geminiKeys.filter(k => k.trim()).length} keys loaded (Used for LLM)</p>
+                                  </div>
+                                  {apiAccordion === 'gemini' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                                </button>
+
+                                {apiAccordion === 'gemini' && (
+                                  <div className="p-5 bg-brand-card space-y-3">
+                                    {Array.from({ length: 15 }).map((_, i) => (
+                                      <div key={`gemini-${i}`}>
+                                        <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                                        <div className="relative">
+                                          <input
+                                            type={showGeminiKeys[i] ? "text" : "password"}
+                                            value={geminiKeys[i]}
+                                            onChange={e => {
+                                              const newKeys = [...geminiKeys];
+                                              newKeys[i] = e.target.value;
+                                              setGeminiKeys(newKeys);
+                                            }}
+                                            className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all"
+                                            placeholder={`AIza... or AQ...`}
+                                          />
+                                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            {geminiKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                            {geminiKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                            {geminiKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                            {geminiKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
+                                            <button onClick={() => {
+                                              const newShow = [...showGeminiKeys];
+                                              newShow[i] = !newShow[i];
+                                              setShowGeminiKeys(newShow);
+                                            }} className="text-brand-subtext hover:text-white transition-colors">
+                                              {showGeminiKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                            </button>
+                                            <button onClick={() => {
+                                              if (geminiKeys[i]) {
+                                                clipboard.writeText(geminiKeys[i]);
+                                              }
+                                            }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
+                                              <Copy size={14} />
+                                            </button>
+                                            <button onClick={async () => {
+                                              try {
+                                                const text = clipboard.readText();
+                                                if (text && text.trim()) {
+                                                  const newKeys = [...geminiKeys];
+                                                  newKeys[i] = text.trim();
+                                                  setGeminiKeys(newKeys);
+                                                }
+                                              } catch (e) { }
+                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                              <ClipboardPaste size={14} />
+                                            </button>
+                                            <button onClick={() => {
+                                              const newKeys = [...geminiKeys];
+                                              newKeys[i] = '';
+                                              setGeminiKeys(newKeys);
+                                              setDeleteMessage({ provider: 'gemini', index: i });
+                                              setTimeout(() => setDeleteMessage(null), 3000);
+                                            }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                              <Trash2 size={14} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                        {deleteMessage?.provider === 'gemini' && deleteMessage?.index === i && (
+                                          <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Claude Accordion */}
+                              <div className="border-b border-brand-border last:border-b-0">
+                                <button onClick={() => setApiAccordion(apiAccordion === 'claude' ? 'none' : 'claude')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">Claude Keys (Anthropic)</h4>
+                                    <p className="text-xs text-brand-subtext mt-1">{claudeKeys.filter(k => k.key.trim()).length} key loaded (14 Day Limit)</p>
+                                  </div>
+                                  {apiAccordion === 'claude' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                                </button>
+                                {apiAccordion === 'claude' && (
+                                  <div className="p-5 bg-brand-card space-y-3">
+                                    {Array.from({ length: 2 }).map((_, i) => {
+                                      return (
+                                        <div key={`claude-${i}`}>
+                                          <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                                          </div>
+                                          <div className="relative">
+                                            <input
+                                              type={showClaudeKeys[i] ? "text" : "password"}
+                                              value={claudeKeys[i].key}
+                                              onChange={e => {
+                                                const newKeys = [...claudeKeys];
+                                                newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                                setClaudeKeys(newKeys);
+                                              }}
+                                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all"
+                                              placeholder={`sk-ant-...`}
+                                            />
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                              {claudeKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                              {claudeKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                              {claudeKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                              <button onClick={() => {
+                                                const newShow = [...showClaudeKeys];
+                                                newShow[i] = !newShow[i];
+                                                setShowClaudeKeys(newShow);
+                                              }} className="text-brand-subtext hover:text-white transition-colors">
+                                                {showClaudeKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                              </button>
+                                              <button onClick={async () => {
+                                                try {
+                                                  const text = clipboard.readText();
+                                                  if (text && text.trim()) {
+                                                    const newKeys = [...claudeKeys];
+                                                    newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                                    setClaudeKeys(newKeys);
+                                                  }
+                                                } catch (e) { }
+                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                                <ClipboardPaste size={14} />
+                                              </button>
+                                              <button onClick={() => {
+                                                const newKeys = [...claudeKeys];
+                                                newKeys[i] = { key: '', addedAt: 0 };
+                                                setClaudeKeys(newKeys);
+                                                setDeleteMessage({ provider: 'claude', index: i });
+                                                setTimeout(() => setDeleteMessage(null), 3000);
+                                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                                <Trash2 size={14} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                          {deleteMessage?.provider === 'claude' && deleteMessage?.index === i && (
+                                            <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                              {/* GLM Accordion */}
+                              <div className="border-b border-brand-border last:border-b-0">
+                                <button onClick={() => setApiAccordion(apiAccordion === 'glm' ? 'none' : 'glm')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">GLM / NVIDIA Keys</h4>
+                                    <p className="text-xs text-brand-subtext mt-1">{glmKeys.filter(k => k.key.trim()).length} keys loaded (Used for LLM)</p>
+                                  </div>
+                                  {apiAccordion === 'glm' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                                </button>
+
+                                {apiAccordion === 'glm' && (
+                                  <div className="p-5 bg-brand-card space-y-3">
+                                    {Array.from({ length: 3 }).map((_, i) => (
+                                      <div key={`glm-${i}`}>
+                                        <label className="block text-[10px] font-bold text-brand-subtext uppercase mb-1">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                                        <div className="relative">
+                                          <input
+                                            type={showGlmKeys[i] ? "text" : "password"}
+                                            value={glmKeys[i].key}
+                                            onChange={e => {
+                                              const newKeys = [...glmKeys];
+                                              newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                              setGlmKeys(newKeys);
+                                            }}
+
+                                            className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all"
+                                            placeholder={`nvapi- or Zhipu key`}
+                                          />
+                                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                            {glmKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                            {glmKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                            {glmKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                            {glmKeyStatus[i] === 'duplicate' && <div><AlertTriangle size={16} className="text-yellow-500" /></div>}
+                                            <button onClick={() => {
+                                              const newShow = [...showGlmKeys];
+                                              newShow[i] = !newShow[i];
+                                              setShowGlmKeys(newShow);
+                                            }} className="text-brand-subtext hover:text-white transition-colors">
+                                              {showGlmKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                            </button>
+                                            <button onClick={async () => {
+                                              try {
+                                                const text = clipboard.readText();
+                                                if (text && text.trim()) {
+                                                  const newKeys = [...glmKeys];
+                                                  newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                                  setGlmKeys(newKeys);
+                                                }
+                                              } catch (e) { }
+                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                              <ClipboardPaste size={14} />
+                                            </button>
+                                            <button onClick={() => {
+                                              const newKeys = [...glmKeys];
+                                              newKeys[i] = { key: '', addedAt: 0 };
+                                              setGlmKeys(newKeys);
+                                              setDeleteMessage({ provider: 'glm', index: i });
+                                              setTimeout(() => setDeleteMessage(null), 3000);
+                                            }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                              <Trash2 size={14} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                        {deleteMessage?.provider === 'glm' && deleteMessage?.index === i && (
+                                          <p className="text-rose-400 text-[10px] mt-1 font-bold animate-in fade-in">API Key deleted</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+
+                              {/* ChatGPT Accordion */}
+                              <div className="border-b border-brand-border last:border-b-0">
+                                <button onClick={() => setApiAccordion(apiAccordion === 'chatgpt' ? 'none' : 'chatgpt')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">ChatGPT Keys (OpenAI)</h4>
+                                    <p className="text-xs text-brand-subtext mt-1">{chatgptKeys.filter(k => k.key.trim()).length} keys loaded (90 Day Limit)</p>
+                                  </div>
+                                  {apiAccordion === 'chatgpt' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                                </button>
+                                {apiAccordion === 'chatgpt' && (
+                                  <div className="p-5 bg-brand-card space-y-3">
+                                    {Array.from({ length: 3 }).map((_, i) => {
+                                      return (
+                                        <div key={`chatgpt-${i}`}>
+                                          <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                                          </div>
+                                          <div className="relative">
+                                            <input
+                                              type={showChatgptKeys[i] ? "text" : "password"}
+                                              value={chatgptKeys[i].key}
+                                              onChange={e => {
+                                                const newKeys = [...chatgptKeys];
+                                                newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                                setChatgptKeys(newKeys);
+                                              }}
+                                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all"
+                                              placeholder={`sk-...`}
+                                            />
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                              {chatgptKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                              {chatgptKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                              {chatgptKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                              <button onClick={() => {
+                                                const newShow = [...showChatgptKeys];
+                                                newShow[i] = !newShow[i];
+                                                setShowChatgptKeys(newShow);
+                                              }} className="text-brand-subtext hover:text-white transition-colors">
+                                                {showChatgptKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                              </button>
+                                              <button onClick={async () => {
+                                                try {
+                                                  const text = clipboard.readText();
+                                                  if (text && text.trim()) {
+                                                    const newKeys = [...chatgptKeys];
+                                                    newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                                    setChatgptKeys(newKeys);
+                                                  }
+                                                } catch (e) { }
+                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                                <ClipboardPaste size={14} />
+                                              </button>
+                                              <button onClick={() => {
+                                                const newKeys = [...chatgptKeys];
+                                                newKeys[i] = { key: '', addedAt: 0 };
+                                                setChatgptKeys(newKeys);
+                                                setDeleteMessage({ provider: 'chatgpt', index: i });
+                                                setTimeout(() => setDeleteMessage(null), 3000);
+                                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                                <Trash2 size={14} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* DeepSeek Accordion */}
+                              <div className="border-b border-brand-border last:border-b-0">
+                                <button onClick={() => setApiAccordion(apiAccordion === 'deepseek' ? 'none' : 'deepseek')} className="w-full flex items-center justify-between p-5 bg-brand-secondary/50 hover:bg-brand-secondary transition-colors text-left">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">DeepSeek Keys</h4>
+                                    <p className="text-xs text-brand-subtext mt-1">{deepseekKeys.filter(k => k.key.trim()).length} keys loaded</p>
+                                  </div>
+                                  {apiAccordion === 'deepseek' ? <ChevronDown size={20} className="text-brand-subtext" /> : <ChevronRight size={20} className="text-brand-subtext" />}
+                                </button>
+                                {apiAccordion === 'deepseek' && (
+                                  <div className="p-5 bg-brand-card space-y-3">
+                                    {Array.from({ length: 3 }).map((_, i) => {
+                                      return (
+                                        <div key={`deepseek-${i}`}>
+                                          <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[10px] font-bold text-brand-subtext uppercase">Key {i + 1} {i === 0 ? '(Mandatory)' : '(Optional)'}</label>
+                                            <div className="flex gap-2">
+                                              {deepseekBalances[i] && <span className="text-[10px] font-bold text-green-400">Bal: ${deepseekBalances[i]}</span>}
+                                            </div>
+                                          </div>
+                                          <div className="relative">
+                                            <input
+                                              type={showDeepseekKeys[i] ? "text" : "password"}
+                                              value={deepseekKeys[i].key}
+                                              onChange={e => {
+                                                const newKeys = [...deepseekKeys];
+                                                newKeys[i] = { key: e.target.value, addedAt: e.target.value ? Date.now() : 0 };
+                                                setDeepseekKeys(newKeys);
+                                              }}
+                                              className="w-full bg-brand-secondary border border-brand-border rounded-lg pl-3 pr-[100px] py-2 text-sm outline-none focus:border-brand-accent text-white transition-all"
+                                              placeholder={`sk-...`}
+                                            />
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                              {deepseekKeyStatus[i] === 'validating' && <div><Loader2 size={16} className="animate-spin text-brand-subtext" /></div>}
+                                              {deepseekKeyStatus[i] === 'valid' && <div><CheckCircle2 size={16} className="text-green-500" /></div>}
+                                              {deepseekKeyStatus[i] === 'invalid' && <div><XCircle size={16} className="text-rose-500" /></div>}
+                                              <button onClick={() => {
+                                                const newShow = [...showDeepseekKeys];
+                                                newShow[i] = !newShow[i];
+                                                setShowDeepseekKeys(newShow);
+                                              }} className="text-brand-subtext hover:text-white transition-colors">
+                                                {showDeepseekKeys[i] ? <Eye size={14} /> : <EyeOff size={14} />}
+                                              </button>
+                                              <button onClick={async () => {
+                                                try {
+                                                  const text = clipboard.readText();
+                                                  if (text && text.trim()) {
+                                                    const newKeys = [...deepseekKeys];
+                                                    newKeys[i] = { key: text.trim(), addedAt: Date.now() };
+                                                    setDeepseekKeys(newKeys);
+                                                  }
+                                                } catch (e) { }
+                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                                <ClipboardPaste size={14} />
+                                              </button>
+                                              <button onClick={() => {
+                                                const newKeys = [...deepseekKeys];
+                                                newKeys[i] = { key: '', addedAt: 0 };
+                                                setDeepseekKeys(newKeys);
+
+                                                const newBals = [...deepseekBalances];
+                                                newBals[i] = '';
+                                                setDeepseekBalances(newBals);
+
+                                                setDeleteMessage({ provider: 'deepseek', index: i });
+                                                setTimeout(() => setDeleteMessage(null), 3000);
+                                              }} className="text-rose-500 hover:text-rose-400 transition-colors">
+                                                <Trash2 size={14} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* Interview Context */}
+                          <section>
+                            <h3 className="text-sm font-bold text-brand-accent uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16} /> Interview Context</h3>
+                            <div className="bg-brand-card p-6 rounded-2xl border border-brand-border shadow-lg">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Interview Title */}
+                                <div className="md:col-span-2">
+                                  <label className="block text-xs font-black text-brand-subtext uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <Layout size={14} className="text-brand-accent" /> Title of Interview
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={interviewTitle}
+                                    onChange={e => setInterviewTitle(e.target.value)}
+                                    className="w-full bg-brand-bg/50 border border-brand-border rounded-xl px-4 py-3 text-sm outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/50 text-white transition-all placeholder:text-white/20"
+                                    placeholder="e.g. Senior Backend Developer"
+                                  />
+                                </div>
+
+                                {/* Resume Context 1 */}
+                                <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
+                                      <FileText size={14} className="text-blue-400" /> Resume Context 1
+                                    </label>
+                                    <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-brand-text cursor-pointer hover:text-brand-accent transition-colors">
+                                      <input type="radio" name="resumePriority" checked={resumePriority === 1} onChange={() => setResumePriority(1)} className="accent-brand-accent cursor-pointer" />
+                                      <span className={resumePriority === 1 ? 'text-brand-accent' : ''}>High Priority</span>
+                                    </label>
+                                  </div>
+
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-3">
+                                      <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg cursor-pointer transition-all text-xs font-bold">
+                                        {isUploadingResume ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                                        {isUploadingResume ? 'Analyzing...' : 'Upload PDF/TXT'}
+                                        <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume1')} disabled={isUploadingResume} />
+                                      </label>
+                                      {resumeFileName && !isUploadingResume && (
+                                        <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
+                                          <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
+                                            <FileText size={12} className="shrink-0" /> {resumeFileName}
+                                          </span>
+                                          <button onClick={() => handleDeleteFile('resume1')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <textarea
+                                      value={resumeText}
+                                      onChange={(e) => setResumeText(e.target.value)}
+                                      className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-blue-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
+                                      placeholder="Paste your resume text here or upload a file..."
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Resume Context 2 */}
+                                <div className="bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2">
+                                      <FileText size={14} className="text-cyan-400" /> Resume Context 2
+                                    </label>
+                                    <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-brand-text cursor-pointer hover:text-brand-accent transition-colors">
+                                      <input type="radio" name="resumePriority" checked={resumePriority === 2} onChange={() => setResumePriority(2)} className="accent-brand-accent cursor-pointer" />
+                                      <span className={resumePriority === 2 ? 'text-brand-accent' : ''}>High Priority</span>
+                                    </label>
+                                  </div>
+
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-3">
+                                      <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg cursor-pointer transition-all text-xs font-bold">
+                                        {isUploadingResume2 ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                                        {isUploadingResume2 ? 'Analyzing...' : 'Upload PDF/TXT'}
+                                        <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'resume2')} disabled={isUploadingResume2} />
+                                      </label>
+                                      {resumeFileName2 && !isUploadingResume2 && (
+                                        <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
+                                          <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
+                                            <FileText size={12} className="shrink-0" /> {resumeFileName2}
+                                          </span>
+                                          <button onClick={() => handleDeleteFile('resume2')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <textarea
+                                      value={resumeText2}
+                                      onChange={(e) => setResumeText2(e.target.value)}
+                                      className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-cyan-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
+                                      placeholder="Paste your second resume text here or upload a file..."
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Personal Context */}
+                                <div className="md:col-span-2 bg-brand-bg/30 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/30 transition-all duration-150">
+                                  <div className="mb-4">
+                                    <label className="text-xs font-black text-brand-subtext uppercase tracking-widest flex items-center gap-2 mb-1">
+                                      <User size={14} className="text-fuchsia-400" /> Personal Context
+                                    </label>
+                                    <p className="text-[10px] text-brand-subtext/70 italic">High Priority: This document should contain information about yourself (strengths, weaknesses, hobbies, background).</p>
+                                  </div>
+
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-3 w-1/2">
+                                      <label className="flex items-center justify-center gap-2 px-4 py-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400 rounded-lg cursor-pointer transition-all text-xs font-bold shrink-0">
+                                        {isUploadingPersonalContext ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                                        {isUploadingPersonalContext ? 'Analyzing...' : 'Upload PDF/TXT'}
+                                        <input type="file" accept=".pdf,.txt" className="hidden" onChange={(e) => handleFileUpload(e, 'personal')} disabled={isUploadingPersonalContext} />
+                                      </label>
+                                      {personalContextFileName && !isUploadingPersonalContext && (
+                                        <div className="flex-1 flex items-center gap-2 overflow-hidden bg-green-500/10 border border-green-500/20 rounded-lg px-2 py-1.5">
+                                          <span className="text-[10px] text-green-400 font-medium truncate flex-1 flex items-center gap-1.5">
+                                            <FileText size={12} className="shrink-0" /> {personalContextFileName}
+                                          </span>
+                                          <button onClick={() => handleDeleteFile('personal')} className="text-rose-400 hover:text-rose-300 shrink-0 p-1 bg-rose-500/20 rounded hover:bg-rose-500/30 transition-colors">
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <textarea
+                                      value={personalContextText}
+                                      onChange={(e) => setPersonalContextText(e.target.value)}
+                                      className="w-full h-32 bg-black/40 border border-white/5 rounded-lg p-3 text-[11px] text-white/80 font-mono resize-y outline-none focus:border-fuchsia-400/50 custom-scrollbar whitespace-pre-wrap placeholder:text-white/20"
+                                      placeholder="Paste your personal context here (strengths, weaknesses, background) or upload a file..."
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* Sound Settings */}
+                          <section>
+                            <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Mic size={16} /> System Sound Settings</h3>
+                            <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-5">
+                              <div className="flex items-center justify-between pb-4 border-b border-brand-border">
+                                <div>
+                                  <h4 className="text-sm font-bold text-white mb-1">Active Microphone</h4>
+                                  <p className="text-xs text-brand-accentSec font-mono truncate max-w-[250px]">{activeMicName}</p>
+                                </div>
+                                <button
+                                  onClick={() => shell.openExternal('ms-settings:sound')}
+                                  className="px-4 py-2 bg-brand-secondary hover:bg-white/10 border border-brand-border text-brand-text rounded-lg text-xs font-bold transition-colors"
+                                >
+                                  Change in Windows Settings
+                                </button>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="text-sm font-bold text-white mb-1">Microphone Volume</h4>
+                                  <p className="text-xs text-brand-subtext">Automatically synced with Windows system settings</p>
+                                </div>
+                                <div className="flex items-center gap-3 w-1/2">
+                                  <span className="text-xs font-mono text-brand-subtext w-8 text-right">{sysMicVolume}%</span>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={sysMicVolume}
+                                    onChange={handleMicVolumeChange}
+                                    className="w-full accent-brand-accent"
+                                    disabled={sysMicMuted}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between pt-4 border-t border-brand-border">
+                                <div>
+                                  <h4 className="text-sm font-bold text-white mb-1">Microphone Mute</h4>
+                                  <p className="text-xs text-brand-subtext">Toggle microphone on or off at the system level</p>
+                                </div>
+                                <button
+                                  onClick={handleMicMuteToggle}
+                                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${sysMicMuted ? 'bg-rose-500/20 text-rose-500 border border-rose-500/50' : 'bg-brand-secondary border border-brand-border text-white hover:bg-white/10'}`}
+                                >
+                                  {sysMicMuted ? 'Unmute' : 'Mute'}
+                                </button>
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* Software Updates Section */}
+                          <section>
+                            <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Sparkles size={16} className="text-cyan-400" /> Software Updates</h3>
+                            <div className="bg-brand-card p-5 rounded-2xl border border-brand-border flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-bold text-white">ClueAI Version</span>
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                                    v{appVersion}
+                                  </span>
+                                  {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
+                                      Update Available: v{updateInfo.version}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-brand-subtext">Free on-demand updates powered directly via official GitHub Releases.</p>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setShowSettings(false);
+                                    setShowUpdateModal(true);
+                                    if (updateStatus === 'idle') handleCheckForUpdates();
+                                  }}
+                                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${updateStatus === 'available' || updateStatus === 'downloaded'
+                                    ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:scale-105 active:scale-95 animate-pulse border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10 hover:border-cyan-400/40'
+                                    }`}
+                                >
+                                  <Sparkles size={13} />
+                                  <span>{updateStatus === 'available' || updateStatus === 'downloaded' ? 'View & Install Update' : 'Check for Updates'}</span>
+                                </button>
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* Display */}
+                          <section>
+                            <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><LayoutPanelTop size={16} /> Display Settings</h3>
+                            <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
+                              <div>
+                                <label className="block text-xs font-bold text-brand-subtext uppercase mb-3">Window Opacity ({Math.round(opacity * 100)}%)</label>
+                                <input type="range" min="0.2" max="1.0" step="0.05" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} className="w-full accent-brand-accent" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-brand-subtext uppercase mb-3">Layout Style</label>
+                                <button onClick={() => setLayout(layout === 'vertical' ? 'horizontal' : 'vertical')} className="w-full bg-brand-secondary border border-brand-border hover:bg-white/10 py-2.5 rounded-lg text-xs font-bold text-brand-text transition-all">Toggle Vertical / Horizontal</button>
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* Keyboard Shortcuts */}
+                          <section className="pb-10">
+                            <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Cpu size={16} /> All Shortcut Keys</h3>
+                            <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-3">
+
+                              {/* Interview Controls */}
+                              <div className="space-y-2 mb-6">
+                                <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3">Interview Controls</h4>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Pause / Resume <span className="text-xs text-white/40 font-normal">(Use 1 or Z)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold border border-yellow-500/30">Z</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">1</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Ask AI (Trigger) <span className="text-xs text-white/40 font-normal">(Use 2 or X)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg text-xs font-bold border border-purple-500/30">X</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">2</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Clear Transcript <span className="text-xs text-white/40 font-normal">(Use 3 or C)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-lg text-xs font-bold border border-orange-500/30">C</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">3</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Snipping Tool <span className="text-xs text-white/40 font-normal">(Use 4 or A)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-lg text-xs font-bold border border-cyan-500/30">A</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">4</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Edit Transcript <span className="text-xs text-white/40 font-normal">(Use 7 or Q)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/30">Q</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">7</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Toggle Text Color <span className="text-xs text-white/40 font-normal">(Use 0)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30">0</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Switch Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-brand-accent/20 text-brand-accent px-3 py-1 rounded-lg text-xs font-bold border border-brand-accent/30">S</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">5</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Stop Generation <span className="text-xs text-white/40 font-normal">(Use 6 or D)</span></span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-lg text-xs font-bold border border-red-500/30">D</span>
+                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">6</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Window Controls */}
+                              <div className="space-y-2 mb-6">
+                                <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
+                                <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
+                                  <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + +</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
+                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
+                                  <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + -</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
+                                  <span className="text-sm text-white/90 font-medium">Move Window</span>
+                                  <div className="flex gap-2">
+                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↑</span>
+                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↓</span>
+                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">←</span>
+                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">→</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Global Launch Shortcut */}
+                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mt-6">
+                                <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
+                                  <Cpu size={16} /> Global Launch Shortcut
+                                </h4>
+                                <p className="text-xs text-blue-200/70 leading-relaxed mb-3">
+                                  You can open ClueAI instantly from anywhere using a custom Windows Shortcut Key!
+                                </p>
+                                <ol className="text-xs text-blue-200/60 list-decimal pl-4 space-y-1.5">
+                                  <li>Search for <strong>ClueAI</strong> in your Windows Start Menu.</li>
+                                  <li>Right-click the app and select <strong>Open file location</strong>.</li>
+                                  <li>Right-click the ClueAI Shortcut file and select <strong>Properties</strong>.</li>
+                                  <li>In the <strong>Shortcut</strong> tab, click inside the <strong>Shortcut key</strong> box.</li>
+                                  <li>Press your desired keys (e.g. <code>Ctrl + Alt + L</code>) and click OK.</li>
+                                </ol>
+                              </div>
+                            </div>
+                          </section>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Audio Error Modal */}
+              {showAudioErrorModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                  <div className="bg-brand-bg rounded-2xl w-full max-w-md shadow-2xl border border-rose-500/50 flex flex-col overflow-hidden relative">
+                    <div className="bg-rose-500/10 p-6 flex flex-col items-center text-center border-b border-rose-500/20">
+                      <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mb-4">
+                        <AlertTriangle size={32} className="text-rose-500" />
+                      </div>
+                      <h2 className="text-xl font-black text-rose-500 uppercase tracking-wide mb-2">Critical Audio Error</h2>
+                      <p className="text-brand-subtext text-sm mb-4 leading-relaxed">
+                        Your microphone is currently {sysMicMuted ? 'muted' : `too quiet (Volume: ${sysMicVolume}%)`}.
+                        <br /><br />
+                        The AI will not be able to hear you properly during the interview. Please adjust your system settings.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowAudioErrorModal(false);
+                          minimizeApp();
+                          setTimeout(() => {
+                            try {
+                              const { exec } = (window as any).require('child_process');
+                              exec('powershell -Command "Start-Process \'ms-settings:sound\' -WindowStyle Maximized"');
+                            } catch (e) {
+                              shell.openExternal('ms-settings:sound');
+                            }
+                          }, 500);
+                        }}
+                        className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-lg shadow-lg shadow-rose-500/20 transition-all uppercase tracking-widest text-sm"
+                      >
+                        Correct It Now
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setShowAudioErrorModal(false)}
+                      className="absolute top-3 right-3 p-1.5 bg-black/20 hover:bg-black/40 rounded-lg text-white/50 hover:text-white transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Dashboard Empty State */}
+              {!isRecording && !showSettings && !showInfo && !showUpdateModal && (
+                <div className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
+                      <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
+                      <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br /><br />Development driven by real users<br />Faster iteration on features that matter</p>
+                      <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-150">✨ View Portfolio &rarr;</button>
+                    </div>
+
+                    <div className="relative h-full w-full">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 overflow-hidden shadow-lg border border-blue-400/30 flex flex-col cursor-default">
+                        <div className="flex flex-col mb-3 w-full shrink-0">
+                          <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-xl w-full mb-3">
+                            <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
+                              <CheckCircle2 size={12} />
+                            </div>
+                            Interview and Notes Reminder
+                          </h3>
+                          <div className="flex justify-center items-center gap-4 w-full px-2">
+                            <button
+                              onClick={() => {
+                                setReminderForm({ id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM' });
+                                setLocalReminderStealth(stealthMode);
+                                setReminderPopupMode('create');
+                                setShowReminderPopup(true);
+                              }}
+                              className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                            >
+                              <Plus size={14} /> Create Reminder
+                            </button>
+                            <button
+                              onClick={() => {
+                                setNotesForm({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
+                                setLocalNotesStealth(stealthMode);
+                                setNotesPopupMode('create');
+                                setShowNotesPopup(true);
+                              }}
+                              className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                            >
+                              <Plus size={14} /> New Note
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Model Selector Dropdown */}
-                        <div className="shrink-0">
-                          <CustomSelect 
-                            value={provider} 
-                            onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
-                              setProvider(val);
-                              switchProvider(val);
-                              const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
-                              setModelChangeMsg(`Switched to ${nameMap[val] || val}`);
-                              setTimeout(() => setModelChangeMsg(''), 3000);
-                            }}
-                            options={[
-                              { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
-                              { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
-                              { value: 'claude', label: 'Claude 3.5 Sonnet' },
-                              { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
-                              { value: 'deepseek', label: 'DeepSeek Coder' },
-                              { value: 'glm', label: 'GLM / NVIDIA' }
-                            ]}
-                            className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[125px]"
-                            icon={<Cpu size={10} className="text-brand-accent pointer-events-none" />}
+                        <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                          {(() => {
+                            const combined = [
+                              ...reminderProfiles.map(p => ({ ...p, type: 'reminder' as const })),
+                              ...notesProfiles.map(p => ({ ...p, type: 'note' as const }))
+                            ].sort((a, b) => Number(b.id) - Number(a.id));
+
+                            if (combined.length === 0) {
+                              return <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders or notes saved yet.</p>;
+                            }
+
+                            return combined.map(prof => {
+                              // Check status
+                              let isPast = false;
+                              try {
+                                const [d, m, y] = prof.date.split('-');
+                                const [h, min] = prof.time.split(':');
+                                let hours = parseInt(h);
+                                if (prof.ampm === 'PM' && hours < 12) hours += 12;
+                                if (prof.ampm === 'AM' && hours === 12) hours = 0;
+                                const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                                isPast = new Date() > targetDate;
+                              } catch (e) { }
+
+                              if (prof.type === 'reminder') {
+                                return (
+                                  <div
+                                    key={prof.id}
+                                    className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                                    onClick={() => {
+                                      setReminderForm(prof as any);
+                                      setLocalReminderStealth(stealthMode);
+                                      setReminderPopupMode('preview');
+                                      setShowReminderPopup(true);
+                                    }}
+                                  >
+                                    <div className="flex flex-col flex-1 min-w-0 pr-3">
+                                      <span className="font-bold text-xs text-white truncate flex items-center gap-2">
+                                        {prof.name}
+                                        {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
+                                      </span>
+                                      <span className="text-[10px] text-blue-200 font-bold truncate">Reminder <span className="opacity-70 font-normal">• {prof.jobTitle}</span></span>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                      <div className="flex flex-wrap items-center justify-end gap-2">
+                                        <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setItemToDelete({ id: prof.id, type: 'reminder', name: prof.name, isPast });
+                                          }}
+                                          className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <X size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div
+                                    key={prof.id}
+                                    className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                                    onClick={() => {
+                                      setNotesForm(prof as any);
+                                      setLocalNotesStealth(stealthMode);
+                                      setNotesPopupMode('preview');
+                                      setShowNotesPopup(true);
+                                    }}
+                                  >
+                                    <div className="flex flex-col flex-1 min-w-0 pr-1">
+                                      <span className="font-bold text-xs text-white truncate flex items-center gap-2">
+                                        Note
+                                        {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
+                                      </span>
+                                      <span className="text-[10px] text-teal-200 font-bold truncate">Note <span className="opacity-70 font-normal">• {prof.email}</span></span>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                      <div className="flex flex-wrap items-center justify-end gap-2">
+                                        <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setItemToDelete({ id: prof.id, type: 'note', name: 'Note Scheduled', isPast });
+                                          }}
+                                          className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
+                                        >
+                                          <X size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-3 mt-4 pb-4">
+                    <h3 className="text-brand-subtext font-bold mb-3 text-sm px-2">Yesterday</h3>
+                    <div className="space-y-3">
+                      {sessions.length === 0 ? (
+                        <div className="text-brand-subtext text-sm italic px-2 py-4">No sessions saved yet. Start capturing to see history here!</div>
+                      ) : sessions.map((session) => (
+                        <div key={session.id} className={`flex flex-col bg-brand-secondary/30 rounded-xl transition-colors border border-brand-border group relative ${openMenuId === session.id ? "z-50 overflow-visible" : "z-10 overflow-hidden"}`}>
+                          <div
+                            className="flex justify-between items-center py-3 px-4 hover:bg-brand-secondary/80 cursor-pointer"
+                            onClick={() => setExpandedSessionId(expandedSessionId === session.id ? null : session.id)}
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {expandedSessionId === session.id ? <ChevronDown size={16} className="text-brand-subtext shrink-0" /> : <ChevronRight size={16} className="text-brand-subtext shrink-0" />}
+                              <span className="text-brand-text font-bold text-sm truncate">{session.name}</span>
+                            </div>
+
+                            <div className="flex items-center gap-6 text-brand-subtext text-xs font-mono shrink-0">
+                              <span>{session.time}</span>
+                              <button onClick={(e) => {
+                                e.stopPropagation();
+                                if (openMenuId === session.id) {
+                                  setOpenMenuId(null);
+                                  setMenuPos(null);
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setOpenMenuId(session.id);
+                                  setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right });
+                                }
+                              }} className="p-1 hover:bg-white/10 rounded-md transition-colors">
+                                <MoreVertical size={16} />
+                              </button>
+                            </div>
+
+                            {openMenuId === session.id && menuPos && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); setMenuPos(null); }}></div>
+                                <div
+                                  className="fixed bg-brand-secondary border border-brand-border rounded-lg shadow-xl z-[100] overflow-hidden min-w-[120px]"
+                                  style={{ top: menuPos.top + 4, right: menuPos.right }}
+                                >
+                                  <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingSessionId(session.id); setEditingSessionName(session.name); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors">
+                                    <FileText size={14} /> Rename
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); exportSession(session); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-accentSec flex items-center gap-2 transition-colors border-t border-brand-border">
+                                    <Download size={14} /> Export
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); setOpenMenuId(null); setMenuPos(null); }} className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 transition-colors border-t border-brand-border">
+                                    <Trash2 size={14} /> Delete
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Expanded Session History Accordion */}
+                          {expandedSessionId === session.id && (
+                            <div className="border-t border-brand-border bg-black/40 p-4 space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
+                              {(!session.history || session.history.length === 0) ? (
+                                <div className="text-white/30 text-xs italic">No questions recorded in this session.</div>
+                              ) : session.history.map((item, idx) => {
+                                const stateKey = `${session.id}-${idx}`;
+                                const isTranscriptExpanded = expandedHistoryItems[stateKey]?.transcript;
+                                const isAnswerExpanded = expandedHistoryItems[stateKey]?.answer;
+
+                                return (
+                                  <div key={idx} className="bg-white/5 border border-white/5 rounded-lg overflow-hidden">
+
+                                    {/* Transcript Header */}
+                                    <div
+                                      className="px-4 py-3 bg-white/5 hover:bg-white/10 cursor-pointer flex justify-between items-center transition-colors"
+                                      onClick={() => toggleHistoryItem(session.id, idx, 'transcript')}
+                                    >
+                                      <h4 className="text-xs font-bold text-cyan-400 flex items-center gap-2">
+                                        {isTranscriptExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                        {idx + 1}st question - Transcript
+                                      </h4>
+                                      {item.modelInfo && (
+                                        <span className="text-[10px] font-mono text-fuchsia-400 bg-fuchsia-400/10 border border-fuchsia-400/20 px-2 py-0.5 rounded-full">
+                                          {item.modelInfo}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Transcript Body */}
+                                    {isTranscriptExpanded && (
+                                      <div className="p-4 text-xs text-white/80 whitespace-pre-wrap font-medium border-t border-white/5">
+                                        {item.images && item.images.length > 0 && (
+                                          <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                                            {item.images.map((img, i) => (
+                                              <img key={i} src={img} className="h-24 rounded border border-white/10" alt="snapshot" />
+                                            ))}
+                                          </div>
+                                        )}
+                                        {item.question || "No transcript"}
+                                      </div>
+                                    )}
+
+                                    {/* Answer Header */}
+                                    <div
+                                      className="px-4 py-3 bg-brand-accentSec/30 hover:bg-brand-accentSec/50 cursor-pointer flex items-center gap-2 transition-colors border-t border-white/5"
+                                      onClick={() => toggleHistoryItem(session.id, idx, 'answer')}
+                                    >
+                                      <h4 className="text-xs font-bold text-brand-accent flex items-center gap-2">
+                                        {isAnswerExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                        Answer of {idx + 1} - Generate Ai
+                                      </h4>
+                                    </div>
+
+                                    {/* Answer Body */}
+                                    {isAnswerExpanded && (
+                                      <div className="p-4 text-xs text-white/90 border-t border-white/5 bg-black/50 overflow-x-auto">
+                                        <ReactMarkdown
+                                          components={{
+                                            code({ node, inline, className, children, ...props }: any) {
+                                              const match = /language-(\w+)/.exec(className || '');
+                                              return !inline && match ? (
+                                                <SyntaxHighlighter
+                                                  style={vscDarkPlus as any}
+                                                  language={match[1]}
+                                                  PreTag="div"
+                                                  {...props}
+                                                >
+                                                  {String(children).replace(/\n$/, '')}
+                                                </SyntaxHighlighter>
+                                              ) : (
+                                                <code className="bg-brand-secondary/80 text-brand-accent px-1.5 py-0.5 rounded text-[11px]" {...props}>
+                                                  {children}
+                                                </code>
+                                              )
+                                            }
+                                          }}
+                                        >
+                                          {item.answer ? item.answer.replace(/(?:\r?\n)+/g, '\n').trim() : "No answer generated"}
+                                        </ReactMarkdown>
+                                      </div>
+                                    )}
+
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Main UI */}
+              {isRecording && (
+                <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto">
+                  {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
+                  <div className="w-full flex justify-center items-center relative z-20">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {isTranscriptMinimized ? (
+                        <motion.div
+                          key="minimized-dock"
+                          layout
+                          initial={{ opacity: 0, scale: 0.85, y: -8 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.85, y: -8 }}
+                          transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                          onClick={() => setIsTranscriptMinimized(false)}
+                          className="drag-area cursor-pointer group bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 rounded-full px-5 py-2.5 shadow-[0_12px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.25)] flex items-center gap-3.5 hover:border-cyan-400 hover:scale-105 transition-all select-none"
+                          title="Click to expand transcription dock"
+                        >
+                          <div className="flex items-center gap-1.5 text-cyan-400">
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
+                              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                            </span>
+                            <div className="flex items-end gap-0.5 h-3">
+                              <span className="w-0.5 h-2 bg-cyan-400 animate-pulse rounded-full" />
+                              <span className="w-0.5 h-3 bg-cyan-300 animate-pulse delay-75 rounded-full" />
+                              <span className="w-0.5 h-1.5 bg-cyan-500 animate-pulse delay-150 rounded-full" />
+                            </div>
+                          </div>
+                          <span className="text-xs font-black text-white/90 tracking-wide uppercase flex items-center gap-1.5">
+                            {!isPaused ? "Live STT Active" : "STT Paused"}
+                          </span>
+                          <span className="text-[10px] font-bold text-cyan-400/90 bg-cyan-500/15 border border-cyan-500/30 px-2.5 py-0.5 rounded-full group-hover:bg-cyan-500/30 group-hover:text-cyan-200 transition-colors flex items-center gap-1">
+                            Expand ▾
+                          </span>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="expanded-dock"
+                          layout
+                          initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                          transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                          className="w-full max-w-[1040px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
+                        >
+                          {/* 1. Sleek Controls & Status Ribbon */}
+                          <div className="flex items-center justify-between w-full no-drag px-1">
+                            {/* Left: Drag Handle, Brand, Timer, Stealth, Hotkeys, Model Selector */}
+                            <div className="flex items-center gap-2">
+                              <div className="p-1 bg-white/5 hover:bg-white/10 rounded text-white/40 hover:text-white/80 cursor-grab active:cursor-grabbing shrink-0" title="Drag Dock">
+                                <Move size={13} />
+                              </div>
+
+                              {/* Brand Logo & Live Recording Timer */}
+                              <div className="flex items-center gap-1.5 shrink-0 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/10 shadow-sm">
+                                <img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded shadow-sm border border-cyan-400/30" />
+                                <span className="text-[11px] font-black text-white">Clue<span className="text-cyan-400">AI</span></span>
+                                <span className="text-cyan-300 font-mono font-bold text-[10px] ml-1 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">{formatTimer(recordingSeconds)}</span>
+                              </div>
+                              {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+                                <button
+                                  onClick={() => setShowUpdateModal(true)}
+                                  className="px-2 py-0.5 rounded-lg font-black text-[9px] flex items-center gap-1 uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse shrink-0 cursor-pointer"
+                                  title="New version available! Click to update"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                  <Sparkles size={10} />
+                                  <span>Update Available</span>
+                                </button>
+                              )}
+
+                              {/* Stealth Shield Toggle Button */}
+                              <button
+                                onClick={() => {
+                                  if (stealthMode) {
+                                    setShowStealthWarning(true);
+                                  } else {
+                                    setStealthMode(true);
+                                    ipcRenderer.invoke('set-stealth', true);
+                                  }
+                                }}
+                                className={`px-2 py-1 rounded-lg font-bold text-[9.5px] flex items-center gap-1 border transition-all ${stealthMode
+                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                                  : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'
+                                  }`}
+                                title={stealthMode ? "Stealth Shield Active (Click to disable)" : "Stealth Shield OFF (Click to activate)"}
+                              >
+                                {stealthMode ? <ShieldCheck size={11} className="text-emerald-400" /> : <AlertTriangle size={11} className="text-rose-400" />}
+                                <span className="uppercase tracking-wider">{stealthMode ? "Stealth ON" : "Stealth OFF"}</span>
+                              </button>
+
+                              {/* Global Hotkeys Toggle */}
+                              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-1 rounded-lg shrink-0" title="Toggle Global Hotkeys">
+                                <button
+                                  onClick={() => {
+                                    const newState = !globalHotkeysEnabled;
+                                    setGlobalHotkeysEnabled(newState);
+                                    ipcRenderer.invoke('toggle-global-hotkeys', newState);
+                                  }}
+                                  className={`relative w-6 h-3 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
+                                >
+                                  <div className={`w-2 h-2 bg-white rounded-full transition-transform ${globalHotkeysEnabled ? 'translate-x-3' : 'translate-x-0'}`} />
+                                </button>
+                                <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/60">Hotkeys</span>
+                              </div>
+
+                              {/* Model Selector Dropdown */}
+                              <div className="shrink-0">
+                                <CustomSelect
+                                  value={provider}
+                                  onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
+                                    setProvider(val);
+                                    switchProvider(val);
+                                    const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
+                                    setModelChangeMsg(`Switched to ${nameMap[val] || val}`);
+                                    setTimeout(() => setModelChangeMsg(''), 3000);
+                                  }}
+                                  options={[
+                                    { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
+                                    { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
+                                    { value: 'claude', label: 'Claude 3.5 Sonnet' },
+                                    { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
+                                    { value: 'deepseek', label: 'DeepSeek Coder' },
+                                    { value: 'glm', label: 'GLM / NVIDIA' }
+                                  ]}
+                                  className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[125px]"
+                                  icon={<Cpu size={10} className="text-brand-accent pointer-events-none" />}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Right: Actions, History, Stop & Window Controls */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
+                                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                                </span>
+                                <span className="text-[9px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
+                              </div>
+
+                              <button
+                                onClick={handlePauseToggle}
+                                className={`px-2 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                                title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
+                              >
+                                {isPaused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
+                                <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                                <span className="text-[8px] opacity-60 font-mono">1</span>
+                              </button>
+
+                              <button
+                                onClick={handleSnipClick}
+                                className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                                title="Snip Screen Question (4 / A)"
+                              >
+                                <Crop size={9} />
+                                <span>Snip</span>
+                                <span className="text-[8px] opacity-60 font-mono">4</span>
+                              </button>
+
+                              <button
+                                onClick={handleClearAll}
+                                className="px-2 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                                title="Clear Transcript (3 / C)"
+                              >
+                                <Trash2 size={9} />
+                                <span>Clear</span>
+                                <span className="text-[8px] opacity-60 font-mono">3</span>
+                              </button>
+
+                              <button
+                                onClick={() => setShowVirtualKeyboard(true)}
+                                className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
+                                title="Edit Transcript (7 / Q)"
+                              >
+                                <Edit2 size={9} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
+                              </button>
+
+                              {currentSessionHistory.length > 0 && (
+                                <button
+                                  onClick={() => setShowPreviousQuestions(true)}
+                                  className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
+                                  title="Session History (8 / H)"
+                                >
+                                  <Clock size={9} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
+                                </button>
+                              )}
+
+                              {/* STOP Recording Session */}
+                              <button
+                                onClick={stopRecording}
+                                className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                                title="Stop Recording Session (6 / D)"
+                              >
+                                <Square size={9} fill="currentColor" /> STOP <span className="text-[8px] opacity-60 font-mono">6</span>
+                              </button>
+
+                              {/* Settings Button */}
+                              <button
+                                onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
+                                className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
+                                title="Settings"
+                              >
+                                <Settings size={12} />
+                              </button>
+
+                              {/* Minimize Dock Button */}
+                              <button
+                                onClick={() => setIsTranscriptMinimized(true)}
+                                className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
+                                title="Minimize Dock"
+                              >
+                                <Minus size={12} />
+                              </button>
+
+                              {/* Close Window */}
+                              <button
+                                onClick={closeApp}
+                                className="p-1 bg-white/5 hover:bg-rose-500/20 text-white/50 hover:text-rose-400 rounded-md border border-white/10 transition-colors"
+                                title="Close App"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
+                          <div className="flex items-center gap-2.5 w-full no-drag">
+                            <div
+                              ref={transcriptScrollRef}
+                              className="flex-1 min-h-[46px] max-h-[72px] overflow-y-auto custom-scrollbar bg-black/80 border border-cyan-500/25 hover:border-cyan-400/50 rounded-xl px-4 py-2 select-text transition-colors shadow-inner flex items-center"
+                              style={{ fontSize: `${transcriptTextSize}px` }}
+                            >
+                              {transcript ? (
+                                <span className="text-white font-medium leading-relaxed tracking-wide select-text">
+                                  {transcript}
+                                </span>
+                              ) : (
+                                <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-cyan-400/60 animate-ping"></span>
+                                  Listening to conversation... (Interviewer questions appear here)
+                                </span>
+                              )}
+                            </div>
+
+                            {/* High-Impact Integrated Generate Answer Button */}
+                            <button
+                              onClick={() => { if (!isGenerating) manualTriggerAI(); }}
+                              disabled={isGenerating}
+                              className="h-[46px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[180px]"
+                            >
+                              {isGenerating ? (
+                                <>
+                                  <Loader2 size={13} className="animate-spin text-white" />
+                                  <span>Generating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Cpu size={13} className="text-cyan-200" />
+                                  <span>Generate Answer</span>
+                                  <span className="bg-black/30 text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-0.5">2 / X</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Snapshots Strip (if any exist) */}
+                          {currentSnapshots.length > 0 && (
+                            <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 px-2 bg-black/50 rounded-lg border border-white/5 no-drag">
+                              <span className="text-[9.5px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                                <Crop size={10} /> Snips:
+                              </span>
+                              {currentSnapshots.map((snap, idx) => (
+                                <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
+                                  <img src={snap} alt={`Snapshot ${idx + 1}`} className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                    <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
+                                      <Eye size={9} />
+                                    </button>
+                                    <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
+                                      <Trash2 size={9} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                              {currentSnapshots.length > 1 && (
+                                <button onClick={() => setCurrentSnapshots([])} className="h-[36px] px-2 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9px] font-bold shrink-0">
+                                  <Trash2 size={10} /> Clear
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+
+              {/* API Key Missing Error Modal */}
+              {showApiKeyMissingError && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+                  <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200">
+                    <div className="relative bg-brand-bg border border-brand-border rounded-2xl w-full p-6 shadow-2xl">
+                      <h3 className="font-black text-lg text-white mb-3 flex items-center gap-2">
+                        <AlertTriangle className="text-rose-500" size={20} /> Missing API Keys
+                      </h3>
+                      <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
+                        You must provide a valid API key (at least Groq Key 1) before starting the interview. Go to Settings and add your API keys to continue.
+                      </p>
+                      <button
+                        onClick={() => setShowApiKeyMissingError(false)}
+                        className="w-full bg-brand-accent hover:bg-brand-accentSec text-white py-2.5 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Minimum Size Warning Modal */}
+              {showMinSizeWarning && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 select-none">
+                  <div className="bg-[#09090b]/90 border border-brand-border rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                      <h3 className="font-black text-lg text-white flex items-center gap-2"><ZoomOut size={18} className="text-brand-accent" /> Size Limit Reached</h3>
+                    </div>
+                    <div className="p-6">
+                      <p className="text-brand-subtext text-sm mb-6 text-center">
+                        The window cannot be decreased further without hiding essential buttons and breaking the layout.
+                      </p>
+                      <button
+                        onClick={() => setShowMinSizeWarning(false)}
+                        className="w-full bg-brand-accent hover:bg-brand-accent/90 text-white py-2.5 rounded-xl font-bold transition-colors"
+                      >
+                        Okay
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stealth Mode Warning Modal (For Starting Interview) */}
+              {showStartStealthWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+                  <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 rounded-3xl blur opacity-40"></div>
+
+                    <div className="relative bg-[#09090b]/90 border border-red-500/30 rounded-3xl w-full overflow-hidden shadow-[0_0_80px_rgba(225,29,72,0.3)]">
+                      <div className="px-8 py-6 border-b border-red-500/20 flex justify-between items-center bg-red-500/10">
+                        <h3 className="font-black text-xl text-rose-500 tracking-wide flex items-center gap-2"><AlertTriangle size={20} /> Warning</h3>
+                        <button onClick={() => setShowStartStealthWarning(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16} /></button>
+                      </div>
+
+                      <div className="p-8 space-y-6">
+                        <div className="text-sm text-white/80 leading-relaxed">
+                          <p className="mb-4">You are about to start the interview with <strong className="text-white">Stealth Mode OFF</strong>.</p>
+                          <p className="mb-4 text-rose-400"><strong>Impact:</strong> Without Stealth Mode enabled, anti-cheat software (like MS Teams or Zoom screen sharing) may detect this application running in the background.</p>
+                          <p><strong>How to fix:</strong> Click Cancel, go to <span className="bg-white/10 px-2 py-0.5 rounded text-white text-xs font-bold inline-flex items-center gap-1">Settings <Settings size={12} /></span>, and turn on <strong>Stealth Mode</strong> to hide the app securely.</p>
+                        </div>
+
+                        <div className="flex gap-3 pt-4 border-t border-white/5">
+                          <button
+                            onClick={() => setShowStartStealthWarning(false)}
+                            className="flex-1 bg-[#18181b] hover:bg-white/10 text-white py-3.5 rounded-xl font-bold transition-all border border-white/10"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={proceedWithInterview}
+                            className="flex-1 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-400 hover:to-red-400 text-white py-3.5 rounded-xl font-black shadow-[0_0_20px_rgba(225,29,72,0.4)] transition-all"
+                          >
+                            Start Anyway
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rename Session Modal */}
+              {editingSessionId !== null && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+                  <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
+
+                    <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full shadow-[0_0_80px_rgba(0,0,0,1)]">
+                      <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                        <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Rename Session</h3>
+                        <button onClick={() => setEditingSessionId(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16} /></button>
+                      </div>
+
+                      <div className="p-8 space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">New Session Name</label>
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editingSessionName}
+                            onChange={e => setEditingSessionName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleRenameSession(editingSessionId); }}
+                            className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
                           />
                         </div>
                       </div>
 
-                      {/* Right: Actions, History, Stop & Window Controls */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]">
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                            <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
-                          </span>
-                          <div className="flex items-end gap-0.5 h-2.5 px-0.5">
-                            {[6, 12, 16, 10, 4].map((maxH, i) => (
-                              <motion.span
-                                key={i}
-                                animate={!isPaused ? { height: ['2.5px', `${maxH}px`, '2.5px'] } : { height: '2.5px' }}
-                                transition={{ repeat: Infinity, duration: 0.6 + i * 0.12, ease: 'easeInOut' }}
-                                className="w-0.5 bg-cyan-400 rounded-full"
-                              />
+                      <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md rounded-b-3xl">
+                        <button onClick={() => setEditingSessionId(null)} className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                        <button onClick={() => handleRenameSession(editingSessionId)} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]">
+                          Save Name
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Session Name Prompt Modal Redesign with Framer Motion & Blur */}
+              <AnimatePresence>
+                {showSessionPrompt && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-2xl p-4 pointer-events-auto"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.92, opacity: 0, y: 15 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.92, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                      className="relative w-full max-w-md bg-[#0a0c16]/95 border border-cyan-500/40 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] overflow-hidden"
+                    >
+                      <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                            <Play size={16} fill="currentColor" />
+                          </div>
+                          <div>
+                            <h3 className="font-black text-lg text-white tracking-wide">Initialize Session</h3>
+                            <p className="text-[11px] text-white/50">Setup interview context and candidate details</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setShowSessionPrompt(false)} 
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      <div className="p-6 space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-brand-subtext uppercase tracking-[0.2em] mb-2">Resume Existing Session</label>
+                          <div className="relative">
+                            <CustomSelect
+                              value={currentSessionId}
+                              onChange={(val: string) => {
+                                setCurrentSessionId(val);
+                                if (val) {
+                                  const s = sessions.find(x => x.id === val);
+                                  if (s) setSessionNameInput(s.name);
+                                  setSessionError('');
+                                } else {
+                                  setSessionNameInput('');
+                                }
+                              }}
+                              options={[
+                                { value: '', label: '-- Create a New Session Instead --' },
+                                ...sessions.map(s => ({ value: s.id, label: `${s.name} (${s.date || 'Old Session'})` }))
+                              ]}
+                              className="w-full bg-[#18181b] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white transition-all"
+                            />
+                          </div>
+                        </div>
+
+                        {!currentSessionId && (
+                          <div>
+                            <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-2">New Session Name</label>
+                            <input
+                              type="text"
+                              autoFocus
+                              value={sessionNameInput}
+                              onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
+                              placeholder="e.g. Meta / Google Final Round"
+                              onKeyDown={e => { if (e.key === 'Enter') startRecording(); }}
+                              className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
+                            />
+                          </div>
+                        )}
+
+                        {sessionError && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
+                            <p className="text-rose-400 text-xs font-bold flex items-center gap-2">
+                              <X size={14} className="bg-rose-500/20 rounded-full p-0.5" /> {sessionError}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="px-6 py-4 bg-[#14151f]/80 flex justify-end gap-3 border-t border-white/10 backdrop-blur-md rounded-b-3xl">
+                        <button onClick={() => setShowSessionPrompt(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">Cancel</button>
+                        <button onClick={startRecording} className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] flex items-center gap-2 cursor-pointer active:scale-95">
+                          Start AI Interview <Play size={12} fill="currentColor" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* Stealth Warning Modal */}
+              {showStealthWarning && (
+                <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                  <div className="bg-brand-bg border border-rose-500/30 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_40px_rgba(225,29,72,0.2)] animate-in zoom-in-95 duration-200">
+                    <h3 className="text-xl font-black text-rose-400 mb-3 flex items-center gap-2">
+                      <AlertTriangle size={24} /> Warning!
+                    </h3>
+                    <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
+                      Disabling Stealth Mode will make ClueAI visible to screen sharing software like Zoom, Microsoft Teams, or Google Meet!
+                      <br /><br />
+                      Only turn this off if you are absolutely sure you want the app to be visible on your screen during a meeting.
+                    </p>
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={() => setShowStealthWarning(false)}
+                        className="px-4 py-2 bg-brand-secondary hover:bg-brand-border text-white rounded-lg font-bold text-sm transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          setStealthMode(false);
+                          ipcRenderer.invoke('set-stealth', false);
+                          setShowStealthWarning(false);
+                        }}
+                        className="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white rounded-lg font-bold text-sm transition-colors shadow-[0_0_15px_rgba(225,29,72,0.4)]"
+                      >
+                        OK, Disable it
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Snapshot Fullscreen Preview Modal */}
+              {previewSnapshot && (
+                <div
+                  className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-200"
+                  onClick={() => setPreviewSnapshot(null)}
+                >
+                  <button
+                    className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
+                    onClick={(e) => { e.stopPropagation(); setPreviewSnapshot(null); }}
+                  >
+                    <X size={24} />
+                  </button>
+                  <img
+                    src={previewSnapshot}
+                    alt="Snapshot Preview"
+                    className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-150"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              )}
+
+              {itemToDelete && (
+                <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                  <div className="w-full max-w-md bg-brand-secondary border border-rose-500/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                    <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2"><Trash2 size={18} className="text-rose-400" /> Confirm Deletion</h2>
+                      <button onClick={() => setItemToDelete(null)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
+                    </div>
+                    <div className="p-6 text-center">
+                      <p className="text-sm text-gray-300 mb-4">Are you sure you want to delete this {itemToDelete.type}?</p>
+                      <div className="bg-black/30 p-3 rounded-lg border border-white/5 mb-6 text-left">
+                        <span className="font-bold text-white block">{itemToDelete.name}</span>
+                      </div>
+                      {!itemToDelete.isPast && (
+                        <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 text-xs text-rose-300 font-medium text-left flex items-start gap-2 mb-6">
+                          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                          <p>On deleting, it will cancel the scheduled email and it will not send it again.</p>
+                        </div>
+                      )}
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => setItemToDelete(null)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-sm transition-colors">Cancel</button>
+                        <button
+                          onClick={() => {
+                            const { id, type, isPast } = itemToDelete;
+                            if (type === 'reminder') {
+                              setReminderProfiles(prev => prev.filter(r => r.id !== id));
+                            } else {
+                              setNotesProfiles(prev => prev.filter(r => r.id !== id));
+                            }
+                            if (!isPast) {
+                              fetch(GOOGLE_SCRIPT_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'delete', id })
+                              }).catch(console.error);
+                            }
+                            setItemToDelete(null);
+                          }}
+                          className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-sm transition-colors"
+                        >
+                          Confirm Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reminder Popup Editor */}
+              {showReminderPopup && (
+                <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                  <div className={`w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${!localReminderStealth ? 'stealth-exempt' : ''}`}>
+                    <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
+                        <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localReminderStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                          {localReminderStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                        </button>
+                      </div>
+                      <button onClick={() => setShowReminderPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
+                    </div>
+                    <div className="p-6 grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Company Name</label>
+                        <input type="text" placeholder="e.g. Amazon" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.name ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.name} onChange={e => setReminderForm({ ...reminderForm, name: e.target.value })} />
+                        {showReminderErrors && !reminderForm.name && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Job Title</label>
+                        <input type="text" placeholder="e.g. Software Engineer" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.jobTitle ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.jobTitle} onChange={e => setReminderForm({ ...reminderForm, jobTitle: e.target.value })} />
+                        {showReminderErrors && !reminderForm.jobTitle && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                      </div>
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
+                        <input
+                          type="email"
+                          disabled={reminderPopupMode !== 'create'}
+                          placeholder="e.g. user@example.com"
+                          className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`}
+                          value={reminderForm.email}
+                          onChange={e => {
+                            setReminderForm({ ...reminderForm, email: e.target.value });
+                            const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                            const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                            setShowReminderEmailSuggest(matches.length > 0);
+                          }}
+                          onFocus={() => {
+                            const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                            if (saved.length > 0) {
+                              setShowReminderEmailSuggest(true);
+                            }
+                          }}
+                          onBlur={() => setTimeout(() => setShowReminderEmailSuggest(false), 200)}
+                        />
+                        {showReminderEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                          <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
+                            <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
+                              <span className="text-[10px] font-bold text-brand-accent uppercase tracking-wider mb-0.5">Suggested Emails</span>
+                            </div>
+                            {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                              .filter(s => !reminderForm.email || s.toLowerCase().includes(reminderForm.email.toLowerCase()))
+                              .map((email, idx) => (
+                                <div
+                                  key={idx}
+                                  className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setReminderForm({ ...reminderForm, email });
+                                    setShowReminderEmailSuggest(false);
+                                  }}
+                                >
+                                  <span className="text-sm text-white font-medium">{email}</span>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                        {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                        {showReminderErrors && reminderForm.email && !/^\S+@\S+\.\S+$/.test(reminderForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1 flex justify-between">
+                          <span>Date</span>
+                          {getDayOfWeek(reminderForm.date) && <span className="text-blue-400 capitalize">{getDayOfWeek(reminderForm.date)}</span>}
+                        </label>
+                        <input type="text" placeholder="DD-MM-YYYY" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.date) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
+                        {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                        {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
+                        <div className="relative">
+                          <input type="text" placeholder="HH:MM" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.time) || (reminderPopupMode !== 'preview' && validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16 disabled:opacity-50`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
+                          <button
+                            disabled={reminderPopupMode === 'preview'}
+                            onClick={() => setReminderForm({ ...reminderForm, ampm: reminderForm.ampm === 'AM' ? 'PM' : 'AM' })}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
+                          >
+                            {reminderForm.ampm} <RefreshCcw size={10} />
+                          </button>
+                        </div>
+                        {showReminderErrors && !reminderForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                        {reminderPopupMode !== 'preview' && validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError}</p>}
+                      </div>
+                    </div>
+                    <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
+                      {reminderPopupMode === 'preview' ? (() => {
+                        let isPast = false;
+                        try {
+                          const [d, m, y] = reminderForm.date.split('-');
+                          const [h, min] = reminderForm.time.split(':');
+                          let hours = parseInt(h);
+                          if (reminderForm.ampm === 'PM' && hours < 12) hours += 12;
+                          if (reminderForm.ampm === 'AM' && hours === 12) hours = 0;
+                          const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                          isPast = new Date() > targetDate;
+                        } catch (e) { }
+
+                        return (
+                          <button
+                            onClick={() => setReminderPopupMode('edit')}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                          >
+                            <Edit2 size={16} /> {isPast ? 'Resend' : 'Edit'}
+                          </button>
+                        );
+                      })() : (
+                        <>
+                          {emailSendStatus === 'sending' && (
+                            <div className="px-5 py-2.5 flex items-center justify-center h-[44px]">
+                              <Loader2 size={24} className="text-blue-500 animate-spin" />
+                            </div>
+                          )}
+                          {emailSendStatus === 'success' && (
+                            <div className="px-5 py-2.5 flex items-center justify-center h-[44px] gap-2 text-green-500 font-bold">
+                              <CheckCircle2 size={24} /> Scheduled
+                            </div>
+                          )}
+                          {emailSendStatus === 'idle' && (
+                            <button
+                              onClick={() => {
+                                const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
+                                const dateValid = !dateError && reminderForm.date;
+                                const timeValid = !timeError && reminderForm.time;
+                                const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
+
+                                if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
+                                  setShowReminderErrors(true);
+                                  return;
+                                }
+                                setShowReminderErrors(false);
+                                const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                if (!currentEmails.includes(reminderForm.email)) {
+                                  currentEmails.unshift(reminderForm.email);
+                                  localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
+                                }
+
+                                const currentId = reminderForm.id || Date.now().toString();
+                                const templateParams = {
+                                  id: currentId,
+                                  type: 'reminder',
+                                  to_name: reminderForm.name,
+                                  to_email: reminderForm.email,
+                                  company_name: reminderForm.name,
+                                  job_title: reminderForm.jobTitle,
+                                  date: reminderForm.date,
+                                  time: `${reminderForm.time} ${reminderForm.ampm}`,
+                                };
+
+                                setEmailSendStatus('sending');
+                                const doSchedule = () => {
+                                  fetch(GOOGLE_SCRIPT_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(templateParams)
+                                  })
+                                    .then(() => {
+                                      setEmailSendStatus('success');
+                                      setReminderProfiles(prev => {
+                                        if (prev.some(p => p.id === currentId)) {
+                                          return prev.map(p => p.id === currentId ? { ...reminderForm, id: currentId } : p);
+                                        }
+                                        return [{ ...reminderForm, id: currentId }, ...prev];
+                                      });
+
+                                      setTimeout(() => {
+                                        setShowReminderPopup(false);
+                                        setEmailSendStatus('idle');
+                                      }, 1500);
+                                    })
+                                    .catch(err => {
+                                      setEmailSendStatus('idle');
+                                      console.error('Google Script Error:', err);
+                                      setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Error: ${err.message}`, type: 'error' });
+                                    });
+                                };
+
+                                if (reminderForm.id) {
+                                  fetch(GOOGLE_SCRIPT_URL, {
+                                    method: 'POST', mode: 'no-cors',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'delete', id: reminderForm.id })
+                                  }).then(doSchedule).catch(doSchedule);
+                                } else {
+                                  doSchedule();
+                                }
+                              }}
+                              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                            >
+                              Send Reminder via Email
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
+                              const dateValid = !dateError && reminderForm.date;
+                              const timeValid = !timeError && reminderForm.time;
+                              const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
+
+                              if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
+                                setShowReminderErrors(true);
+                                return;
+                              }
+                              setShowReminderErrors(false);
+                              const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                              if (!currentEmails.includes(reminderForm.email)) {
+                                currentEmails.unshift(reminderForm.email);
+                                localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
+                              }
+                              localStorage.setItem('clueai_saved_email', reminderForm.email);
+
+                              const currentId = reminderForm.id || Date.now().toString();
+                              setReminderProfiles(prev => {
+                                if (prev.some(p => p.id === currentId)) {
+                                  return prev.map(p => p.id === currentId ? { ...reminderForm, id: currentId } : p);
+                                }
+                                return [{ ...reminderForm, id: currentId }, ...prev];
+                              });
+                              setShowReminderPopup(false);
+                            }}
+                            className="px-5 py-2.5 bg-brand-accent hover:bg-brand-accent/80 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                          >
+                            <Save size={16} /> Save Profile
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Notes Popup Editor */}
+              {showNotesPopup && (
+                <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                  <div className={`w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden ${!localNotesStealth ? 'stealth-exempt' : ''}`}>
+                    <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
+                        <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localNotesStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                          {localNotesStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                        </button>
+                      </div>
+                      <button onClick={() => setShowNotesPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
+                    </div>
+
+                    <div className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                      <div>
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Notes</label>
+                        <textarea
+                          placeholder="e.g. Discussed system design..."
+                          disabled={notesPopupMode === 'preview'}
+                          className={`w-full bg-black/40 border ${showNotesErrors && !notesForm.notes ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors h-24 resize-none disabled:opacity-50`}
+                          value={notesForm.notes}
+                          onChange={e => setNotesForm({ ...notesForm, notes: e.target.value })}
+                        />
+                        {showNotesErrors && !notesForm.notes && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                      </div>
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
+                        <input
+                          type="email"
+                          disabled={notesPopupMode !== 'create'}
+                          placeholder="e.g. user@example.com"
+                          className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors disabled:opacity-50`}
+                          value={notesForm.email}
+                          onChange={e => {
+                            setNotesForm({ ...notesForm, email: e.target.value });
+                            const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                            const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                            setShowNotesEmailSuggest(matches.length > 0);
+                          }}
+                          onFocus={() => {
+                            const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                            if (saved.length > 0) {
+                              setShowNotesEmailSuggest(true);
+                            }
+                          }}
+                          onBlur={() => setTimeout(() => setShowNotesEmailSuggest(false), 200)}
+                        />
+                        {showNotesEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                          <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
+                            <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
+                              <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-0.5">Suggested Emails</span>
+                            </div>
+                            {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                              .filter(s => !notesForm.email || s.toLowerCase().includes(notesForm.email.toLowerCase()))
+                              .map((email, idx) => (
+                                <div
+                                  key={idx}
+                                  className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setNotesForm({ ...notesForm, email });
+                                    setShowNotesEmailSuggest(false);
+                                  }}
+                                >
+                                  <span className="text-sm text-white font-medium">{email}</span>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                        {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
+                        {showNotesErrors && notesForm.email && !/^\S+@\S+\.\S+$/.test(notesForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-brand-subtext uppercase mb-1 flex justify-between">
+                            <span>Date</span>
+                            {getDayOfWeek(notesForm.date) && <span className="text-teal-400 capitalize">{getDayOfWeek(notesForm.date)}</span>}
+                          </label>
+                          <input type="text" placeholder="DD-MM-YYYY" disabled={notesPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.date) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors disabled:opacity-50`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
+                          {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
+                          {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError}</p>}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
+                          <div className="relative">
+                            <input type="text" placeholder="HH:MM" disabled={notesPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.time) || (notesPopupMode !== 'preview' && validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16 disabled:opacity-50`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
+                            <button
+                              disabled={notesPopupMode === 'preview'}
+                              onClick={() => setNotesForm({ ...notesForm, ampm: notesForm.ampm === 'AM' ? 'PM' : 'AM' })}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
+                            >
+                              {notesForm.ampm} <RefreshCcw size={10} />
+                            </button>
+                          </div>
+                          {showNotesErrors && !notesForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
+                          {notesPopupMode !== 'preview' && validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
+                      {notesPopupMode === 'preview' ? (() => {
+                        let isPast = false;
+                        try {
+                          const [d, m, y] = notesForm.date.split('-');
+                          const [h, min] = notesForm.time.split(':');
+                          let hours = parseInt(h);
+                          if (notesForm.ampm === 'PM' && hours < 12) hours += 12;
+                          if (notesForm.ampm === 'AM' && hours === 12) hours = 0;
+                          const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                          isPast = new Date() > targetDate;
+                        } catch (e) { }
+
+                        return (
+                          <button
+                            onClick={() => setNotesPopupMode('edit')}
+                            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                          >
+                            <Edit2 size={16} /> {isPast ? 'Resend' : 'Edit'}
+                          </button>
+                        );
+                      })() : (
+                        <>
+                          {emailSendStatus === 'sending' && (
+                            <div className="px-5 py-2.5 bg-teal-600/50 text-white rounded-xl font-bold flex items-center gap-2 border border-teal-500/50">
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending & Saving...
+                            </div>
+                          )}
+                          {emailSendStatus === 'success' && (
+                            <div className="px-5 py-2.5 bg-green-500/20 text-green-400 rounded-xl font-bold flex items-center gap-2 border border-green-500/50">
+                              <CheckCircle2 size={16} /> Sent & Saved!
+                            </div>
+                          )}
+                          {emailSendStatus === 'idle' && (
+                            <button
+                              onClick={() => {
+                                const { dateError, timeError } = validateDateTime(notesForm.date, notesForm.time, notesForm.ampm);
+                                const dateValid = !dateError && notesForm.date;
+                                const timeValid = !timeError && notesForm.time;
+                                const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
+
+                                if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
+                                  setShowNotesErrors(true);
+                                  return;
+                                }
+                                setShowNotesErrors(false);
+                                const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                if (!currentEmails.includes(notesForm.email)) {
+                                  currentEmails.unshift(notesForm.email);
+                                  localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
+                                }
+                                localStorage.setItem('clueai_saved_email', notesForm.email);
+
+                                const currentId = notesForm.id || Date.now().toString();
+                                const templateParams = {
+                                  id: currentId,
+                                  type: 'note',
+                                  email: notesForm.email,
+                                  date: notesForm.date,
+                                  time: `${notesForm.time} ${notesForm.ampm}`,
+                                  notes: notesForm.notes,
+                                };
+
+                                setEmailSendStatus('sending');
+                                const doSchedule = () => {
+                                  fetch(GOOGLE_SCRIPT_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(templateParams)
+                                  })
+                                    .then(() => {
+                                      setEmailSendStatus('success');
+                                      setNotesProfiles(prev => {
+                                        if (prev.some(p => p.id === currentId)) {
+                                          return prev.map(p => p.id === currentId ? { ...notesForm, id: currentId } : p);
+                                        }
+                                        return [{ ...notesForm, id: currentId }, ...prev];
+                                      });
+
+                                      setTimeout(() => {
+                                        setShowNotesPopup(false);
+                                        setEmailSendStatus('idle');
+                                      }, 1500);
+                                    })
+                                    .catch(err => {
+                                      setEmailSendStatus('idle');
+                                      console.error('Google Script Error:', err);
+                                      setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
+                                    });
+                                };
+
+                                if (notesForm.id) {
+                                  fetch(GOOGLE_SCRIPT_URL, {
+                                    method: 'POST', mode: 'no-cors',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'delete', id: notesForm.id })
+                                  }).then(doSchedule).catch(doSchedule);
+                                } else {
+                                  doSchedule();
+                                }
+                              }}
+                              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
+                            >
+                              Send & Save Notes
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Virtual Keyboard Transcript Editor with Framer Motion & Native Physical Keyboard Support */}
+              <AnimatePresence>
+                {showVirtualKeyboard && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-6 md:p-8"
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.94, y: 15 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.94, y: 15 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                      className="w-full max-w-4xl bg-[#0a0b12]/95 border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden stealth-exempt"
+                    >
+                      <div className="flex justify-between items-center bg-white/[0.03] px-6 py-4 border-b border-white/10">
+                        <h2 className="text-base font-black text-white flex items-center gap-2">
+                          <FileText size={18} className="text-cyan-400" /> Virtual & Physical Keyboard Editor
+                        </h2>
+                        <div className="flex gap-2 text-[10.5px] text-white/50 uppercase font-black tracking-wider">
+                          <span className="bg-black/40 border border-white/10 px-2 py-1 rounded">Enter: Save</span>
+                          <span className="bg-black/40 border border-white/10 px-2 py-1 rounded">Shift+Enter: New Line</span>
+                          <span className="bg-black/40 border border-white/10 px-2 py-1 rounded text-cyan-300">Physical Keyboard Ready</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowVirtualKeyboard(false);
+                            if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                          }}
+                          className="text-white/60 hover:text-white transition-colors bg-white/5 hover:bg-rose-500/80 rounded-lg px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold border border-white/10"
+                        >
+                          <X size={15} /> Cancel (Esc)
+                        </button>
+                      </div>
+
+                      <textarea
+                        ref={virtualKeyboardTextareaRef}
+                        className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20 select-text"
+                        value={editTranscript}
+                        onChange={(e) => setEditTranscript(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setShowVirtualKeyboard(false);
+                            if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                          } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+                            e.preventDefault();
+                            setTranscript(editTranscript);
+                            finalizedTranscriptRef.current = editTranscript;
+                            interimTranscriptRef.current = '';
+                            clearAudioBuffer();
+                            setShowVirtualKeyboard(false);
+                            if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                          }
+                          // Shift+Enter, Alt+Enter, Ctrl+Enter and all physical typing keys work natively with 0 interference!
+                        }}
+                        placeholder="Type question or prompt with your physical keyboard, or click on-screen buttons below..."
+                        autoFocus
+                      />
+
+                      <div className="bg-black/60 p-4 flex flex-col gap-2 items-center border-t border-white/10 select-none">
+                        <div className="flex flex-col gap-1.5 w-full max-w-4xl">
+                          {/* Special characters row */}
+                          <div className="flex gap-1.5 w-full justify-center mb-1">
+                            {['@', '#', '$', '%', '&', '*', '(', ')', '{', '}', '[', ']', '<', '>', '_', '+', '-', '=', '/', '\\', '|'].map(key => (
+                              <button
+                                key={key}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  const ta = virtualKeyboardTextareaRef.current;
+                                  if (ta) {
+                                    const start = ta.selectionStart ?? editTranscript.length;
+                                    const end = ta.selectionEnd ?? editTranscript.length;
+                                    const updated = editTranscript.slice(0, start) + key + editTranscript.slice(end);
+                                    setEditTranscript(updated);
+                                    requestAnimationFrame(() => {
+                                      ta.focus();
+                                      ta.selectionStart = ta.selectionEnd = start + key.length;
+                                    });
+                                  } else {
+                                    setEditTranscript(prev => prev + key);
+                                  }
+                                }}
+                                className="w-8 h-8 bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-300 rounded-lg font-bold text-sm transition-all flex items-center justify-center border border-cyan-500/20 active:scale-95"
+                              >
+                                {key}
+                              </button>
                             ))}
                           </div>
-                          <span className="text-[8.5px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
-                        </div>
-
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={handlePauseToggle}
-                          className={`px-1.5 py-0.5 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
-                          title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
-                        >
-                          {isPaused ? <Play size={8.5} fill="currentColor" /> : <Pause size={8.5} fill="currentColor" />}
-                          <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                          <span className="text-[7.5px] opacity-60 font-mono">1</span>
-                        </motion.button>
-
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={handleSnipClick}
-                          className="px-1.5 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_8px_rgba(6,182,212,0.15)]"
-                          title="Snip Screen Question (4 / A)"
-                        >
-                          <Crop size={8.5} />
-                          <span>Snip</span>
-                          <span className="text-[7.5px] opacity-60 font-mono">4</span>
-                        </motion.button>
-
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={handleClearAll}
-                          className="px-1.5 py-0.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer"
-                          title="Clear Transcript (3 / C)"
-                        >
-                          <Trash2 size={8.5} />
-                          <span>Clear</span>
-                          <span className="text-[7.5px] opacity-60 font-mono">3</span>
-                        </motion.button>
-
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={() => setShowVirtualKeyboard(true)}
-                          className="px-1.5 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[9.5px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                          title="Edit Transcript (7 / Q)"
-                        >
-                          <Edit2 size={8.5} /> Edit <span className="text-[7.5px] opacity-60 font-mono">7</span>
-                        </motion.button>
-
-                        {currentSessionHistory.length > 0 && (
-                          <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                            onClick={() => setShowPreviousQuestions(true)}
-                            className="px-1.5 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[9.5px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Session History (8 / H)"
-                          >
-                            <Clock size={8.5} /> {currentSessionHistory.length} Qs <span className="text-[7.5px] opacity-60 font-mono">8</span>
-                          </motion.button>
-                        )}
-
-                        {/* STOP Recording Session */}
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                          onClick={stopRecording} 
-                          className="px-2 py-0.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[9.5px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_8px_rgba(244,63,94,0.2)]"
-                          title="Stop Recording Session (6 / D)"
-                        >
-                          <Square size={8.5} fill="currentColor" /> STOP <span className="text-[7.5px] opacity-60 font-mono">6</span>
-                        </motion.button>
-
-                        {/* Dedicated Window Controls Cluster (Never Overlaps) */}
-                        <div className="flex items-center gap-0.5 pl-1.5 ml-0.5 border-l border-white/10 shrink-0">
-                          {/* Settings Button */}
-                          <motion.button 
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.9 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                            onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
-                            className="p-1 bg-white/5 hover:bg-white/15 text-white/60 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
-                            title="Settings"
-                          >
-                            <Settings size={11} />
-                          </motion.button>
-
-                          {/* Minimize Dock Button */}
-                          <motion.button 
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.9 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                            onClick={() => setIsTranscriptMinimized(true)}
-                            className="p-1 bg-white/5 hover:bg-white/15 text-white/60 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
-                            title="Minimize Dock"
-                          >
-                            <Minus size={11} />
-                          </motion.button>
-
-                          {/* Close Window */}
-                          <motion.button 
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.9 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                            onClick={closeApp}
-                            className="p-1 bg-white/5 hover:bg-rose-500/25 text-white/60 hover:text-rose-400 rounded-md border border-white/10 transition-colors cursor-pointer"
-                            title="Close App"
-                          >
-                            <X size={11} />
-                          </motion.button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
-                    <div className="flex items-center gap-2.5 w-full no-drag">
-                      <div 
-                        ref={transcriptScrollRef}
-                        className="flex-1 min-h-[46px] max-h-[72px] overflow-y-auto custom-scrollbar bg-black/80 border border-cyan-500/25 hover:border-cyan-400/50 rounded-xl px-4 py-2 select-text transition-colors shadow-inner flex items-center"
-                        style={{ fontSize: `${transcriptTextSize}px` }}
-                      >
-                        {transcript ? (
-                          <span className="text-white font-medium leading-relaxed tracking-wide select-text">
-                            {transcript}
-                          </span>
-                        ) : (
-                          <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
-                            <span className="inline-block w-2 h-2 rounded-full bg-cyan-400/60 animate-ping"></span>
-                            Listening to conversation... (Interviewer questions appear here)
-                          </span>
-                        )}
-                      </div>
-
-                      {/* High-Impact Integrated Generate Answer Button */}
-                      <motion.button 
-                        whileHover={{ scale: 1.03, boxShadow: "0 0 30px rgba(6,182,212,0.6)" }}
-                        whileTap={{ scale: 0.96 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                        onClick={() => { if (!isGenerating) manualTriggerAI(); }}
-                        disabled={isGenerating}
-                        className="h-[46px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer min-w-[180px]"
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 size={13} className="animate-spin text-white" />
-                            <span>Generating...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Cpu size={13} className="text-cyan-200" />
-                            <span>Generate Answer</span>
-                            <span className="bg-black/30 text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-0.5">2 / X</span>
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
-
-                    {/* Snapshots Strip (if any exist) */}
-                    {currentSnapshots.length > 0 && (
-                      <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 px-2 bg-black/50 rounded-lg border border-white/5 no-drag">
-                        <span className="text-[9.5px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-                          <Crop size={10} /> Snips:
-                        </span>
-                        {currentSnapshots.map((snap, idx) => (
-                          <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
-                            <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                              <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
-                                <Eye size={9} />
-                              </button>
-                              <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
-                                <Trash2 size={9} />
-                              </button>
+                          {[
+                            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+                            ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+                            ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'"],
+                            ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?']
+                          ].map((row, i) => (
+                            <div key={i} className="flex gap-1.5 w-full justify-center">
+                              {row.map(key => (
+                                <button
+                                  key={key}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    const ta = virtualKeyboardTextareaRef.current;
+                                    if (ta) {
+                                      const start = ta.selectionStart ?? editTranscript.length;
+                                      const end = ta.selectionEnd ?? editTranscript.length;
+                                      const updated = editTranscript.slice(0, start) + key + editTranscript.slice(end);
+                                      setEditTranscript(updated);
+                                      requestAnimationFrame(() => {
+                                        ta.focus();
+                                        ta.selectionStart = ta.selectionEnd = start + key.length;
+                                      });
+                                    } else {
+                                      setEditTranscript(prev => prev + key);
+                                    }
+                                  }}
+                                  className="w-10 h-10 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-lg font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
+                                >
+                                  {key}
+                                </button>
+                              ))}
                             </div>
+                          ))}
+
+                          <div className="flex gap-2 w-full justify-center mt-2">
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                const ta = virtualKeyboardTextareaRef.current;
+                                if (ta) {
+                                  const start = ta.selectionStart ?? editTranscript.length;
+                                  const end = ta.selectionEnd ?? editTranscript.length;
+                                  if (start === end && start > 0) {
+                                    const updated = editTranscript.slice(0, start - 1) + editTranscript.slice(end);
+                                    setEditTranscript(updated);
+                                    requestAnimationFrame(() => {
+                                      ta.focus();
+                                      ta.selectionStart = ta.selectionEnd = start - 1;
+                                    });
+                                  } else if (start !== end) {
+                                    const updated = editTranscript.slice(0, start) + editTranscript.slice(end);
+                                    setEditTranscript(updated);
+                                    requestAnimationFrame(() => {
+                                      ta.focus();
+                                      ta.selectionStart = ta.selectionEnd = start;
+                                    });
+                                  }
+                                } else {
+                                  setEditTranscript(prev => prev.slice(0, -1));
+                                }
+                              }}
+                              className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/10 transition-all active:scale-95"
+                            >
+                              Backspace
+                            </button>
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                const ta = virtualKeyboardTextareaRef.current;
+                                if (ta) {
+                                  const start = ta.selectionStart ?? editTranscript.length;
+                                  const end = ta.selectionEnd ?? editTranscript.length;
+                                  const updated = editTranscript.slice(0, start) + '\n' + editTranscript.slice(end);
+                                  setEditTranscript(updated);
+                                  requestAnimationFrame(() => {
+                                    ta.focus();
+                                    ta.selectionStart = ta.selectionEnd = start + 1;
+                                  });
+                                } else {
+                                  setEditTranscript(prev => prev + '\n');
+                                }
+                              }}
+                              className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/10 transition-all flex flex-col items-center justify-center gap-0.5 leading-none active:scale-95"
+                            >
+                              <span>Next Line</span>
+                              <span className="text-[10px] opacity-70 font-normal">(Shift+Enter)</span>
+                            </button>
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                const ta = virtualKeyboardTextareaRef.current;
+                                if (ta) {
+                                  const start = ta.selectionStart ?? editTranscript.length;
+                                  const end = ta.selectionEnd ?? editTranscript.length;
+                                  const updated = editTranscript.slice(0, start) + ' ' + editTranscript.slice(end);
+                                  setEditTranscript(updated);
+                                  requestAnimationFrame(() => {
+                                    ta.focus();
+                                    ta.selectionStart = ta.selectionEnd = start + 1;
+                                  });
+                                } else {
+                                  setEditTranscript(prev => prev + ' ');
+                                }
+                              }}
+                              className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/10 transition-all active:scale-95"
+                            >
+                              Space
+                            </button>
+                            <button
+                              onClick={() => {
+                                setTranscript(editTranscript);
+                                finalizedTranscriptRef.current = editTranscript;
+                                interimTranscriptRef.current = '';
+                                clearAudioBuffer();
+                                setShowVirtualKeyboard(false);
+                                if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                              }}
+                              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] rounded-xl font-bold flex-[1] border border-cyan-400/40 transition-all flex flex-col items-center justify-center gap-0.5 leading-none active:scale-95"
+                            >
+                              <span>Done / Save</span>
+                              <span className="text-[10px] opacity-90 font-normal">(Enter)</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Alert Message Modal */}
+
+              {stealthWarningToast && (
+                <div
+                  className="fixed z-[9999] bg-rose-500/90 text-white px-3 py-1.5 rounded-lg shadow-xl font-bold flex items-center justify-center gap-2 text-[11px] animate-in zoom-in duration-200 backdrop-blur-md pointer-events-none whitespace-nowrap"
+                  style={{
+                    top: Math.max(10, stealthWarningToast.y) + 'px',
+                    left: stealthWarningToast.x + 'px',
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  {stealthWarningToast.isShieldToast && <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-rose-500/90" />}
+                  {stealthWarningToast.isShieldToast ? (
+                    <><ShieldAlert size={14} /> Turn OFF the shield above to type.</>
+                  ) : (
+                    <><ShieldAlert size={14} /> Shield is ON. Cannot type here.</>
+                  )}
+                </div>
+              )}
+
+              {alertMessage && (
+                <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                  <div className={`w-full max-w-md bg-brand-secondary border ${alertMessage.type === 'error' ? 'border-rose-500/50' : alertMessage.type === 'success' ? 'border-green-500/50' : 'border-brand-accent/50'} rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
+                    <div className="px-6 py-4 flex flex-col gap-3 mt-2">
+                      <h3 className={`font-black text-xl tracking-wide flex items-center gap-2 ${alertMessage.type === 'error' ? 'text-rose-500' : alertMessage.type === 'success' ? 'text-green-400' : 'text-brand-accent'}`}>
+                        {alertMessage.type === 'error' ? <XCircle size={20} /> : alertMessage.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+                        {alertMessage.title}
+                      </h3>
+                      <p className="text-sm font-medium leading-relaxed text-white/80 pb-2">
+                        {alertMessage.message}
+                      </p>
+                    </div>
+                    <div className="bg-black/40 px-6 py-4 border-t border-brand-border/50 flex justify-end">
+                      <button
+                        onClick={() => setAlertMessage(null)}
+                        className={`px-6 py-2 ${alertMessage.type === 'error' ? 'bg-rose-500 hover:bg-rose-400' : alertMessage.type === 'success' ? 'bg-green-600 hover:bg-green-500' : 'bg-brand-accent hover:bg-brand-accentSec'} text-white rounded-lg font-bold text-sm transition-colors shadow-lg`}
+                      >
+                        OK
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showUsernamePrompt && (
+                <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
+                  <div className={`w-full max-w-sm bg-brand-secondary border border-brand-border rounded-3xl shadow-2xl flex flex-col overflow-hidden ${!localRenameStealth ? 'stealth-exempt' : ''}`}>
+                    <div className="p-8 pb-6 bg-[#18181b]/50">
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h2 className="text-lg font-bold tracking-tight text-white m-0">Your Name</h2>
+                            <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localRenameStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                              {localRenameStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
+                            </button>
+                          </div>
+                          <p className="text-xs text-brand-subtext leading-relaxed">This name will be attached to your exported sessions.</p>
+                        </div>
+                      </div>
+                      <div className="w-full">
+                        <input
+                          type="text"
+                          value={tempUsername}
+                          onChange={(e) => setTempUsername(e.target.value)}
+                          placeholder="e.g. John Doe"
+                          className="w-full bg-black/50 border border-brand-border rounded-lg px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-brand-accent transition-colors"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && tempUsername.trim()) {
+                              setUsername(tempUsername.trim());
+                              localStorage.setItem('clueai_username', tempUsername.trim());
+                              setShowUsernamePrompt(false);
+                              setStealthWarningToast(null);
+                              if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-end mt-4">
+                        <button
+                          disabled={!tempUsername.trim()}
+                          onClick={() => {
+                            setUsername(tempUsername.trim());
+                            localStorage.setItem('clueai_username', tempUsername.trim());
+                            setShowUsernamePrompt(false);
+                            setStealthWarningToast(null);
+                            if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
+                          }}
+                          className="px-6 py-2 bg-brand-accent hover:bg-brand-accentSec disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-all shadow-sm"
+                        >
+                          Save Name
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Previous Questions Modal with Framer Motion */}
+              <AnimatePresence>
+                {showPreviousQuestions && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-[400] bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8 overflow-hidden pointer-events-auto"
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.94, y: 15 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.94, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className="w-full max-w-4xl max-h-[90vh] h-full bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden"
+                    >
+                      <div className="px-8 py-5 border-b border-white/5 flex justify-between items-center bg-white/5">
+                        <h2 className="font-black text-xl text-white tracking-tight flex items-center gap-2">
+                          <FileText size={20} className="text-white/60" />
+                          Previous Questions (Active Session)
+                        </h2>
+                        <button onClick={() => setShowPreviousQuestions(false)} className="text-white/50 hover:text-white p-2 bg-white/5 hover:bg-rose-500 rounded-xl transition-colors shadow-sm">
+                          <X size={20} />
+                        </button>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-black/[0.02]">
+                        {currentSessionHistory.length === 0 ? (
+                          <div className="text-center text-white/30 font-medium italic mt-10">No questions asked in this session yet.</div>
+                        ) : currentSessionHistory.map((item, idx) => (
+                          <div key={idx} className="bg-white/5 border border-white/5 rounded-[1.5rem] p-6 space-y-6 shadow-sm">
+                            <div>
+                              <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-[11px] font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5"><Mic size={14} /> Transcript {idx + 1}</h3>
+                                <CopyButton text={item.question} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Transcript" />
+                              </div>
+
+                              {item.images && item.images.length > 0 && (
+                                <div className="flex gap-2 overflow-x-auto custom-scrollbar mb-4 pb-2">
+                                  {item.images.map((img, i) => (
+                                    <img key={i} src={img} alt="Snapshot" className="h-[80px] aspect-video object-cover rounded-lg border border-white/10" />
+                                  ))}
+                                </div>
+                              )}
+
+                              <textarea
+                                value={item.question}
+                                onChange={(e) => {
+                                  const updated = [...currentSessionHistory];
+                                  updated[idx].question = e.target.value;
+                                  setCurrentSessionHistory(updated);
+                                }}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white/90 text-sm font-medium focus:border-cyan-500/50 outline-none transition-colors min-h-[100px] resize-y"
+                              />
+
+                              {/* Quick Add per Transcript */}
+                              <div className="mt-3 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2">
+                                <span className="text-[10px] font-black text-white/40 uppercase tracking-wider whitespace-nowrap shrink-0">Quick Add:</span>
+                                {['Explain this clearly', 'What are the main types?', 'Give an example', 'Optimize this code', 'Find the bug'].map((tag, tagIdx) => (
+                                  <button
+                                    key={tagIdx}
+                                    onClick={() => {
+                                      const updated = [...currentSessionHistory];
+                                      updated[idx].question += (updated[idx].question ? '\n' : '') + tag;
+                                      setCurrentSessionHistory(updated);
+                                    }}
+                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1"
+                                  >
+                                    <Plus size={12} className="opacity-50" /> {tag}
+                                  </button>
+                                ))}
+                              </div>
+
+                              <div className="mt-4 flex justify-between items-center border-t border-white/5 pt-4">
+                                <button
+                                  onClick={() => setExpandedAnswers(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg font-bold text-xs transition-all flex items-center gap-2"
+                                >
+                                  {expandedAnswers[idx] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                  {expandedAnswers[idx] ? "Hide AI Answer" : "View AI Answer"}
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setTranscript(item.question);
+                                    finalizedTranscriptRef.current = item.question;
+                                    let snaps: string[] = [];
+                                    if (item.images && item.images.length > 0) {
+                                      snaps = item.images;
+                                      setCurrentSnapshots(snaps);
+                                    }
+                                    setShowPreviousQuestions(false);
+                                    if (!isGenerating) {
+                                      manualTriggerAIRef.current(snaps, item.question);
+                                    }
+                                  }}
+                                  className="px-4 py-2 bg-brand-accent hover:bg-cyan-400 text-white rounded-lg font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2"
+                                >
+                                  <RefreshCw size={14} /> Generate Answer
+                                </button>
+                              </div>
+                            </div>
+
+                            {expandedAnswers[idx] && (
+                              <div className="pt-6 border-t border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
+                                <div className="flex justify-between items-center mb-4">
+                                  <h3 className="text-[11px] font-black text-fuchsia-400 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
+                                  <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
+                                </div>
+                                <div className="text-white/90 font-bold text-sm whitespace-pre-wrap leading-relaxed">
+                                  <ReactMarkdown
+                                    components={{
+                                      code({ inline, children }: any) {
+                                        return !inline ? (
+                                          <div className="bg-[#000000] rounded-xl p-4 my-3 border border-white/5 font-mono text-xs overflow-x-auto text-white/80">{children}</div>
+                                        ) : (
+                                          <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
+                                        )
+                                      },
+                                      p({ children, ...props }: any) {
+                                        return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
+                                      },
+                                      h1({ children, ...props }: any) {
+                                        return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
+                                      },
+                                      h2({ children, ...props }: any) {
+                                        return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
+                                      },
+                                      h3({ children, ...props }: any) {
+                                        return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
+                                      },
+                                      ul({ children, ...props }: any) {
+                                        return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
+                                      },
+                                      li({ node, children, ...props }: any) {
+                                        return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
+                                      }
+                                    }}
+                                  >
+                                    {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                                  </ReactMarkdown>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
-                        {currentSnapshots.length > 1 && (
-                          <button onClick={() => setCurrentSnapshots([])} className="h-[36px] px-2 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9px] font-bold shrink-0">
-                            <Trash2 size={10} /> Clear
-                          </button>
-                        )}
                       </div>
-                    )}
+                    </motion.div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           </div>
         )}
-      
-      {/* API Key Missing Error Modal */}
-      {showApiKeyMissingError && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm animate-in zoom-in-95 duration-200">
-            <div className="relative bg-brand-bg border border-brand-border rounded-2xl w-full p-6 shadow-2xl">
-              <h3 className="font-black text-lg text-white mb-3 flex items-center gap-2">
-                <AlertTriangle className="text-rose-500" size={20} /> Missing API Keys
-              </h3>
-              <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
-                You must provide a valid API key (at least Groq Key 1) before starting the interview. Go to Settings and add your API keys to continue.
-              </p>
-              <button 
-                onClick={() => setShowApiKeyMissingError(false)} 
-                className="w-full bg-brand-accent hover:bg-brand-accentSec text-white py-2.5 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Minimum Size Warning Modal */}
-      {showMinSizeWarning && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 select-none">
-          <div className="bg-[#09090b]/90 border border-brand-border rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
-              <h3 className="font-black text-lg text-white flex items-center gap-2"><ZoomOut size={18} className="text-brand-accent"/> Size Limit Reached</h3>
-            </div>
-            <div className="p-6">
-              <p className="text-brand-subtext text-sm mb-6 text-center">
-                The window cannot be decreased further without hiding essential buttons and breaking the layout.
-              </p>
-              <button 
-                onClick={() => setShowMinSizeWarning(false)} 
-                className="w-full bg-brand-accent hover:bg-brand-accent/90 text-white py-2.5 rounded-xl font-bold transition-colors"
-              >
-                Okay
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stealth Mode Warning Modal (For Starting Interview) */}
-      {showStartStealthWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 via-red-500 to-rose-500 rounded-3xl blur opacity-40"></div>
-            
-            <div className="relative bg-[#09090b]/90 border border-red-500/30 rounded-3xl w-full overflow-hidden shadow-[0_0_80px_rgba(225,29,72,0.3)]">
-              <div className="px-8 py-6 border-b border-red-500/20 flex justify-between items-center bg-red-500/10">
-                <h3 className="font-black text-xl text-rose-500 tracking-wide flex items-center gap-2"><AlertTriangle size={20} /> Warning</h3>
-                <button onClick={() => setShowStartStealthWarning(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
-              </div>
-              
-              <div className="p-8 space-y-6">
-                <div className="text-sm text-white/80 leading-relaxed">
-                  <p className="mb-4">You are about to start the interview with <strong className="text-white">Stealth Mode OFF</strong>.</p>
-                  <p className="mb-4 text-rose-400"><strong>Impact:</strong> Without Stealth Mode enabled, anti-cheat software (like MS Teams or Zoom screen sharing) may detect this application running in the background.</p>
-                  <p><strong>How to fix:</strong> Click Cancel, go to <span className="bg-white/10 px-2 py-0.5 rounded text-white text-xs font-bold inline-flex items-center gap-1">Settings <Settings size={12}/></span>, and turn on <strong>Stealth Mode</strong> to hide the app securely.</p>
-                </div>
-                
-                <div className="flex gap-3 pt-4 border-t border-white/5">
-                  <button 
-                    onClick={() => setShowStartStealthWarning(false)} 
-                    className="flex-1 bg-[#18181b] hover:bg-white/10 text-white py-3.5 rounded-xl font-bold transition-all border border-white/10"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={proceedWithInterview} 
-                    className="flex-1 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-400 hover:to-red-400 text-white py-3.5 rounded-xl font-black shadow-[0_0_20px_rgba(225,29,72,0.4)] transition-all"
-                  >
-                    Start Anyway
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-              {/* Rename Session Modal */}
-        {editingSessionId !== null && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-150">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
-              
-              <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full shadow-[0_0_80px_rgba(0,0,0,1)]">
-                <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                  <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Rename Session</h3>
-                  <button onClick={() => setEditingSessionId(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
-                </div>
-                
-                <div className="p-8 space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">New Session Name</label>
-                    <input 
-                      type="text"
-                      autoFocus
-                      value={editingSessionName}
-                      onChange={e => setEditingSessionName(e.target.value)}
-                      onKeyDown={e => { if(e.key === 'Enter') handleRenameSession(editingSessionId); }}
-                      className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
-                    />
-                  </div>
-                </div>
-                
-                <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md rounded-b-3xl">
-                  <button onClick={() => setEditingSessionId(null)} className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                  <button onClick={() => handleRenameSession(editingSessionId)} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]">
-                    Save Name
-                  </button>
-                </div>
-              </div>
-            </div>
+        {modelChangeMsg && (
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+            <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-150 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
+              <CheckCircle2 size={16} /> {modelChangeMsg}
+            </span>
           </div>
         )}
 
-        {/* Session Name Prompt Modal Redesign */}
-      {showSessionPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
-            {/* Glowing Accent Border */}
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-accent via-cyan-400 to-brand-accent rounded-3xl blur opacity-30"></div>
-            
-            <div className="relative bg-[#09090b]/90 border border-white/10 rounded-3xl w-full shadow-[0_0_80px_rgba(0,0,0,1)]">
-              <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                <h3 className="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-wide">Initialize Session</h3>
-                <button onClick={() => setShowSessionPrompt(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X size={16}/></button>
-              </div>
-              
-              <div className="p-8 space-y-6">
-                <div>
-                  <label className="block text-[10px] font-black text-brand-subtext uppercase tracking-[0.2em] mb-3">Resume Existing Session</label>
-                  <div className="relative">
-                    <CustomSelect
-                      value={currentSessionId}
-                      onChange={(val: string) => {
-                        setCurrentSessionId(val);
-                        if (val) {
-                           const s = sessions.find(x => x.id === val);
-                           if (s) setSessionNameInput(s.name);
-                           setSessionError('');
-                        } else {
-                           setSessionNameInput('');
-                        }
-                      }}
-                      options={[
-                        { value: '', label: '-- Create a New Session Instead --' },
-                        ...sessions.map(s => ({ value: s.id, label: `${s.name} (${s.date || 'Old Session'})` }))
-                      ]}
-                      className="w-full bg-[#18181b] border border-white/10 rounded-xl px-5 py-3 text-sm text-white transition-all"
-                    />
-                  </div>
-                </div>
-
-                {!currentSessionId && (
-                  <div className="animate-in fade-in slide-in-from-top-4 duration-150">
-                    <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">New Session Name</label>
-                    <input 
-                      type="text"
-                      autoFocus
-                      value={sessionNameInput}
-                      onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
-                      placeholder="e.g. Meta Final Round"
-                      onKeyDown={e => { if(e.key === 'Enter') startRecording(); }}
-                      className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-5 py-4 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
-                    />
-                  </div>
-                )}
-                
-                {sessionError && (
-                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 animate-in slide-in-from-top-2">
-                    <p className="text-rose-400 text-xs font-bold flex items-center gap-2">
-                      <X size={14} className="bg-rose-500/20 rounded-full p-0.5" /> {sessionError}
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="px-8 py-5 bg-[#18181b]/50 flex justify-end gap-3 border-t border-white/5 backdrop-blur-md rounded-b-3xl">
-                <button onClick={() => setShowSessionPrompt(false)} className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                <button onClick={startRecording} className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] flex items-center gap-2 transform active:scale-95">
-                  Start AI Interview <Play size={12} fill="currentColor" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Stealth Warning Modal */}
-      {showStealthWarning && (
-        <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-brand-bg border border-rose-500/30 rounded-2xl p-6 max-w-sm w-full shadow-[0_0_40px_rgba(225,29,72,0.2)] animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black text-rose-400 mb-3 flex items-center gap-2">
-              <AlertTriangle size={24} /> Warning!
-            </h3>
-            <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
-              Disabling Stealth Mode will make ClueAI visible to screen sharing software like Zoom, Microsoft Teams, or Google Meet! 
-              <br/><br/>
-              Only turn this off if you are absolutely sure you want the app to be visible on your screen during a meeting.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button 
-                onClick={() => setShowStealthWarning(false)} 
-                className="px-4 py-2 bg-brand-secondary hover:bg-brand-border text-white rounded-lg font-bold text-sm transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => {
-                  setStealthMode(false);
-                  ipcRenderer.invoke('set-stealth', false);
-                  setShowStealthWarning(false);
-                }} 
-                className="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white rounded-lg font-bold text-sm transition-colors shadow-[0_0_15px_rgba(225,29,72,0.4)]"
-              >
-                OK, Disable it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Snapshot Fullscreen Preview Modal */}
-      {previewSnapshot && (
-        <div 
-          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-200"
-          onClick={() => setPreviewSnapshot(null)}
-        >
-          <button 
-            className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
-            onClick={(e) => { e.stopPropagation(); setPreviewSnapshot(null); }}
-          >
-            <X size={24} />
-          </button>
-          <img 
-            src={previewSnapshot} 
-            alt="Snapshot Preview" 
-            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-150" 
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
-
-      {itemToDelete && (
-        <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-brand-secondary border border-rose-500/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2"><Trash2 size={18} className="text-rose-400" /> Confirm Deletion</h2>
-              <button onClick={() => setItemToDelete(null)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            <div className="p-6 text-center">
-              <p className="text-sm text-gray-300 mb-4">Are you sure you want to delete this {itemToDelete.type}?</p>
-              <div className="bg-black/30 p-3 rounded-lg border border-white/5 mb-6 text-left">
-                <span className="font-bold text-white block">{itemToDelete.name}</span>
-              </div>
-              {!itemToDelete.isPast && (
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 text-xs text-rose-300 font-medium text-left flex items-start gap-2 mb-6">
-                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                  <p>On deleting, it will cancel the scheduled email and it will not send it again.</p>
-                </div>
-              )}
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setItemToDelete(null)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-sm transition-colors">Cancel</button>
-                <button 
-                  onClick={() => {
-                    const { id, type, isPast } = itemToDelete;
-                    if (type === 'reminder') {
-                      setReminderProfiles(prev => prev.filter(r => r.id !== id));
-                    } else {
-                      setNotesProfiles(prev => prev.filter(r => r.id !== id));
-                    }
-                    if (!isPast) {
-                      fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'delete', id })
-                      }).catch(console.error);
-                    }
-                    setItemToDelete(null);
-                  }} 
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-sm transition-colors"
-                >
-                  Confirm Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reminder Popup Editor */}
-      {showReminderPopup && (
-        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className={`w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${!localReminderStealth ? 'stealth-exempt' : ''}`}>
-            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
-                <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localReminderStealth ? 'Stealth ON' : 'Stealth OFF'}>
-                  {localReminderStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
-                </button>
-              </div>
-              <button onClick={() => setShowReminderPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Company Name</label>
-                <input type="text" placeholder="e.g. Amazon" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.name ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.name} onChange={e => setReminderForm({...reminderForm, name: e.target.value})} />
-                {showReminderErrors && !reminderForm.name && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Job Title</label>
-                <input type="text" placeholder="e.g. Software Engineer" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${showReminderErrors && !reminderForm.jobTitle ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.jobTitle} onChange={e => setReminderForm({...reminderForm, jobTitle: e.target.value})} />
-                {showReminderErrors && !reminderForm.jobTitle && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
-                <input 
-                  type="email" 
-                  disabled={reminderPopupMode !== 'create'}
-                  placeholder="e.g. user@example.com" 
-                  className={`w-full bg-black/40 border ${showReminderErrors && (!reminderForm.email || !/^\S+@\S+\.\S+$/.test(reminderForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} 
-                  value={reminderForm.email} 
-                  onChange={e => {
-                     setReminderForm({...reminderForm, email: e.target.value});
-                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                     const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
-                     setShowReminderEmailSuggest(matches.length > 0);
-                  }}
-                  onFocus={() => {
-                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                     if (saved.length > 0) {
-                        setShowReminderEmailSuggest(true);
-                     }
-                  }}
-                  onBlur={() => setTimeout(() => setShowReminderEmailSuggest(false), 200)}
-                />
-                {showReminderEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
-                    <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
-                      <span className="text-[10px] font-bold text-brand-accent uppercase tracking-wider mb-0.5">Suggested Emails</span>
-                    </div>
-                    {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
-                      .filter(s => !reminderForm.email || s.toLowerCase().includes(reminderForm.email.toLowerCase()))
-                      .map((email, idx) => (
-                      <div 
-                        key={idx}
-                        className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
-                        onMouseDown={(e) => {
-                           e.preventDefault();
-                           setReminderForm({...reminderForm, email});
-                           setShowReminderEmailSuggest(false);
-                        }}
-                      >
-                        <span className="text-sm text-white font-medium">{email}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {showReminderErrors && reminderForm.email && !/^\S+@\S+\.\S+$/.test(reminderForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1 flex justify-between">
-                  <span>Date</span>
-                  {getDayOfWeek(reminderForm.date) && <span className="text-blue-400 capitalize">{getDayOfWeek(reminderForm.date)}</span>}
-                </label>
-                <input type="text" placeholder="DD-MM-YYYY" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.date) || validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors disabled:opacity-50`} value={reminderForm.date} onChange={e => handleDateChange(e.target.value, reminderForm, setReminderForm)} />
-                {showReminderErrors && !reminderForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).dateError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
-                <div className="relative">
-                  <input type="text" placeholder="HH:MM" disabled={reminderPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showReminderErrors && !reminderForm.time) || (reminderPopupMode !== 'preview' && validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors pr-16 disabled:opacity-50`} value={reminderForm.time} onChange={e => handleTimeChange(e.target.value, reminderForm, setReminderForm)} />
-                  <button
-                    disabled={reminderPopupMode === 'preview'}
-                    onClick={() => setReminderForm({...reminderForm, ampm: reminderForm.ampm === 'AM' ? 'PM' : 'AM'})}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
-                  >
-                    {reminderForm.ampm} <RefreshCcw size={10} />
-                  </button>
-                </div>
-                {showReminderErrors && !reminderForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {reminderPopupMode !== 'preview' && validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm).timeError}</p>}
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
-              {reminderPopupMode === 'preview' ? (() => {
-                let isPast = false;
-                try {
-                  const [d, m, y] = reminderForm.date.split('-');
-                  const [h, min] = reminderForm.time.split(':');
-                  let hours = parseInt(h);
-                  if (reminderForm.ampm === 'PM' && hours < 12) hours += 12;
-                  if (reminderForm.ampm === 'AM' && hours === 12) hours = 0;
-                  const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
-                  isPast = new Date() > targetDate;
-                } catch(e) {}
-                
-                return (
-                  <button 
-                    onClick={() => setReminderPopupMode('edit')}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-                  >
-                    <Edit2 size={16} /> {isPast ? 'Resend' : 'Edit'}
-                  </button>
-                );
-              })() : (
-                <>
-                  {emailSendStatus === 'sending' && (
-                    <div className="px-5 py-2.5 flex items-center justify-center h-[44px]">
-                      <Loader2 size={24} className="text-blue-500 animate-spin" />
-                    </div>
-                  )}
-                  {emailSendStatus === 'success' && (
-                    <div className="px-5 py-2.5 flex items-center justify-center h-[44px] gap-2 text-green-500 font-bold">
-                      <CheckCircle2 size={24} /> Scheduled
-                    </div>
-                  )}
-                  {emailSendStatus === 'idle' && (
-                  <button 
-                    onClick={() => {
-                      const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
-                      const dateValid = !dateError && reminderForm.date;
-                      const timeValid = !timeError && reminderForm.time;
-                      const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
-                      
-                      if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
-                        setShowReminderErrors(true);
-                        return;
-                      }
-                      setShowReminderErrors(false);
-                      const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                      if (!currentEmails.includes(reminderForm.email)) {
-                         currentEmails.unshift(reminderForm.email);
-                         localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
-                      }
-
-                      const currentId = reminderForm.id || Date.now().toString();
-                      const templateParams = {
-                        id: currentId,
-                        type: 'reminder',
-                        to_name: reminderForm.name,
-                        to_email: reminderForm.email,
-                        company_name: reminderForm.name,
-                        job_title: reminderForm.jobTitle,
-                        date: reminderForm.date,
-                        time: `${reminderForm.time} ${reminderForm.ampm}`,
-                      };
-
-                      setEmailSendStatus('sending');
-                      const doSchedule = () => {
-                        fetch(GOOGLE_SCRIPT_URL, {
-                          method: 'POST',
-                          mode: 'no-cors',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(templateParams)
-                        })
-                        .then(() => {
-                          setEmailSendStatus('success');
-                          setReminderProfiles(prev => {
-                            if (prev.some(p => p.id === currentId)) {
-                              return prev.map(p => p.id === currentId ? {...reminderForm, id: currentId} : p);
-                            }
-                            return [{...reminderForm, id: currentId}, ...prev];
-                          });
-                          
-                          setTimeout(() => {
-                            setShowReminderPopup(false);
-                            setEmailSendStatus('idle');
-                          }, 1500);
-                        })
-                        .catch(err => {
-                          setEmailSendStatus('idle');
-                          console.error('Google Script Error:', err);
-                          setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Error: ${err.message}`, type: 'error' });
-                        });
-                      };
-
-                      if (reminderForm.id) {
-                        fetch(GOOGLE_SCRIPT_URL, {
-                          method: 'POST', mode: 'no-cors',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'delete', id: reminderForm.id })
-                        }).then(doSchedule).catch(doSchedule);
-                      } else {
-                        doSchedule();
-                      }
-                    }}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-                  >
-                    Send Reminder via Email
-                  </button>
-                  )}
-                  <button 
-                    onClick={() => {
-                      const { dateError, timeError } = validateDateTime(reminderForm.date, reminderForm.time, reminderForm.ampm);
-                      const dateValid = !dateError && reminderForm.date;
-                      const timeValid = !timeError && reminderForm.time;
-                      const emailValid = /^\S+@\S+\.\S+$/.test(reminderForm.email);
-                      
-                      if (!reminderForm.name || !reminderForm.jobTitle || !emailValid || !dateValid || !timeValid) {
-                        setShowReminderErrors(true);
-                        return;
-                      }
-                      setShowReminderErrors(false);
-                      const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                      if (!currentEmails.includes(reminderForm.email)) {
-                         currentEmails.unshift(reminderForm.email);
-                         localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
-                      }
-                      localStorage.setItem('clueai_saved_email', reminderForm.email);
-                      
-                      const currentId = reminderForm.id || Date.now().toString();
-                      setReminderProfiles(prev => {
-                        if (prev.some(p => p.id === currentId)) {
-                          return prev.map(p => p.id === currentId ? {...reminderForm, id: currentId} : p);
-                        }
-                        return [{...reminderForm, id: currentId}, ...prev];
-                      });
-                      setShowReminderPopup(false);
-                    }}
-                    className="px-5 py-2.5 bg-brand-accent hover:bg-brand-accent/80 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-                  >
-                    <Save size={16} /> Save Profile
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Notes Popup Editor */}
-      {showNotesPopup && (
-        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className={`w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden ${!localNotesStealth ? 'stealth-exempt' : ''}`}>
-            <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
-                <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localNotesStealth ? 'Stealth ON' : 'Stealth OFF'}>
-                  {localNotesStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
-                </button>
-              </div>
-              <button onClick={() => setShowNotesPopup(false)} className="text-white/50 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            
-            <div className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[60vh] custom-scrollbar">
-              <div>
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Notes</label>
-                <textarea 
-                  placeholder="e.g. Discussed system design..." 
-                  disabled={notesPopupMode === 'preview'}
-                  className={`w-full bg-black/40 border ${showNotesErrors && !notesForm.notes ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors h-24 resize-none disabled:opacity-50`} 
-                  value={notesForm.notes} 
-                  onChange={e => setNotesForm({...notesForm, notes: e.target.value})} 
-                />
-                {showNotesErrors && !notesForm.notes && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
-                <input 
-                  type="email" 
-                  disabled={notesPopupMode !== 'create'}
-                  placeholder="e.g. user@example.com" 
-                  className={`w-full bg-black/40 border ${showNotesErrors && (!notesForm.email || !/^\S+@\S+\.\S+$/.test(notesForm.email)) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors disabled:opacity-50`} 
-                  value={notesForm.email} 
-                  onChange={e => {
-                     setNotesForm({...notesForm, email: e.target.value});
-                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                     const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
-                     setShowNotesEmailSuggest(matches.length > 0);
-                  }}
-                  onFocus={() => {
-                     const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                     if (saved.length > 0) {
-                        setShowNotesEmailSuggest(true);
-                     }
-                  }}
-                  onBlur={() => setTimeout(() => setShowNotesEmailSuggest(false), 200)}
-                />
-                {showNotesEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
-                    <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
-                      <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-0.5">Suggested Emails</span>
-                    </div>
-                    {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
-                      .filter(s => !notesForm.email || s.toLowerCase().includes(notesForm.email.toLowerCase()))
-                      .map((email, idx) => (
-                      <div 
-                        key={idx}
-                        className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
-                        onMouseDown={(e) => {
-                           e.preventDefault();
-                           setNotesForm({...notesForm, email});
-                           setShowNotesEmailSuggest(false);
-                        }}
-                      >
-                        <span className="text-sm text-white font-medium">{email}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
-                {showNotesErrors && notesForm.email && !/^\S+@\S+\.\S+$/.test(notesForm.email) && <p className="text-rose-500 text-[10px] mt-1 font-bold">Please enter a valid email address.</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1 flex justify-between">
-                    <span>Date</span>
-                    {getDayOfWeek(notesForm.date) && <span className="text-teal-400 capitalize">{getDayOfWeek(notesForm.date)}</span>}
-                  </label>
-                  <input type="text" placeholder="DD-MM-YYYY" disabled={notesPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.date) || validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors disabled:opacity-50`} value={notesForm.date} onChange={e => handleDateChange(e.target.value, notesForm, setNotesForm)} />
-                  {showNotesErrors && !notesForm.date && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
-                  {validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).dateError}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Time</label>
-                  <div className="relative">
-                    <input type="text" placeholder="HH:MM" disabled={notesPopupMode === 'preview'} className={`w-full bg-black/40 border ${(showNotesErrors && !notesForm.time) || (notesPopupMode !== 'preview' && validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError) ? 'border-rose-500/50' : 'border-brand-border'} rounded-lg p-3 text-sm text-white outline-none focus:border-teal-500 transition-colors pr-16 disabled:opacity-50`} value={notesForm.time} onChange={e => handleTimeChange(e.target.value, notesForm, setNotesForm)} />
-                    <button
-                      disabled={notesPopupMode === 'preview'}
-                      onClick={() => setNotesForm({...notesForm, ampm: notesForm.ampm === 'AM' ? 'PM' : 'AM'})}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
-                    >
-                      {notesForm.ampm} <RefreshCcw size={10} />
-                    </button>
-                  </div>
-                  {showNotesErrors && !notesForm.time && <p className="text-rose-500 text-[10px] mt-1 font-bold">Required.</p>}
-                  {notesPopupMode !== 'preview' && validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError && <p className="text-rose-500 text-[10px] mt-1 font-bold">{validateDateTime(notesForm.date, notesForm.time, notesForm.ampm).timeError}</p>}
-                </div>
-              </div>
-            </div>
-            
-            <div className="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
-              {notesPopupMode === 'preview' ? (() => {
-                let isPast = false;
-                try {
-                  const [d, m, y] = notesForm.date.split('-');
-                  const [h, min] = notesForm.time.split(':');
-                  let hours = parseInt(h);
-                  if (notesForm.ampm === 'PM' && hours < 12) hours += 12;
-                  if (notesForm.ampm === 'AM' && hours === 12) hours = 0;
-                  const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
-                  isPast = new Date() > targetDate;
-                } catch(e) {}
-                
-                return (
-                  <button 
-                    onClick={() => setNotesPopupMode('edit')}
-                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-                  >
-                    <Edit2 size={16} /> {isPast ? 'Resend' : 'Edit'}
-                  </button>
-                );
-              })() : (
-                <>
-                  {emailSendStatus === 'sending' && (
-                    <div className="px-5 py-2.5 bg-teal-600/50 text-white rounded-xl font-bold flex items-center gap-2 border border-teal-500/50">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending & Saving...
-                    </div>
-                  )}
-                  {emailSendStatus === 'success' && (
-                    <div className="px-5 py-2.5 bg-green-500/20 text-green-400 rounded-xl font-bold flex items-center gap-2 border border-green-500/50">
-                      <CheckCircle2 size={16} /> Sent & Saved!
-                    </div>
-                  )}
-                  {emailSendStatus === 'idle' && (
-                  <button 
-                    onClick={() => {
-                      const { dateError, timeError } = validateDateTime(notesForm.date, notesForm.time, notesForm.ampm);
-                      const dateValid = !dateError && notesForm.date;
-                      const timeValid = !timeError && notesForm.time;
-                      const emailValid = /^\S+@\S+\.\S+$/.test(notesForm.email);
-                      
-                      if (!notesForm.notes || !emailValid || !dateValid || !timeValid) {
-                        setShowNotesErrors(true);
-                        return;
-                      }
-                      setShowNotesErrors(false);
-                      const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                      if (!currentEmails.includes(notesForm.email)) {
-                         currentEmails.unshift(notesForm.email);
-                         localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
-                      }
-                      localStorage.setItem('clueai_saved_email', notesForm.email);
-
-                      const currentId = notesForm.id || Date.now().toString();
-                      const templateParams = {
-                        id: currentId,
-                        type: 'note',
-                        email: notesForm.email,
-                        date: notesForm.date,
-                        time: `${notesForm.time} ${notesForm.ampm}`,
-                        notes: notesForm.notes,
-                      };
-
-                      setEmailSendStatus('sending');
-                      const doSchedule = () => {
-                        fetch(GOOGLE_SCRIPT_URL, {
-                          method: 'POST',
-                          mode: 'no-cors',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(templateParams)
-                        })
-                        .then(() => {
-                          setEmailSendStatus('success');
-                          setNotesProfiles(prev => {
-                            if (prev.some(p => p.id === currentId)) {
-                              return prev.map(p => p.id === currentId ? {...notesForm, id: currentId} : p);
-                            }
-                            return [{...notesForm, id: currentId}, ...prev];
-                          });
-                          
-                          setTimeout(() => {
-                            setShowNotesPopup(false);
-                            setEmailSendStatus('idle');
-                          }, 1500);
-                        })
-                        .catch(err => {
-                          setEmailSendStatus('idle');
-                          console.error('Google Script Error:', err);
-                          setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
-                        });
-                      };
-
-                      if (notesForm.id) {
-                        fetch(GOOGLE_SCRIPT_URL, {
-                          method: 'POST', mode: 'no-cors',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'delete', id: notesForm.id })
-                        }).then(doSchedule).catch(doSchedule);
-                      } else {
-                        doSchedule();
-                      }
-                    }}
-                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
-                  >
-                    Send & Save Notes
-                  </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Virtual Keyboard Transcript Editor with Framer Motion & Native Physical Keyboard Support */}
-      <AnimatePresence>
-        {showVirtualKeyboard && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-6 md:p-8"
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="w-full max-w-4xl bg-[#0a0b12]/95 border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden stealth-exempt"
-            >
-              <div className="flex justify-between items-center bg-white/[0.03] px-6 py-4 border-b border-white/10">
-                <h2 className="text-base font-black text-white flex items-center gap-2">
-                  <FileText size={18} className="text-cyan-400"/> Virtual & Physical Keyboard Editor
-                </h2>
-                <div className="flex gap-2 text-[10.5px] text-white/50 uppercase font-black tracking-wider">
-                  <span className="bg-black/40 border border-white/10 px-2 py-1 rounded">Enter: Save</span>
-                  <span className="bg-black/40 border border-white/10 px-2 py-1 rounded">Shift+Enter: New Line</span>
-                  <span className="bg-black/40 border border-white/10 px-2 py-1 rounded text-cyan-300">Physical Keyboard Ready</span>
-                </div>
-                <button 
-                  onClick={() => {
-                    setShowVirtualKeyboard(false);
-                    if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                  }}
-                  className="text-white/60 hover:text-white transition-colors bg-white/5 hover:bg-rose-500/80 rounded-lg px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold border border-white/10"
-                >
-                  <X size={15} /> Cancel (Esc)
-                </button>
-              </div>
-
-              <textarea 
-                ref={virtualKeyboardTextareaRef}
-                className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20 select-text"
-                value={editTranscript}
-                onChange={(e) => setEditTranscript(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setShowVirtualKeyboard(false);
-                    if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                  } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
-                    e.preventDefault();
-                    setTranscript(editTranscript);
-                    finalizedTranscriptRef.current = editTranscript;
-                    interimTranscriptRef.current = '';
-                    clearAudioBuffer();
-                    setShowVirtualKeyboard(false);
-                    if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                  }
-                  // Shift+Enter, Alt+Enter, Ctrl+Enter and all physical typing keys work natively with 0 interference!
-                }}
-                placeholder="Type question or prompt with your physical keyboard, or click on-screen buttons below..."
-                autoFocus
-              />
-
-              <div className="bg-black/60 p-4 flex flex-col gap-2 items-center border-t border-white/10 select-none">
-                <div className="flex flex-col gap-1.5 w-full max-w-4xl">
-                  {/* Special characters row */}
-                  <div className="flex gap-1.5 w-full justify-center mb-1">
-                    {['@','#','$','%','&','*','(',')','{','}','[',']','<','>','_','+','-','=','/','\\','|'].map(key => (
-                      <button 
-                        key={key} 
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          const ta = virtualKeyboardTextareaRef.current;
-                          if (ta) {
-                            const start = ta.selectionStart ?? editTranscript.length;
-                            const end = ta.selectionEnd ?? editTranscript.length;
-                            const updated = editTranscript.slice(0, start) + key + editTranscript.slice(end);
-                            setEditTranscript(updated);
-                            requestAnimationFrame(() => {
-                              ta.focus();
-                              ta.selectionStart = ta.selectionEnd = start + key.length;
-                            });
-                          } else {
-                            setEditTranscript(prev => prev + key);
-                          }
-                        }}
-                        className="w-8 h-8 bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-300 rounded-lg font-bold text-sm transition-all flex items-center justify-center border border-cyan-500/20 active:scale-95"
-                      >
-                        {key}
-                      </button>
-                    ))}
-                  </div>
-                  {[
-                    ['1','2','3','4','5','6','7','8','9','0'],
-                    ['q','w','e','r','t','y','u','i','o','p'],
-                    ['a','s','d','f','g','h','j','k','l',';',"'"],
-                    ['z','x','c','v','b','n','m',',','.','?']
-                  ].map((row, i) => (
-                    <div key={i} className="flex gap-1.5 w-full justify-center">
-                      {row.map(key => (
-                        <button 
-                          key={key} 
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            const ta = virtualKeyboardTextareaRef.current;
-                            if (ta) {
-                              const start = ta.selectionStart ?? editTranscript.length;
-                              const end = ta.selectionEnd ?? editTranscript.length;
-                              const updated = editTranscript.slice(0, start) + key + editTranscript.slice(end);
-                              setEditTranscript(updated);
-                              requestAnimationFrame(() => {
-                                ta.focus();
-                                ta.selectionStart = ta.selectionEnd = start + key.length;
-                              });
-                            } else {
-                              setEditTranscript(prev => prev + key);
-                            }
-                          }}
-                          className="w-10 h-10 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-lg font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
-                        >
-                          {key}
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                  
-                  <div className="flex gap-2 w-full justify-center mt-2">
-                     <button 
-                       onMouseDown={(e) => e.preventDefault()}
-                       onClick={() => {
-                         const ta = virtualKeyboardTextareaRef.current;
-                         if (ta) {
-                           const start = ta.selectionStart ?? editTranscript.length;
-                           const end = ta.selectionEnd ?? editTranscript.length;
-                           if (start === end && start > 0) {
-                             const updated = editTranscript.slice(0, start - 1) + editTranscript.slice(end);
-                             setEditTranscript(updated);
-                             requestAnimationFrame(() => {
-                               ta.focus();
-                               ta.selectionStart = ta.selectionEnd = start - 1;
-                             });
-                           } else if (start !== end) {
-                             const updated = editTranscript.slice(0, start) + editTranscript.slice(end);
-                             setEditTranscript(updated);
-                             requestAnimationFrame(() => {
-                               ta.focus();
-                               ta.selectionStart = ta.selectionEnd = start;
-                             });
-                           }
-                         } else {
-                           setEditTranscript(prev => prev.slice(0, -1));
-                         }
-                       }} 
-                       className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/10 transition-all active:scale-95"
-                     >
-                       Backspace
-                     </button>
-                     <button 
-                       onMouseDown={(e) => e.preventDefault()}
-                       onClick={() => {
-                         const ta = virtualKeyboardTextareaRef.current;
-                         if (ta) {
-                           const start = ta.selectionStart ?? editTranscript.length;
-                           const end = ta.selectionEnd ?? editTranscript.length;
-                           const updated = editTranscript.slice(0, start) + '\n' + editTranscript.slice(end);
-                           setEditTranscript(updated);
-                           requestAnimationFrame(() => {
-                             ta.focus();
-                             ta.selectionStart = ta.selectionEnd = start + 1;
-                           });
-                         } else {
-                           setEditTranscript(prev => prev + '\n');
-                         }
-                       }} 
-                       className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/10 transition-all flex flex-col items-center justify-center gap-0.5 leading-none active:scale-95"
-                     >
-                       <span>Next Line</span>
-                       <span className="text-[10px] opacity-70 font-normal">(Shift+Enter)</span>
-                     </button>
-                     <button 
-                       onMouseDown={(e) => e.preventDefault()}
-                       onClick={() => {
-                         const ta = virtualKeyboardTextareaRef.current;
-                         if (ta) {
-                           const start = ta.selectionStart ?? editTranscript.length;
-                           const end = ta.selectionEnd ?? editTranscript.length;
-                           const updated = editTranscript.slice(0, start) + ' ' + editTranscript.slice(end);
-                           setEditTranscript(updated);
-                           requestAnimationFrame(() => {
-                             ta.focus();
-                             ta.selectionStart = ta.selectionEnd = start + 1;
-                           });
-                         } else {
-                           setEditTranscript(prev => prev + ' ');
-                         }
-                       }} 
-                       className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/10 transition-all active:scale-95"
-                     >
-                       Space
-                     </button>
-                     <button 
-                       onClick={() => {
-                          setTranscript(editTranscript);
-                          finalizedTranscriptRef.current = editTranscript;
-                          interimTranscriptRef.current = '';
-                          clearAudioBuffer();
-                          setShowVirtualKeyboard(false);
-                          if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                       }} 
-                       className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] rounded-xl font-bold flex-[1] border border-cyan-400/40 transition-all flex flex-col items-center justify-center gap-0.5 leading-none active:scale-95"
-                     >
-                       <span>Done / Save</span>
-                       <span className="text-[10px] opacity-90 font-normal">(Enter)</span>
-                     </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Alert Message Modal */}
-      
-        {stealthWarningToast && (
-          <div 
-            className="fixed z-[9999] bg-rose-500/90 text-white px-3 py-1.5 rounded-lg shadow-xl font-bold flex items-center justify-center gap-2 text-[11px] animate-in zoom-in duration-200 backdrop-blur-md pointer-events-none whitespace-nowrap"
-            style={{ 
-              top: Math.max(10, stealthWarningToast.y) + 'px', 
-              left: stealthWarningToast.x + 'px',
-              transform: 'translateX(-50%)'
-            }}
-          >
-            {stealthWarningToast.isShieldToast && <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-rose-500/90" />}
-            {stealthWarningToast.isShieldToast ? (
-              <><ShieldAlert size={14} /> Turn OFF the shield above to type.</>
-            ) : (
-              <><ShieldAlert size={14} /> Shield is ON. Cannot type here.</>
-            )}
-          </div>
-        )}
-
-        {alertMessage && (
-        <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className={`w-full max-w-md bg-brand-secondary border ${alertMessage.type === 'error' ? 'border-rose-500/50' : alertMessage.type === 'success' ? 'border-green-500/50' : 'border-brand-accent/50'} rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
-            <div className="px-6 py-4 flex flex-col gap-3 mt-2">
-              <h3 className={`font-black text-xl tracking-wide flex items-center gap-2 ${alertMessage.type === 'error' ? 'text-rose-500' : alertMessage.type === 'success' ? 'text-green-400' : 'text-brand-accent'}`}>
-                {alertMessage.type === 'error' ? <XCircle size={20} /> : alertMessage.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-                {alertMessage.title}
-              </h3>
-              <p className="text-sm font-medium leading-relaxed text-white/80 pb-2">
-                {alertMessage.message}
-              </p>
-            </div>
-            <div className="bg-black/40 px-6 py-4 border-t border-brand-border/50 flex justify-end">
-              <button 
-                onClick={() => setAlertMessage(null)}
-                className={`px-6 py-2 ${alertMessage.type === 'error' ? 'bg-rose-500 hover:bg-rose-400' : alertMessage.type === 'success' ? 'bg-green-600 hover:bg-green-500' : 'bg-brand-accent hover:bg-brand-accentSec'} text-white rounded-lg font-bold text-sm transition-colors shadow-lg`}
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {showUsernamePrompt && (
-        <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">
-          <div className={`w-full max-w-sm bg-brand-secondary border border-brand-border rounded-3xl shadow-2xl flex flex-col overflow-hidden ${!localRenameStealth ? 'stealth-exempt' : ''}`}>
-            <div className="p-8 pb-6 bg-[#18181b]/50">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-lg font-bold tracking-tight text-white m-0">Your Name</h2>
-                    <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localRenameStealth ? 'Stealth ON' : 'Stealth OFF'}>
-                      {localRenameStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-brand-subtext leading-relaxed">This name will be attached to your exported sessions.</p>
-                </div>
-              </div>
-              <div className="w-full">
-                <input 
-                  type="text" 
-                  value={tempUsername}
-                  onChange={(e) => setTempUsername(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full bg-black/50 border border-brand-border rounded-lg px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-brand-accent transition-colors"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && tempUsername.trim()) {
-                      setUsername(tempUsername.trim());
-                      localStorage.setItem('clueai_username', tempUsername.trim());
-                      setShowUsernamePrompt(false);
-                      setStealthWarningToast(null);
-                      if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex justify-end mt-4">
-                <button 
-                  disabled={!tempUsername.trim()}
-                  onClick={() => {
-                    setUsername(tempUsername.trim());
-                    localStorage.setItem('clueai_username', tempUsername.trim());
-                    setShowUsernamePrompt(false);
-                    setStealthWarningToast(null);
-                    if ((window as any).stealthToastTimeout) clearTimeout((window as any).stealthToastTimeout);
-                  }}
-                  className="px-6 py-2 bg-brand-accent hover:bg-brand-accentSec disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-all shadow-sm"
-                >
-                  Save Name
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Previous Questions Modal with Framer Motion */}
-      <AnimatePresence>
-        {showPreviousQuestions && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[400] bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8 overflow-hidden pointer-events-auto"
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
-              className="w-full max-w-4xl max-h-[90vh] h-full bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden"
-            >
-            <div className="px-8 py-5 border-b border-white/5 flex justify-between items-center bg-white/5">
-              <h2 className="font-black text-xl text-white tracking-tight flex items-center gap-2">
-                <FileText size={20} className="text-white/60" />
-                Previous Questions (Active Session)
-              </h2>
-              <button onClick={() => setShowPreviousQuestions(false)} className="text-white/50 hover:text-white p-2 bg-white/5 hover:bg-rose-500 rounded-xl transition-colors shadow-sm">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-black/[0.02]">
-              {currentSessionHistory.length === 0 ? (
-                <div className="text-center text-white/30 font-medium italic mt-10">No questions asked in this session yet.</div>
-              ) : currentSessionHistory.map((item, idx) => (
-                <div key={idx} className="bg-white/5 border border-white/5 rounded-[1.5rem] p-6 space-y-6 shadow-sm">
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-[11px] font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5"><Mic size={14} /> Transcript {idx + 1}</h3>
-                      <CopyButton text={item.question} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Transcript" />
-                    </div>
-                    
-                    {item.images && item.images.length > 0 && (
-                      <div className="flex gap-2 overflow-x-auto custom-scrollbar mb-4 pb-2">
-                        {item.images.map((img, i) => (
-                          <img key={i} src={img} alt="Snapshot" className="h-[80px] aspect-video object-cover rounded-lg border border-white/10" />
-                        ))}
-                      </div>
-                    )}
-
-                    <textarea 
-                      value={item.question}
-                      onChange={(e) => {
-                        const updated = [...currentSessionHistory];
-                        updated[idx].question = e.target.value;
-                        setCurrentSessionHistory(updated);
-                      }}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white/90 text-sm font-medium focus:border-cyan-500/50 outline-none transition-colors min-h-[100px] resize-y"
-                    />
-                    
-                    {/* Quick Add per Transcript */}
-                    <div className="mt-3 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2">
-                      <span className="text-[10px] font-black text-white/40 uppercase tracking-wider whitespace-nowrap shrink-0">Quick Add:</span>
-                      {['Explain this clearly', 'What are the main types?', 'Give an example', 'Optimize this code', 'Find the bug'].map((tag, tagIdx) => (
-                        <button 
-                          key={tagIdx}
-                          onClick={() => {
-                            const updated = [...currentSessionHistory];
-                            updated[idx].question += (updated[idx].question ? '\n' : '') + tag;
-                            setCurrentSessionHistory(updated);
-                          }}
-                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1"
-                        >
-                          <Plus size={12} className="opacity-50" /> {tag}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 flex justify-between items-center border-t border-white/5 pt-4">
-                      <button
-                        onClick={() => setExpandedAnswers(prev => ({ ...prev, [idx]: !prev[idx] }))}
-                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg font-bold text-xs transition-all flex items-center gap-2"
-                      >
-                        {expandedAnswers[idx] ? <EyeOff size={14} /> : <Eye size={14} />} 
-                        {expandedAnswers[idx] ? "Hide AI Answer" : "View AI Answer"}
-                      </button>
-
-                      <button 
-                        onClick={() => {
-                          setTranscript(item.question);
-                          finalizedTranscriptRef.current = item.question;
-                          let snaps: string[] = [];
-                          if (item.images && item.images.length > 0) {
-                            snaps = item.images;
-                            setCurrentSnapshots(snaps);
-                          }
-                          setShowPreviousQuestions(false);
-                          if (!isGenerating) {
-                            manualTriggerAIRef.current(snaps, item.question);
-                          }
-                        }}
-                        className="px-4 py-2 bg-brand-accent hover:bg-cyan-400 text-white rounded-lg font-bold text-xs shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center gap-2"
-                      >
-                        <RefreshCw size={14} /> Generate Answer
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {expandedAnswers[idx] && (
-                    <div className="pt-6 border-t border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-[11px] font-black text-fuchsia-400 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
-                        <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
-                      </div>
-                      <div className="text-white/90 font-bold text-sm whitespace-pre-wrap leading-relaxed">
-                        <ReactMarkdown
-                          components={{
-                            code({inline, children}: any) {
-                              return !inline ? (
-                                <div className="bg-[#000000] rounded-xl p-4 my-3 border border-white/5 font-mono text-xs overflow-x-auto text-white/80">{children}</div>
-                              ) : (
-                                <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
-                              )
-                            },
-                            p({children, ...props}: any) {
-                              return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
-                            },
-                            h1({children, ...props}: any) {
-                              return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
-                            },
-                            h2({children, ...props}: any) {
-                              return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
-                            },
-                            h3({children, ...props}: any) {
-                              return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
-                            },
-                            ul({children, ...props}: any) {
-                              return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
-                            },
-                            li({node, children, ...props}: any) {
-                              return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
-                            }
-                          }}
-                        >
-                            {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      </div>
-      </div>
-      )}
-      {modelChangeMsg && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-          <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-150 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
-             <CheckCircle2 size={16} /> {modelChangeMsg}
-          </span>
-        </div>
-      )}
-      
       </div>
     </>
   );
