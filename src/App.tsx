@@ -328,17 +328,22 @@ function App() {
   
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const aiAnswerScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
   
-  // Auto-scroll to bottom when new AI answer text arrives
+  // Auto-scroll to bottom when new AI answer text arrives (smooth, hardware-synced RAF)
   useEffect(() => {
     if (aiAnswerScrollRef.current) {
-      // Small timeout to allow React to render the markdown first
-      setTimeout(() => {
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = requestAnimationFrame(() => {
         if (aiAnswerScrollRef.current) {
           aiAnswerScrollRef.current.scrollTop = aiAnswerScrollRef.current.scrollHeight;
         }
-      }, 10);
+        scrollRafRef.current = null;
+      });
     }
+    return () => {
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    };
   }, [aiAnswer]);
   
   const [editTranscript, setEditTranscript] = useState('');
@@ -1168,7 +1173,13 @@ function App() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const audioDataRef = useRef<Float32Array>(new Float32Array(0));
+  const audioChunksRef = useRef<Float32Array[]>([]);
+  const totalAudioSamplesRef = useRef<number>(0);
+
+  const clearAudioBuffer = () => {
+    audioChunksRef.current = [];
+    totalAudioSamplesRef.current = 0;
+  };
   const intervalRef = useRef<any>(null);
 
   useEffect(() => {
@@ -1193,6 +1204,7 @@ function App() {
 
   // Stealth Mode click-through handler — throttled to ~20Hz to avoid flooding Electron IPC
   const lastMouseSendRef = useRef<number>(0);
+  const currentIgnoreRef = useRef<boolean | null>(null);
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
       const now = Date.now();
@@ -1201,18 +1213,20 @@ function App() {
 
       // Only active during interview
       if (!isAiFullscreen && !isRecording) {
-        ipcRenderer.send('set-ignore-mouse-events', false);
+        if (currentIgnoreRef.current !== false) {
+          currentIgnoreRef.current = false;
+          ipcRenderer.send('set-ignore-mouse-events', false);
+        }
         return;
       }
       
       const target = e.target as HTMLElement;
-        if (target.closest && target.closest('.stealth-exempt')) return;
+      if (target.closest && target.closest('.stealth-exempt')) return;
       const shouldPassThrough = target.classList.contains('click-through-bg') || target === document.body || target === document.documentElement || target.id === 'root';
       
-      if (shouldPassThrough) {
-        ipcRenderer.send('set-ignore-mouse-events', true);
-      } else {
-        ipcRenderer.send('set-ignore-mouse-events', false);
+      if (currentIgnoreRef.current !== shouldPassThrough) {
+        currentIgnoreRef.current = shouldPassThrough;
+        ipcRenderer.send('set-ignore-mouse-events', shouldPassThrough);
       }
     };
     window.addEventListener('pointermove', handlePointerMove);
@@ -1509,7 +1523,7 @@ function App() {
     setSTTApiKey(validGroqKeys);
 
     await initSTT(() => {});
-    audioDataRef.current = new Float32Array(0);
+    clearAudioBuffer();
 
     try {      
       const freshSources = await ipcRenderer.invoke('get-desktop-sources');
@@ -1573,10 +1587,10 @@ function App() {
         if (isPausedRef.current) return;
         
         const inputData = e.inputBuffer.getChannelData(0);
-        const newData = new Float32Array(audioDataRef.current.length + inputData.length);
-        newData.set(audioDataRef.current);
-        newData.set(inputData, audioDataRef.current.length);
-        audioDataRef.current = newData;
+        // Fast zero-churn allocation: only allocate the incoming small frame (16KB)
+        const chunk = new Float32Array(inputData);
+        audioChunksRef.current.push(chunk);
+        totalAudioSamplesRef.current += chunk.length;
       };
 
       mixer.connect(processor);
@@ -1623,15 +1637,25 @@ function App() {
     }
     if (isProcessingRef.current) return;
 
-    if (audioDataRef.current.length < 16000 * 0.5) {
+    if (totalAudioSamplesRef.current < 16000 * 0.5) {
       return; 
     }
 
     isProcessingRef.current = true;
     try {
-      const currentAudio = audioDataRef.current;
+      // Merge chunk buffers only when preparing audio for analysis
+      const totalLen = totalAudioSamplesRef.current;
+      let currentAudio = new Float32Array(totalLen);
+      let offset = 0;
+      for (const ch of audioChunksRef.current) {
+        currentAudio.set(ch, offset);
+        offset += ch.length;
+      }
+
       if (currentAudio.length > 16000 * 30) {
-         audioDataRef.current = currentAudio.slice(currentAudio.length - 16000 * 30);
+        currentAudio = currentAudio.slice(currentAudio.length - 16000 * 30);
+        audioChunksRef.current = [currentAudio];
+        totalAudioSamplesRef.current = currentAudio.length;
       }
 
       // Only calculate max volume on the most recent ~1.2 seconds to know if they are speaking RIGHT NOW
@@ -1645,14 +1669,14 @@ function App() {
       if (maxVal < 0.04) {
         silenceFramesRef.current += 1;
         // If silent for more than 2 seconds (4 frames of 500ms) and buffer is not empty
-        if (silenceFramesRef.current > 4 && audioDataRef.current.length > 0) {
+        if (silenceFramesRef.current > 4 && totalAudioSamplesRef.current > 0) {
            logEvent("Silence >2s detected. Committing sentence and flushing STT buffer.");
            
            if (interimTranscriptRef.current) {
              finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
            }
            
-           audioDataRef.current = new Float32Array(0); // FLUSH buffer!
+           clearAudioBuffer(); // FLUSH buffer!
            interimTranscriptRef.current = ''; // Reset interim
            silenceFramesRef.current = 0;
            
@@ -1675,7 +1699,7 @@ function App() {
          if (interimTranscriptRef.current) {
             finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
          }
-         audioDataRef.current = new Float32Array(0);
+         clearAudioBuffer();
          interimTranscriptRef.current = '';
          if (!isPausedRef.current) {
             setTranscript(finalizedTranscriptRef.current);
@@ -1885,7 +1909,7 @@ function App() {
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     navigator.mediaDevices.ondevicechange = null;
     streamRef.current = null;
-    audioDataRef.current = new Float32Array(0);
+    clearAudioBuffer();
     
     if (!silent) {
       console.log('Idle');
@@ -2145,7 +2169,7 @@ function App() {
     setTranscript('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
-    audioDataRef.current = new Float32Array(0);
+    clearAudioBuffer();
     
     setAiAnswer('');
     setCurrentSnapshots([]);
@@ -2163,7 +2187,7 @@ function App() {
       setTranscript('');
       finalizedTranscriptRef.current = '';
       interimTranscriptRef.current = '';
-      audioDataRef.current = new Float32Array(0);
+      clearAudioBuffer();
     }
   };
 
@@ -2175,7 +2199,7 @@ function App() {
     setTranscript(''); 
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
-    audioDataRef.current = new Float32Array(0); 
+    clearAudioBuffer(); 
     setCurrentSnapshots([]);
     setAiAnswer('');
   };
@@ -2264,7 +2288,7 @@ function App() {
           interimTranscriptRef.current = '';
           setAiAnswer('');
           setCurrentSnapshots([]);
-          audioDataRef.current = new Float32Array(0);
+          clearAudioBuffer();
           listeningSessionIdRef.current++;
           setIsPaused(false);
           isPausedRef.current = false;
@@ -2284,7 +2308,7 @@ function App() {
           interimTranscriptRef.current = '';
           setAiAnswer('');
           setCurrentSnapshots([]);
-          audioDataRef.current = new Float32Array(0);
+          clearAudioBuffer();
         } else {
           handleClearAll();
         }
@@ -2335,7 +2359,7 @@ function App() {
           interimTranscriptRef.current = '';
           setAiAnswer('');
           setCurrentSnapshots([]);
-          audioDataRef.current = new Float32Array(0);
+          clearAudioBuffer();
           listeningSessionIdRef.current++;
           setIsPaused(false);
           isPausedRef.current = false;
@@ -2743,7 +2767,7 @@ function App() {
                        interimTranscriptRef.current = '';
                        setAiAnswer('');
                        setCurrentSnapshots([]);
-                       audioDataRef.current = new Float32Array(0);
+                       clearAudioBuffer();
                        listeningSessionIdRef.current++;
                        setIsPaused(false);
                        isPausedRef.current = false;
@@ -2764,7 +2788,7 @@ function App() {
                         setTranscript('');
                         finalizedTranscriptRef.current = '';
                         interimTranscriptRef.current = '';
-                        audioDataRef.current = new Float32Array(0);
+                        clearAudioBuffer();
                         setAiAnswer('');
                         setCurrentSnapshots([]);
                       }}
@@ -5536,7 +5560,7 @@ function App() {
                   setTranscript(editTranscript);
                   finalizedTranscriptRef.current = editTranscript;
                   interimTranscriptRef.current = '';
-                  audioDataRef.current = new Float32Array(0);
+                  clearAudioBuffer();
                   setShowVirtualKeyboard(false);
                   if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
                 } else if (e.key === 'Enter' && e.altKey) {
@@ -5606,7 +5630,7 @@ function App() {
                         setTranscript(editTranscript);
                         finalizedTranscriptRef.current = editTranscript;
                         interimTranscriptRef.current = '';
-                        audioDataRef.current = new Float32Array(0);
+                        clearAudioBuffer();
                         setShowVirtualKeyboard(false);
                         if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
                      }} 

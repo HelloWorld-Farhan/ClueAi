@@ -134,8 +134,12 @@ function createWindow() {
   });
 
   let hotkeysActive = false;
-  const rawKeys = ['0', 'NUM0', '1', 'Z', 'NUM1', '2', 'X', 'NUM2', '3', 'C', 'NUM3', '4', 'A', 'NUM4', '5', 'S', 'NUM5', '6', 'D', 'NUM6', '7', 'Q', 'NUM7'];
-  const windowKeys = ['=', 'Plus', '-', 'Up', 'Down', 'Left', 'Right', 'PageUp', 'PageDown'];
+  const rawKeys = [
+    'NUM0', 'NUM1', 'NUM2', 'NUM3', 'NUM4', 'NUM5', 'NUM6', 'NUM7',
+    'Alt+0', 'Alt+1', 'Alt+2', 'Alt+3', 'Alt+4', 'Alt+5', 'Alt+6', 'Alt+7',
+    'Alt+Z', 'Alt+X', 'Alt+C', 'Alt+A', 'Alt+S', 'Alt+D', 'Alt+Q'
+  ];
+  const windowKeys = ['Alt+=', 'Alt+Plus', 'Alt+-', 'Alt+Up', 'Alt+Down', 'Alt+Left', 'Alt+Right', 'Alt+PageUp', 'Alt+PageDown'];
 
   const unregisterAllHotkeys = () => {
     [...rawKeys, ...windowKeys].forEach(k => {
@@ -145,24 +149,25 @@ function createWindow() {
 
   const registerAllHotkeys = () => {
     const shortcuts = {
-      '0': 'toggle-color', 'NUM0': 'toggle-color',
-      '1': 'toggle-pause', 'z': 'toggle-pause', 'NUM1': 'toggle-pause',
-      '2': 'force-ai', 'x': 'force-ai', 'NUM2': 'force-ai',
-      '3': 'clear-all', 'c': 'clear-all', 'NUM3': 'clear-all',
-      '4': 'snapshot', 'a': 'snapshot', 'NUM4': 'snapshot',
-      '5': 'switch-model', 's': 'switch-model', 'NUM5': 'switch-model',
-      '6': 'stop-generation', 'd': 'stop-generation', 'NUM6': 'stop-generation',
-      '7': 'edit-transcript', 'q': 'edit-transcript', 'NUM7': 'edit-transcript'
+      'NUM0': 'toggle-color', 'Alt+0': 'toggle-color',
+      'NUM1': 'toggle-pause', 'Alt+1': 'toggle-pause', 'Alt+Z': 'toggle-pause',
+      'NUM2': 'force-ai', 'Alt+2': 'force-ai', 'Alt+X': 'force-ai',
+      'NUM3': 'clear-all', 'Alt+3': 'clear-all', 'Alt+C': 'clear-all',
+      'NUM4': 'snapshot', 'Alt+4': 'snapshot', 'Alt+A': 'snapshot',
+      'NUM5': 'switch-model', 'Alt+5': 'switch-model', 'Alt+S': 'switch-model',
+      'NUM6': 'stop-generation', 'Alt+6': 'stop-generation', 'Alt+D': 'stop-generation',
+      'NUM7': 'edit-transcript', 'Alt+7': 'edit-transcript', 'Alt+Q': 'edit-transcript'
     };
     
     for (const [key, action] of Object.entries(shortcuts)) {
-      const bindKey = key.toUpperCase();
       try {
-        globalShortcut.register(bindKey, () => {
-          if (mainWindow) mainWindow.webContents.send('trigger-hotkey', action);
+        globalShortcut.register(key, () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('trigger-hotkey', action);
+          }
         });
       } catch(e) {
-        console.error('Failed to register global shortcut:', bindKey);
+        console.error('Failed to register global shortcut:', key);
       }
     }
 
@@ -278,33 +283,42 @@ function createWindow() {
     }
   });
 
-  let dragInterval;
+  let dragInterval = null;
   let dragOffset = { x: 0, y: 0 };
   let dragSize = { width: 0, height: 0 };
 
   ipcMain.on('start-drag', () => {
-    if (!mainWindow) return;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
     const cursorPos = screen.getCursorScreenPoint();
     const bounds = mainWindow.getBounds();
     dragOffset = { x: cursorPos.x - bounds.x, y: cursorPos.y - bounds.y };
     dragSize = { width: bounds.width, height: bounds.height };
     
     if (dragInterval) clearInterval(dragInterval);
+    const dragStartTime = Date.now();
+
     dragInterval = setInterval(() => {
-      if (mainWindow) {
-        const currentCursor = screen.getCursorScreenPoint();
-        mainWindow.setBounds({
-          x: currentCursor.x - dragOffset.x,
-          y: currentCursor.y - dragOffset.y,
-          width: dragSize.width,
-          height: dragSize.height
-        });
+      // Safety auto-abort after 12s if stop-drag was missed, or if window destroyed
+      if (!mainWindow || mainWindow.isDestroyed() || Date.now() - dragStartTime > 12000) {
+        if (dragInterval) clearInterval(dragInterval);
+        dragInterval = null;
+        return;
       }
+      const currentCursor = screen.getCursorScreenPoint();
+      mainWindow.setBounds({
+        x: currentCursor.x - dragOffset.x,
+        y: currentCursor.y - dragOffset.y,
+        width: dragSize.width,
+        height: dragSize.height
+      });
     }, 16); // ~60fps cap
   });
 
   ipcMain.on('stop-drag', () => {
-    if (dragInterval) clearInterval(dragInterval);
+    if (dragInterval) {
+      clearInterval(dragInterval);
+      dragInterval = null;
+    }
   });
 
   ipcMain.on('resize-window', (event, { width, height }) => {
