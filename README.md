@@ -22,38 +22,46 @@
 
 ## ⚡ Quick Download & Instant Setup (Latest Release v5.5.2)
 
-### Option 1 — One-Line Terminal Command (Auto-Download & Run)
+### 🪟 For Windows
+
+#### Option 1 — One-Line PowerShell Command (Auto-Download & Run)
 Open **PowerShell** on Windows, paste this single line, and hit **Enter**:
 
 ```powershell
 curl.exe -L https://tinyurl.com/2a2lfo9a -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe
 ```
 
-> **What happens:** It downloads `ClueAI.exe` with a live progress bar and automatically launches the app immediately upon completion!
+> **What happens:** Downloads `ClueAI.exe` with a progress bar and automatically launches the app immediately!
 
-*(Alternative direct GitHub command: `curl.exe -L https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe`)*
-
----
-
-### Option 2 — Direct Browser One-Click Download
-
-<p align="center">
-  <a href="https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe">
-    <img src="https://img.shields.io/badge/Download-ClueAI.exe_(v5.5.2)-06B6D4?style=for-the-badge&logo=windows&logoColor=white" height="42" alt="Download ClueAI.exe" />
-  </a>
-</p>
-
+#### Option 2 — Direct Windows Browser Download
+- **Download Link (Short URL):** [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
 - **Direct GitHub Link:** [https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe](https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe)
-- **Short URL (No GitHub mention):** [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
 
 ---
 
-### 🚀 3-Step Installation Guide (Zero Complex Setup)
-1. **Download:** Click the download button above or run the one-line terminal command.
-2. **Launch:** Run `ClueAI.exe`. It installs silently in under 2 seconds.
+### 🍎 For macOS (MacBook / iMac)
+
+#### Option 1 — One-Line Terminal Command (Auto-Download & Mount)
+Open **Terminal** on Mac, paste this single line, and hit **Return**:
+
+```bash
+curl -L https://tinyurl.com/2yynsmoo -o ~/Downloads/ClueAI.dmg && open ~/Downloads/ClueAI.dmg
+```
+
+> **What happens:** Downloads `ClueAI.dmg` to your Downloads folder and automatically opens the installer window!
+
+#### Option 2 — Direct Mac Browser Download
+- **Download Link (Short URL):** [https://tinyurl.com/2yynsmoo](https://tinyurl.com/2yynsmoo)
+- **Direct GitHub Link:** [https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.dmg](https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.dmg)
+
+---
+
+### 🚀 3-Step Quick Start (Zero Complex Setup)
+1. **Download:** Use the 1-line command or browser link for your operating system.
+2. **Launch:** Open `ClueAI`.
 3. **Configure & Start:**
    - Click the **Settings (⚙️)** icon in the top bar.
-   - Enter your preferred AI provider API key (e.g. Groq, Gemini Flash, Claude, ChatGPT, or DeepSeek).
+   - Enter your preferred AI provider API key (Groq, Gemini Flash, Claude, ChatGPT, or DeepSeek).
    - Click **Start Interview**, choose your session context, and let ClueAI assist you in real time!
 
 ---

@@ -13,6 +13,8 @@
     "electron:start": "cross-env NODE_ENV=development electron .",
     "start": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:dev\"",
     "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
     "pack": "npm run build && electron-builder --dir",
     "docker:build": "docker build -t clueai:latest .",
     "docker:run": "docker run -d -p 3000:80 --name clueai-app clueai:latest",
@@ -21,7 +23,6 @@
   "build": {
     "appId": "com.clueai.app",
     "productName": "ClueAI",
-    "artifactName": "ClueAI.exe",
     "directories": {
       "output": "release"
     },
@@ -29,7 +30,32 @@
       "target": [
         "nsis"
       ],
-      "icon": "public/icon.ico"
+      "icon": "public/icon.ico",
+      "artifactName": "ClueAI.exe"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "public/icon.png",
+      "category": "public.app-category.productivity",
+      "artifactName": "ClueAI.dmg",
+      "identity": null
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "nsis": {
       "oneClick": true,
