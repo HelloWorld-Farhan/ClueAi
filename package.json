@@ -35,15 +35,15 @@
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "icon": "public/icon.png",
       "category": "public.app-category.productivity",
-      "artifactName": "ClueAI.dmg",
+      "artifactName": "ClueAI.${ext}",
       "identity": null
     },
     "dmg": {
+      "artifactName": "ClueAI.dmg",
       "contents": [
         {
           "x": 130,
