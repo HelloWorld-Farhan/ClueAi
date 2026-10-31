@@ -1261,24 +1261,10 @@ function App() {
     };
   }, [isAiFullscreen, isRecording, globalHotkeysEnabled]);
 
-  // Auto-pause Stealth Mode when settings/API key config is open,
-  // and automatically resume stealth mode once closed
-  useEffect(() => {
-    if (showSettings) {
-      ipcRenderer.invoke('set-stealth', false);
-    } else {
-      if (stealthMode) {
-        ipcRenderer.invoke('set-stealth', true);
-      }
-    }
-  }, [showSettings, stealthMode]);
-
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
-    if (!showSettings) {
-      ipcRenderer.invoke('set-stealth', stealthMode);
-    }
-  }, [stealthMode, showSettings]);
+    ipcRenderer.invoke('set-stealth', stealthMode);
+  }, [stealthMode]);
 
   useEffect(() => {
     localStorage.setItem('appOpacity', opacity.toString());
@@ -3151,7 +3137,7 @@ function App() {
                 <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
                 <div className="flex flex-col items-start">
                   <span>ClueAI</span>
-                  <span className="text-[8px] text-brand-accent/70 uppercase tracking-widest font-bold mt-0.5">Version - V4.0.0</span>
+                  <span className="text-[8px] text-brand-accent/70 uppercase tracking-widest font-bold mt-0.5">Version - V5.0.0</span>
                 </div>
                 {username && (
                   <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
@@ -3169,11 +3155,24 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2 no-drag">
+            {stealthMode ? (
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-emerald-500/15 text-emerald-400 border-emerald-500/30 mr-1 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Stealth ON
+              </span>
+            ) : (
+              <span className="text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-rose-600/90 text-white border-rose-400 animate-pulse shadow-[0_0_12px_rgba(225,29,72,0.6)] mr-1">
+                <AlertTriangle size={11} /> STEALTH OFF
+              </span>
+            )}
             <button onClick={() => {
-                const newStealth = !stealthMode;
-                setStealthMode(newStealth);
-                ipcRenderer.invoke('set-stealth', newStealth);
-              }} title={stealthMode ? "Stealth Mode ON" : "Stealth Mode OFF"} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${stealthMode ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
+                if (stealthMode) {
+                  setShowStealthWarning(true);
+                } else {
+                  setStealthMode(true);
+                  ipcRenderer.invoke('set-stealth', true);
+                }
+              }} title={stealthMode ? "Stealth Mode ON (Click to disable)" : "Stealth Mode OFF (Click to enable)"} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${stealthMode ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
                 {stealthMode ? <Shield size={16} /> : <ShieldAlert size={16} />}
               </button>
               <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
@@ -3422,7 +3421,7 @@ function App() {
       {/* Full-Screen Settings Modal */}
       {showSettings && (
         <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xl flex flex-col animate-in fade-in duration-200 overflow-hidden">
-          <div className="w-full max-w-4xl mx-auto my-auto bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col h-[90vh] overflow-hidden">
+          <div className={`w-full max-w-4xl mx-auto my-auto bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col h-[90vh] overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
             <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
               <div className="flex items-center gap-4">
                   <div>
@@ -5623,7 +5622,7 @@ function App() {
       {/* Virtual Keyboard Transcript Editor */}
       {showVirtualKeyboard && (
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="w-full max-w-4xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden stealth-exempt">
             
             <div className="flex justify-between items-center bg-black/40 px-6 py-4 border-b border-brand-border">
               <h2 className="text-lg font-black text-white flex items-center gap-2">
