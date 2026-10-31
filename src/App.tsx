@@ -1243,7 +1243,10 @@ function App() {
     };
 
     const handleMouseLeave = () => {
-      // When mouse leaves the entire window area, disable hotkeys so other apps can receive them freely
+      // Only during active interview recording or fullscreen should click-through / hotkeys be gated
+      if (!isAiFullscreen && !isRecording) {
+        return;
+      }
       if (globalHotkeysEnabled) {
         ipcRenderer.invoke('toggle-global-hotkeys', false);
       }
@@ -1253,13 +1256,36 @@ function App() {
       }
     };
 
+    const handleMouseEnter = () => {
+      if (!isAiFullscreen && !isRecording) {
+        if (currentIgnoreRef.current !== false) {
+          currentIgnoreRef.current = false;
+          ipcRenderer.send('set-ignore-mouse-events', false);
+        }
+      }
+    };
+
     window.addEventListener('pointermove', handlePointerMove);
     document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
     };
   }, [isAiFullscreen, isRecording, globalHotkeysEnabled]);
+
+  // Restore mouse responsiveness and reset passthrough whenever the window is shown/restored
+  useEffect(() => {
+    const handleWindowShown = () => {
+      currentIgnoreRef.current = false;
+      ipcRenderer.send('set-ignore-mouse-events', false);
+    };
+    ipcRenderer.on('window-shown', handleWindowShown);
+    return () => {
+      ipcRenderer.removeListener('window-shown', handleWindowShown);
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());

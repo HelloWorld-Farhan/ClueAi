@@ -26,7 +26,7 @@ function createWindow() {
     resizable: false,
     backgroundColor: '#00000000',
     alwaysOnTop: true,
-    focusable: false,
+    focusable: true,
     skipTaskbar: true,
     type: 'toolbar',
     webPreferences: {
@@ -46,6 +46,12 @@ function createWindow() {
   });
 
   mainWindow.on('restore', () => {
+    if (mainWindow) {
+      mainWindow.setContentProtection(isStealthMode);
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      mainWindow.webContents.send('window-shown');
+    }
     if (hotkeysActive) {
       registerAllHotkeys();
     }
@@ -56,6 +62,12 @@ function createWindow() {
   });
 
   mainWindow.on('show', () => {
+    if (mainWindow) {
+      mainWindow.setContentProtection(isStealthMode);
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      mainWindow.webContents.send('window-shown');
+    }
     if (hotkeysActive) {
       registerAllHotkeys();
     }
@@ -102,6 +114,8 @@ function createWindow() {
   ipcMain.handle('focus-window', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.setIgnoreMouseEvents(false);
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.focus();
     }
@@ -627,9 +641,13 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      mainWindow.setContentProtection(isStealthMode);
+      mainWindow.webContents.send('window-shown');
       mainWindow.focus();
     }
   });
@@ -643,7 +661,14 @@ if (!gotTheLock) {
         unregisterAllHotkeys();
         mainWindow.hide();
       } else {
-        mainWindow.showInactive();
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.show();
+        mainWindow.setIgnoreMouseEvents(false);
+        mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+        mainWindow.setContentProtection(isStealthMode);
+        mainWindow.webContents.send('window-shown');
         if (hotkeysActive) {
           registerAllHotkeys();
         }
