@@ -2797,17 +2797,17 @@ function App() {
                   </div>
                 </div>
 
-                {/* Row 2: Question Context Box */}
-                <div className="w-full bg-black/50 border border-white/10 rounded-xl p-3 no-drag">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[11px] uppercase tracking-wider">
-                      <Cpu size={12} /> Interviewer Question
+                {/* Row 2: Ultra-Wide Question Context Box */}
+                <div className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-1.5 no-drag">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[10.5px] uppercase tracking-wider">
+                      <Cpu size={11} /> Interviewer Question
                     </div>
-                    <span className="text-[10px] text-white/40">
-                      Press 1 for Next Q • 3 to Close
+                    <span className="text-[9px] text-white/40 font-mono">
+                      Next Q (1) • Close (3)
                     </span>
                   </div>
-                  <div className="text-white text-[13.5px] leading-relaxed max-h-[85px] overflow-y-auto custom-scrollbar select-text pr-2">
+                  <div className="text-white text-[13px] leading-snug max-h-[52px] overflow-y-auto custom-scrollbar select-text pr-2">
                     {transcript || "Screenshot / Vision analysis provided."}
                   </div>
 
@@ -4720,9 +4720,9 @@ function App() {
 {/* Main UI */}
         {isRecording && (
           <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4">
-            {/* Redesigned Premium Transcript Command Dock */}
+            {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock */}
             <div 
-              className={`w-full max-w-[920px] mx-auto relative z-20 drag-area transition-all duration-200 ${isTranscriptMinimized ? 'w-14 h-14 bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] rounded-full p-0 cursor-pointer group border border-white/10 flex items-center justify-center' : 'bg-[#0c0d15]/96 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-3'}`}
+              className={`w-full max-w-[1040px] mx-auto relative z-20 drag-area transition-all duration-200 ${isTranscriptMinimized ? 'w-12 h-12 bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] rounded-full p-0 cursor-pointer group border border-white/10 flex items-center justify-center' : 'bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2'}`}
             >
               {isTranscriptMinimized ? (
                 <div 
@@ -4730,163 +4730,165 @@ function App() {
                   onClick={() => setIsTranscriptMinimized(false)}
                   title="Expand Transcript"
                 >
-                  <MessageSquare size={22} className="group-hover:scale-110 transition-transform" />
+                  <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
                   <div className="absolute inset-0 rounded-full border border-cyan-400/30 group-hover:border-cyan-400/60 animate-[spin_4s_linear_infinite]" />
                 </div>
               ) : (
                 <>
-                {/* 1. Dock Top Header */}
-                <div className="flex items-center justify-between w-full no-drag pb-1">
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex h-2.5 w-2.5">
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                {/* 1. Sleek Controls & Status Ribbon */}
+                <div className="flex items-center justify-between w-full no-drag px-1">
+                  {/* Left: Live Status & Hotkey Pills */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                      <span className="relative flex h-2 w-2">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider">
+                        {!isPaused ? "Live STT" : "Paused"}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                      <Mic size={13} className={!isPaused ? "animate-pulse" : "text-white/40"} />
-                      {!isPaused ? "Live Transcription" : "Microphone Paused"}
-                    </span>
+
+                    <button 
+                      onClick={handlePauseToggle}
+                      className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                      title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
+                    >
+                      {isPaused ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
+                      <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                      <span className="text-[8.5px] opacity-60 font-mono">1</span>
+                    </button>
+
+                    <button 
+                      onClick={handleSnipClick}
+                      className="px-2 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
+                      title="Snip Screen Question (4 / A)"
+                    >
+                      <Crop size={10} />
+                      <span>Snip</span>
+                      <span className="text-[8.5px] opacity-60 font-mono">4</span>
+                    </button>
+
+                    <button 
+                      onClick={handleClearAll}
+                      className="px-2 py-0.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
+                      title="Clear Transcript (3 / C)"
+                    >
+                      <Trash2 size={10} />
+                      <span>Clear</span>
+                      <span className="text-[8.5px] opacity-60 font-mono">3</span>
+                    </button>
+
+                    <button 
+                      onClick={() => setShowVirtualKeyboard(true)}
+                      className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
+                      title="Edit Transcript (7 / Q)"
+                    >
+                      <Edit2 size={10} /> Edit <span className="text-[8.5px] opacity-60 font-mono">7</span>
+                    </button>
+
+                    {currentSessionHistory.length > 0 && (
+                      <button 
+                        onClick={() => setShowPreviousQuestions(true)}
+                        className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
+                        title="Session History"
+                      >
+                        <Clock size={10} /> {currentSessionHistory.length} Qs
+                      </button>
+                    )}
+
                     {isGenerating && (
-                      <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full animate-pulse font-bold flex items-center gap-1">
-                        <Loader2 size={10} className="animate-spin" /> Drafting Answer...
+                      <span className="text-[9.5px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full animate-pulse font-bold flex items-center gap-1">
+                        <Loader2 size={9} className="animate-spin" /> Drafting Answer...
                       </span>
                     )}
                   </div>
 
-                  {/* Header Actions */}
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setShowVirtualKeyboard(true)}
-                      className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-                      title="Edit Transcript (7 / Q)"
-                    >
-                      <Edit2 size={11} /> Edit <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">7 / Q</span>
-                    </button>
-                    {currentSessionHistory.length > 0 && (
-                      <button 
-                        onClick={() => setShowPreviousQuestions(true)}
-                        className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-                        title="Session History"
-                      >
-                        <Clock size={11} /> {currentSessionHistory.length} Qs
-                      </button>
-                    )}
+                  {/* Right: Settings and Minimize */}
+                  <div className="flex items-center gap-1.5">
                     <button 
                       onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
-                      className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg border border-white/10 transition-colors shadow-sm"
+                      className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
                       title="Settings"
                     >
-                      <Settings size={13} />
+                      <Settings size={12} />
                     </button>
                     <button 
                       onClick={() => setIsTranscriptMinimized(true)}
-                      className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg border border-white/10 transition-colors shadow-sm"
+                      className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
                       title="Minimize Transcript"
                     >
-                      <Minus size={13} />
+                      <Minus size={12} />
                     </button>
                   </div>
                 </div>
 
-                {/* 2. Main High-Contrast Transcript Reading Area */}
-                <div 
-                  ref={transcriptScrollRef}
-                  className="w-full min-h-[58px] max-h-[140px] overflow-y-auto custom-scrollbar bg-black/60 border border-white/10 hover:border-cyan-500/30 rounded-xl p-3 select-text transition-colors shadow-inner no-drag"
-                  style={{ fontSize: `${transcriptTextSize}px` }}
-                >
-                  {transcript ? (
-                    <span className="text-white font-medium leading-relaxed tracking-wide select-text">
-                      {transcript}
-                    </span>
-                  ) : (
-                    <span className="text-white/40 italic flex items-center gap-2 select-none">
-                      <span className="inline-block w-2 h-2 rounded-full bg-cyan-400/50 animate-ping"></span>
-                      Listening to conversation... (Interviewer questions will be transcribed here)
-                    </span>
-                  )}
+                {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
+                <div className="flex items-center gap-2.5 w-full no-drag">
+                  <div 
+                    ref={transcriptScrollRef}
+                    className="flex-1 min-h-[42px] max-h-[64px] overflow-y-auto custom-scrollbar bg-black/70 border border-white/12 hover:border-cyan-500/40 rounded-xl px-3.5 py-1.5 select-text transition-colors shadow-inner flex items-center"
+                    style={{ fontSize: `${transcriptTextSize}px` }}
+                  >
+                    {transcript ? (
+                      <span className="text-white font-medium leading-relaxed tracking-wide select-text">
+                        {transcript}
+                      </span>
+                    ) : (
+                      <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-ping"></span>
+                        Listening to conversation... (Interviewer questions appear here)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* High-Impact Integrated Generate Answer Button */}
+                  <button 
+                    onClick={() => { if (!isGenerating) manualTriggerAI(); }}
+                    disabled={isGenerating}
+                    className="h-[42px] px-5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[170px]"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin text-white" />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Cpu size={13} className="text-cyan-200" />
+                        <span>Generate Answer</span>
+                        <span className="bg-black/30 text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-0.5">2 / X</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
-                {/* Snapshots Bar if any exist */}
+                {/* Snapshots Strip (if any exist) */}
                 {currentSnapshots.length > 0 && (
-                  <div className="flex items-center gap-2.5 overflow-x-auto custom-scrollbar py-1.5 px-2 bg-black/40 rounded-xl border border-white/5 no-drag">
-                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-                      <Crop size={11} /> Snips:
+                  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 px-2 bg-black/50 rounded-lg border border-white/5 no-drag">
+                    <span className="text-[9.5px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                      <Crop size={10} /> Snips:
                     </span>
                     {currentSnapshots.map((snap, idx) => (
-                      <div key={idx} className="relative h-[48px] aspect-video rounded-lg overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
+                      <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
                         <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                          <button onClick={() => setPreviewSnapshot(snap)} className="p-1 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
-                            <Eye size={10} />
+                          <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
+                            <Eye size={9} />
                           </button>
-                          <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-1 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
-                            <Trash2 size={10} />
+                          <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
+                            <Trash2 size={9} />
                           </button>
                         </div>
                       </div>
                     ))}
                     {currentSnapshots.length > 1 && (
-                      <button onClick={() => setCurrentSnapshots([])} className="h-[48px] px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[10px] font-bold shrink-0">
-                        <Trash2 size={12} /> Clear All
+                      <button onClick={() => setCurrentSnapshots([])} className="h-[36px] px-2 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9px] font-bold shrink-0">
+                        <Trash2 size={10} /> Clear
                       </button>
                     )}
                   </div>
                 )}
-
-                {/* 3. Bottom Action Toolbar */}
-                <div className="flex items-center justify-between gap-3 pt-1 w-full no-drag">
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={handlePauseToggle}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'}`}
-                      title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
-                    >
-                      {isPaused ? <Play size={11} fill="currentColor" /> : <Pause size={11} fill="currentColor" />}
-                      <span>{isPaused ? 'Resume Mic' : 'Pause Mic'}</span>
-                      <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">1</span>
-                    </button>
-
-                    <button 
-                      onClick={handleSnipClick}
-                      className="px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-                      title="Snip Screen Question (4 / A)"
-                    >
-                      <Crop size={12} />
-                      <span>Snip Question</span>
-                      <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">4</span>
-                    </button>
-
-                    <button 
-                      onClick={handleClearAll}
-                      className="px-3 py-1.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-                      title="Clear Transcript (3 / C)"
-                    >
-                      <Trash2 size={12} />
-                      <span>Clear</span>
-                      <span className="text-[9px] opacity-60 bg-white/10 px-1 rounded font-mono">3</span>
-                    </button>
-                  </div>
-
-                  {/* Big Glowing Generate Answer Button */}
-                  <button 
-                    onClick={() => { if (!isGenerating) manualTriggerAI(); }}
-                    disabled={isGenerating}
-                    className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wide uppercase rounded-xl shadow-[0_0_25px_rgba(6,182,212,0.45)] border border-cyan-400/40 flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin text-white" />
-                        <span>Generating Answer...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Cpu size={14} className="text-cyan-200" />
-                        <span>Generate Answer</span>
-                        <span className="bg-black/30 text-[10px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-1">2 / X</span>
-                      </>
-                    )}
-                  </button>
-                </div>
                 </>
               )}
             </div>
