@@ -20,6 +20,44 @@
 
 ---
 
+## ⚡ Quick Download & Instant Setup (Latest Release v5.5.2)
+
+### Option 1 — One-Line Terminal Command (Auto-Download & Run)
+Open **PowerShell** on Windows, paste this single line, and hit **Enter**:
+
+```powershell
+curl -L https://tinyurl.com/2a2lfo9a -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe
+```
+
+> **What happens:** It downloads `ClueAI.exe` with a live progress bar and automatically launches the app immediately upon completion!
+
+*(Alternative direct GitHub command: `curl -L https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe`)*
+
+---
+
+### Option 2 — Direct Browser One-Click Download
+
+<p align="center">
+  <a href="https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe">
+    <img src="https://img.shields.io/badge/Download-ClueAI.exe_(v5.5.2)-06B6D4?style=for-the-badge&logo=windows&logoColor=white" height="42" alt="Download ClueAI.exe" />
+  </a>
+</p>
+
+- **Direct GitHub Link:** [https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe](https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe)
+- **Short URL (No GitHub mention):** [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
+
+---
+
+### 🚀 3-Step Installation Guide (Zero Complex Setup)
+1. **Download:** Click the download button above or run the one-line terminal command.
+2. **Launch:** Run `ClueAI.exe`. It installs silently in under 2 seconds.
+3. **Configure & Start:**
+   - Click the **Settings (⚙️)** icon in the top bar.
+   - Enter your preferred AI provider API key (e.g. Groq, Gemini Flash, Claude, ChatGPT, or DeepSeek).
+   - Click **Start Interview**, choose your session context, and let ClueAI assist you in real time!
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
