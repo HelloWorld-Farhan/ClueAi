@@ -159,9 +159,9 @@ function createWindow() {
 
   let hotkeysActive = false;
   const rawKeys = [
-    'NUM0', 'NUM1', 'NUM2', 'NUM3', 'NUM4', 'NUM5', 'NUM6', 'NUM7',
-    'Alt+0', 'Alt+1', 'Alt+2', 'Alt+3', 'Alt+4', 'Alt+5', 'Alt+6', 'Alt+7',
-    'Alt+Z', 'Alt+X', 'Alt+C', 'Alt+A', 'Alt+S', 'Alt+D', 'Alt+Q'
+    'NUM0', 'NUM1', 'NUM2', 'NUM3', 'NUM4', 'NUM5', 'NUM6', 'NUM7', 'NUM8',
+    'Alt+0', 'Alt+1', 'Alt+2', 'Alt+3', 'Alt+4', 'Alt+5', 'Alt+6', 'Alt+7', 'Alt+8',
+    'Alt+Z', 'Alt+X', 'Alt+C', 'Alt+A', 'Alt+S', 'Alt+D', 'Alt+Q', 'Alt+H'
   ];
   const windowKeys = ['Alt+=', 'Alt+Plus', 'Alt+-', 'Alt+Up', 'Alt+Down', 'Alt+Left', 'Alt+Right', 'Alt+PageUp', 'Alt+PageDown'];
 
@@ -180,7 +180,8 @@ function createWindow() {
       'NUM4': 'snapshot', 'Alt+4': 'snapshot', 'Alt+A': 'snapshot',
       'NUM5': 'switch-model', 'Alt+5': 'switch-model', 'Alt+S': 'switch-model',
       'NUM6': 'stop-generation', 'Alt+6': 'stop-generation', 'Alt+D': 'stop-generation',
-      'NUM7': 'edit-transcript', 'Alt+7': 'edit-transcript', 'Alt+Q': 'edit-transcript'
+      'NUM7': 'edit-transcript', 'Alt+7': 'edit-transcript', 'Alt+Q': 'edit-transcript',
+      'NUM8': 'toggle-history', 'Alt+8': 'toggle-history', 'Alt+H': 'toggle-history'
     };
     
     for (const [key, action] of Object.entries(shortcuts)) {

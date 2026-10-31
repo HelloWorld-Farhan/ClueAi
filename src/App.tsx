@@ -1284,12 +1284,13 @@ function App() {
     };
   }, [globalHotkeysEnabled, isRecording]);
 
-  // Synchronize dynamic window sizing between compact dock (150px) and AI fullscreen answer (850px)
+  // Synchronize dynamic window sizing: 150px compact dock vs 850px for modals or AI answer
   useEffect(() => {
     if (isRecording) {
-      ipcRenderer.invoke('set-ai-fullscreen-bounds', isAiFullscreen);
+      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions;
+      ipcRenderer.invoke('set-ai-fullscreen-bounds', isExpanded);
     }
-  }, [isAiFullscreen, isRecording]);
+  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, isRecording]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -2344,8 +2345,12 @@ function App() {
           setShowVirtualKeyboard(false);
           if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
         }
-      } else if (key === '0') {
+      } else if (key === '0' || (e.altKey && key === '0')) {
         e.preventDefault();
+        setAltColor(prev => !prev);
+      } else if (key === '8' || key === 'h' || (e.altKey && (key === '8' || key === 'h'))) {
+        e.preventDefault();
+        setShowPreviousQuestions(prev => !prev);
       } else if (key === 'x' || key === '2') {
         e.preventDefault();
         if (!isGenerating) {
@@ -2993,7 +2998,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
+          <div className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
@@ -3286,9 +3291,23 @@ function App() {
       )}
       </div>
 
-      {/* Full-Screen Info Modal */}
-      {!isRecording && showInfo && (
-        <div className="absolute inset-2 z-40 bg-brand-bg/95 backdrop-blur-3xl rounded-2xl border border-brand-border/50 flex flex-col animate-in fade-in duration-200 overflow-hidden shadow-2xl">
+      {/* Full-Screen Info Modal with Framer Motion */}
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28 }}
+              className="w-full max-w-4xl max-h-[92vh] h-full bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden"
+            >
           <div className="w-full flex-shrink-0 bg-brand-bg/95 pt-8 pb-4 px-8 border-b border-brand-border">
             <div className="max-w-3xl mx-auto flex justify-between items-end">
               <div>
@@ -3493,9 +3512,11 @@ function App() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      )}
+          </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Full-Screen Settings Modal with Framer Motion & Perfect Sizing */}
       <AnimatePresence>
@@ -4788,14 +4809,15 @@ function App() {
           <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto">
             {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
             <div className="w-full flex justify-center items-center relative z-20">
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="popLayout" initial={false}>
                 {isTranscriptMinimized ? (
                   <motion.div
                     key="minimized-dock"
-                    initial={{ opacity: 0, scale: 0.85, y: -10 }}
+                    layout
+                    initial={{ opacity: 0, scale: 0.85, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.85, y: -10 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                    exit={{ opacity: 0, scale: 0.85, y: -8 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 30 }}
                     onClick={() => setIsTranscriptMinimized(false)}
                     className="drag-area cursor-pointer group bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 rounded-full px-5 py-2.5 shadow-[0_12px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.25)] flex items-center gap-3.5 hover:border-cyan-400 hover:scale-105 transition-all select-none"
                     title="Click to expand transcription dock"
@@ -4821,10 +4843,11 @@ function App() {
                 ) : (
                   <motion.div
                     key="expanded-dock"
+                    layout
                     initial={{ opacity: 0, scale: 0.96, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: -8 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 28 }}
                     className="w-full max-w-[1040px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
                   >
                     {/* 1. Sleek Controls & Status Ribbon */}
@@ -6059,10 +6082,23 @@ function App() {
         </div>
       )}
 
-      {/* Previous Questions Modal */}
-      {showPreviousQuestions && (
-        <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-xl flex flex-col p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl mx-auto bg-[#09090b]/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col h-full overflow-hidden">
+      {/* Previous Questions Modal with Framer Motion */}
+      <AnimatePresence>
+        {showPreviousQuestions && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[400] bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8 overflow-hidden pointer-events-auto"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28 }}
+              className="w-full max-w-4xl max-h-[90vh] h-full bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden"
+            >
             <div className="px-8 py-5 border-b border-white/5 flex justify-between items-center bg-white/5">
               <h2 className="font-black text-xl text-white tracking-tight flex items-center gap-2">
                 <FileText size={20} className="text-white/60" />
@@ -6194,9 +6230,10 @@ function App() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
       </div>
       )}
