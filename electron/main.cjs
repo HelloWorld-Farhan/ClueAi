@@ -448,14 +448,21 @@ function createWindow() {
     }
   });
 
+  let preInterviewBounds = null;
+
   ipcMain.handle('start-interview-window', (event, layout) => {
     if (mainWindow) {
+      // Save pre-interview dashboard bounds so stop-interview-window returns to exact size
+      preInterviewBounds = mainWindow.getBounds();
+
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width } = primaryDisplay.workAreaSize;
       
-      const w = layout === 'horizontal' ? 1000 : 450;
-      const h = 800;
+      const w = layout === 'horizontal' ? 1040 : 450;
+      // Ultra-low profile compact dock height while listening/transcribing: only ~150px!
+      // This leaves the ENTIRE desktop below completely free for user to work without mouse blocking!
+      const h = 150;
 
       mainWindow.setBounds({
         width: w,
@@ -470,19 +477,55 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('set-ai-fullscreen-bounds', (event, isFullscreen) => {
+    if (mainWindow) {
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.workAreaSize;
+      const w = 1040;
+
+      if (isFullscreen) {
+        // Expand window downwards to display the full AI Answer view
+        const h = Math.min(850, height - 20);
+        mainWindow.setBounds({
+          width: w,
+          height: h,
+          x: Math.round((width - w) / 2),
+          y: 0
+        });
+      } else {
+        // Shrink back to low-profile transcription dock at the top
+        const h = 150;
+        mainWindow.setBounds({
+          width: w,
+          height: h,
+          x: Math.round((width - w) / 2),
+          y: 0
+        });
+      }
+    }
+  });
+
   ipcMain.handle('stop-interview-window', (event) => {
     if (mainWindow) {
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.workAreaSize;
-      const w = 1000;
-      const h = 600;
-      mainWindow.setBounds({
-        width: w,
-        height: h,
-        x: Math.round((width - w) / 2),
-        y: Math.round((height - h) / 2)
-      });
+
+      // Restore exact previous window size and position so length never increases unexpectedly
+      if (preInterviewBounds && preInterviewBounds.width > 200 && preInterviewBounds.height > 200) {
+        mainWindow.setBounds(preInterviewBounds);
+      } else {
+        const w = 1000;
+        const h = 600;
+        mainWindow.setBounds({
+          width: w,
+          height: h,
+          x: Math.round((width - w) / 2),
+          y: Math.round((height - h) / 2)
+        });
+      }
+      preInterviewBounds = null;
     }
   });
 
@@ -657,10 +700,7 @@ if (!gotTheLock) {
   
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        unregisterAllHotkeys();
-        mainWindow.hide();
-      } else {
+      if (!mainWindow.isVisible() || mainWindow.isMinimized()) {
         if (mainWindow.isMinimized()) {
           mainWindow.restore();
         }
@@ -668,10 +708,13 @@ if (!gotTheLock) {
         mainWindow.setIgnoreMouseEvents(false);
         mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
         mainWindow.setContentProtection(isStealthMode);
+        mainWindow.focus();
         mainWindow.webContents.send('window-shown');
         if (hotkeysActive) {
           registerAllHotkeys();
         }
+      } else {
+        mainWindow.hide();
       }
     }
   });

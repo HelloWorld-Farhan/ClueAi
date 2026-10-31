@@ -1235,11 +1235,6 @@ function App() {
       if (currentIgnoreRef.current !== shouldPassThrough) {
         currentIgnoreRef.current = shouldPassThrough;
         ipcRenderer.send('set-ignore-mouse-events', shouldPassThrough);
-        // Deactivate global hotkeys when cursor is in the passthrough area outside active UI controls
-        // Re-activate hotkeys when hovering directly over ClueAI panels
-        if (globalHotkeysEnabled) {
-          ipcRenderer.invoke('toggle-global-hotkeys', !shouldPassThrough);
-        }
       }
     };
 
@@ -1248,9 +1243,7 @@ function App() {
       if (!isAiFullscreen && !isRecording) {
         return;
       }
-      if (globalHotkeysEnabled) {
-        ipcRenderer.invoke('toggle-global-hotkeys', false);
-      }
+      // Never disable global hotkeys on mouse leave so user can use hotkeys while working in other apps!
       if (currentIgnoreRef.current !== true) {
         currentIgnoreRef.current = true;
         ipcRenderer.send('set-ignore-mouse-events', true);
@@ -1281,12 +1274,22 @@ function App() {
     const handleWindowShown = () => {
       currentIgnoreRef.current = false;
       ipcRenderer.send('set-ignore-mouse-events', false);
+      if (globalHotkeysEnabled && isRecording) {
+        ipcRenderer.invoke('toggle-global-hotkeys', true);
+      }
     };
     ipcRenderer.on('window-shown', handleWindowShown);
     return () => {
       ipcRenderer.removeListener('window-shown', handleWindowShown);
     };
-  }, []);
+  }, [globalHotkeysEnabled, isRecording]);
+
+  // Synchronize dynamic window sizing between compact dock (150px) and AI fullscreen answer (850px)
+  useEffect(() => {
+    if (isRecording) {
+      ipcRenderer.invoke('set-ai-fullscreen-bounds', isAiFullscreen);
+    }
+  }, [isAiFullscreen, isRecording]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -2271,6 +2274,13 @@ function App() {
         return;
       }
 
+      // Local Ctrl+Shift+K minimize/restore shortcut if window has focus
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === 'k' || e.code === 'KeyK')) {
+        e.preventDefault();
+        minimizeApp();
+        return;
+      }
+
       // If hotkeys toggle is OFF, block all shortcut keys entirely
       if (!globalHotkeysEnabled) return;
 
@@ -2983,7 +2993,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className={`flex flex-col w-full h-full overflow-hidden pointer-events-auto rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
+          <div className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
@@ -4775,7 +4785,7 @@ function App() {
 
 {/* Main UI */}
         {isRecording && (
-          <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4">
+          <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto">
             {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
             <div className="w-full flex justify-center items-center relative z-20">
               <AnimatePresence mode="wait">
