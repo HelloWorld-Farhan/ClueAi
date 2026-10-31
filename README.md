@@ -26,12 +26,12 @@
 Open **PowerShell** on Windows, paste this single line, and hit **Enter**:
 
 ```powershell
-curl -L https://tinyurl.com/2a2lfo9a -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe
+curl.exe -L https://tinyurl.com/2a2lfo9a -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe
 ```
 
 > **What happens:** It downloads `ClueAI.exe` with a live progress bar and automatically launches the app immediately upon completion!
 
-*(Alternative direct GitHub command: `curl -L https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe`)*
+*(Alternative direct GitHub command: `curl.exe -L https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe`)*
 
 ---
 
