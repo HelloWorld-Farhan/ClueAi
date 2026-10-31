@@ -22,37 +22,23 @@
 
 ## ⚡ Quick Download & Instant Setup (Latest Release v5.5.3)
 
-### 🪟 For Windows
+### 🪟 1. For Windows
 
-#### Option 1 — One-Line PowerShell Command (Auto-Download & Run)
-Open **PowerShell** on Windows, paste this single line, and hit **Enter**:
-
-```powershell
-curl.exe -L https://tinyurl.com/2a2lfo9a -o $env:TEMP\ClueAI.exe; Start-Process $env:TEMP\ClueAI.exe
-```
-
-> **What happens:** Downloads `ClueAI.exe` with a progress bar and automatically launches the app immediately!
-
-#### Option 2 — Direct Windows Browser Download
-- **Download Link (Short URL):** [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
-- **Direct GitHub Link:** [https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe](https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.exe)
+- **Direct Download Link**: [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
+- **One-line Command** (PowerShell / Command Prompt):
+  ```powershell
+  curl.exe -L -o ClueAI.exe https://tinyurl.com/2a2lfo9a; .\ClueAI.exe
+  ```
 
 ---
 
-### 🍎 For macOS (MacBook / iMac)
+### 🍎 2. For macOS
 
-#### Option 1 — One-Line Terminal Command (Auto-Download & Mount)
-Open **Terminal** on Mac, paste this single line, and hit **Return**:
-
-```bash
-curl -L https://tinyurl.com/2yynsmoo -o ~/Downloads/ClueAI.dmg && open ~/Downloads/ClueAI.dmg
-```
-
-> **What happens:** Downloads `ClueAI.dmg` to your Downloads folder and automatically opens the installer window!
-
-#### Option 2 — Direct Mac Browser Download
-- **Download Link (Short URL):** [https://tinyurl.com/2yynsmoo](https://tinyurl.com/2yynsmoo)
-- **Direct GitHub Link:** [https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.dmg](https://github.com/HelloWorld-Farhan/ClueAi/releases/latest/download/ClueAI.dmg)
+- **Direct Download Link**: [https://tinyurl.com/2yynsmoo](https://tinyurl.com/2yynsmoo)
+- **One-line Command** (macOS Terminal):
+  ```bash
+  curl -L -o ClueAI.dmg https://tinyurl.com/2yynsmoo && open ClueAI.dmg
+  ```
 
 ---
 
