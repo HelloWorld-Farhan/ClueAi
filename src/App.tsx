@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -358,6 +358,13 @@ function App() {
   const [scrollSpeed, setScrollSpeed] = useState(0); // 0 = stopped, 1-5 = speed level
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
+
+  // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
+  const [appVersion, setAppVersion] = useState('5.0.0');
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
+  const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
+  const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
 
   const [username, setUsername] = useState(() => {
@@ -1284,13 +1291,79 @@ function App() {
     };
   }, [globalHotkeysEnabled, isRecording]);
 
+  // Auto-updater IPC event listeners & version retrieval
+  useEffect(() => {
+    ipcRenderer.invoke('get-app-version').then((v: string) => {
+      if (v) setAppVersion(v);
+    }).catch(() => {});
+
+    const handleUpdaterStatus = (_event: any, data: any) => {
+      if (!data) return;
+      setUpdateStatus(data.status);
+      if (data.status === 'available') {
+        setUpdateInfo({
+          version: data.version,
+          releaseDate: data.releaseDate,
+          releaseNotes: data.releaseNotes,
+        });
+      } else if (data.status === 'downloading') {
+        setDownloadProgress({
+          percent: data.percent || 0,
+          bytesPerSecond: data.bytesPerSecond || 0,
+          transferred: data.transferred || 0,
+          total: data.total || 0,
+        });
+      } else if (data.status === 'downloaded') {
+        setUpdateInfo(prev => ({ ...prev, version: data.version, releaseNotes: data.releaseNotes || prev.releaseNotes }));
+      } else if (data.status === 'error') {
+        setUpdateInfo(prev => ({ ...prev, message: data.message }));
+      }
+    };
+
+    ipcRenderer.on('updater-status', handleUpdaterStatus);
+    return () => {
+      ipcRenderer.removeListener('updater-status', handleUpdaterStatus);
+    };
+  }, []);
+
+  const handleCheckForUpdates = () => {
+    setUpdateStatus('checking');
+    ipcRenderer.invoke('check-for-updates').then((res: any) => {
+      if (res && res.error) {
+        setUpdateStatus('error');
+        setUpdateInfo(prev => ({ ...prev, message: res.error }));
+      }
+    }).catch((err: any) => {
+      setUpdateStatus('error');
+      setUpdateInfo(prev => ({ ...prev, message: err?.message || 'Check failed' }));
+    });
+  };
+
+  const handleDownloadUpdate = () => {
+    setUpdateStatus('downloading');
+    setDownloadProgress({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
+    ipcRenderer.invoke('download-update').then((res: any) => {
+      if (res && res.error) {
+        setUpdateStatus('error');
+        setUpdateInfo(prev => ({ ...prev, message: res.error }));
+      }
+    }).catch((err: any) => {
+      setUpdateStatus('error');
+      setUpdateInfo(prev => ({ ...prev, message: err?.message || 'Download failed' }));
+    });
+  };
+
+  const handleRestartToInstall = () => {
+    ipcRenderer.invoke('quit-and-install-update');
+  };
+
   // Synchronize dynamic window sizing: 150px compact dock vs 850px for modals or AI answer
   useEffect(() => {
     if (isRecording) {
-      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions;
+      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal;
       ipcRenderer.invoke('set-ai-fullscreen-bounds', isExpanded);
     }
-  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, isRecording]);
+  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, isRecording]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -2998,7 +3071,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
+          <div className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
@@ -3037,9 +3110,24 @@ function App() {
                 <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
                   Clue<span className="text-cyan-400">AI</span>
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                  v5.0.0
-                </span>
+                <button 
+                  onClick={() => setShowUpdateModal(true)}
+                  className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                  title="Click to check for updates"
+                >
+                  <span>v{appVersion}</span>
+                </button>
+                {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+                  <button 
+                    onClick={() => setShowUpdateModal(true)}
+                    className="px-2.5 py-1 rounded-xl font-black text-[10px] flex items-center gap-1.5 uppercase tracking-wider bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 text-emerald-300 border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.35)] animate-pulse hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    title="New version available! Click to view update details"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <Sparkles size={11} className="text-emerald-300" />
+                    <span>Update {updateInfo.version ? `v${updateInfo.version}` : 'Available'}</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -3354,6 +3442,224 @@ function App() {
             </div>
           </div>
           </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Full-Screen Update Center Modal with Framer Motion */}
+      <AnimatePresence>
+        {showUpdateModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+          >
+            <motion.div 
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              className="bg-[#0c0d16] border border-cyan-500/30 w-full max-w-xl rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(6,182,212,0.15)] flex flex-col gap-5 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shadow-inner">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                      ClueAI Update Center
+                    </h2>
+                    <p className="text-xs text-white/50">On-demand updates powered by GitHub Releases</p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowUpdateModal(false)}
+                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Version Comparison Cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Current Version</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-black text-white">v{appVersion}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/70 border border-white/15">Installed</span>
+                  </div>
+                </div>
+
+                <div className={`border rounded-2xl p-4 flex flex-col gap-1 ${
+                  updateStatus === 'available' || updateStatus === 'downloaded'
+                    ? 'bg-emerald-500/10 border-emerald-500/30'
+                    : 'bg-white/[0.03] border-white/10'
+                }`}>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Latest Available</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-black text-white">
+                      v{updateInfo.version || appVersion}
+                    </span>
+                    {updateStatus === 'available' || updateStatus === 'downloaded' ? (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
+                        New Release
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                        Up to Date
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Display Banner */}
+              {updateStatus === 'checking' && (
+                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4 flex items-center gap-3">
+                  <Loader2 size={18} className="animate-spin text-cyan-400 shrink-0" />
+                  <span className="text-xs text-cyan-200 font-medium">Checking GitHub Releases for new updates...</span>
+                </div>
+              )}
+
+              {updateStatus === 'not-available' && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3">
+                  <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="text-xs text-emerald-200 font-bold">You are using the latest version of ClueAI!</p>
+                    <p className="text-[11px] text-emerald-200/60 mt-0.5">No new updates available at this time.</p>
+                  </div>
+                </div>
+              )}
+
+              {updateStatus === 'error' && (
+                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 flex items-center gap-3">
+                  <AlertTriangle size={18} className="text-rose-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-rose-200 font-bold">Update Check Notice</p>
+                    <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not reach GitHub Releases'}</p>
+                  </div>
+                  <button 
+                    onClick={handleCheckForUpdates} 
+                    className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Download Progress Bar */}
+              {updateStatus === 'downloading' && (
+                <div className="bg-white/[0.04] border border-cyan-500/30 rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-white flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin text-cyan-400" />
+                      Downloading Update Package...
+                    </span>
+                    <span className="font-mono text-cyan-300 font-bold">{downloadProgress.percent}%</span>
+                  </div>
+                  
+                  {/* Progress track */}
+                  <div className="w-full h-2.5 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5">
+                    <div 
+                      className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 rounded-full transition-all duration-200" 
+                      style={{ width: `${downloadProgress.percent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-white/50 font-mono">
+                    <span>Speed: {Math.round(downloadProgress.bytesPerSecond / 1024)} KB/s</span>
+                    <span>
+                      {(downloadProgress.transferred / (1024 * 1024)).toFixed(1)} MB / {(downloadProgress.total / (1024 * 1024)).toFixed(1)} MB
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Release Notes / What's New */}
+              <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col gap-2">
+                <h3 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                  <FileText size={13} />
+                  What's New in {updateInfo.version ? `v${updateInfo.version}` : `v${appVersion}`}
+                </h3>
+                
+                <div className="max-h-48 overflow-y-auto custom-scrollbar pr-1 text-xs text-white/70 space-y-1.5 leading-relaxed">
+                  {updateInfo.releaseNotes ? (
+                    typeof updateInfo.releaseNotes === 'string' ? (
+                      <div className="whitespace-pre-wrap">{updateInfo.releaseNotes}</div>
+                    ) : Array.isArray(updateInfo.releaseNotes) ? (
+                      updateInfo.releaseNotes.map((note: any, idx: number) => (
+                        <div key={idx} className="whitespace-pre-wrap">{note.note || note}</div>
+                      ))
+                    ) : (
+                      <div>{JSON.stringify(updateInfo.releaseNotes)}</div>
+                    )
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">•</span>
+                        <span><strong>Unified Ultra-Wide Command Dock</strong>: Prominent live speech transcription reading area with instant generate CTA.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">•</span>
+                        <span><strong>Automated Update Center</strong>: On-demand checking, release notes preview, live progress, and seamless self-restart.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">•</span>
+                        <span><strong>Expanded Dashboard Bounds</strong>: Increased viewport to 1040x780 to eliminate cutoff on reminders and history cards.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">•</span>
+                        <span><strong>Main Process Stability</strong>: Globalized stealth protection state and resolved all potential reference errors.</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons Footer */}
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  onClick={handleCheckForUpdates}
+                  disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw size={13} className={updateStatus === 'checking' ? 'animate-spin' : ''} />
+                  <span>Check Again</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+
+                  {updateStatus === 'downloaded' ? (
+                    <button
+                      onClick={handleRestartToInstall}
+                      className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] border border-emerald-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 animate-pulse cursor-pointer"
+                    >
+                      <Sparkles size={14} />
+                      <span>Restart & Install Now</span>
+                    </button>
+                  ) : updateStatus === 'available' ? (
+                    <button
+                      onClick={handleDownloadUpdate}
+                      className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <Download size={14} />
+                      <span>Download Update</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -4180,6 +4486,45 @@ function App() {
               </div>
             </section>
 
+            {/* Software Updates Section */}
+            <section>
+              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Sparkles size={16} className="text-cyan-400" /> Software Updates</h3>
+              <div className="bg-brand-card p-5 rounded-2xl border border-brand-border flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-bold text-white">ClueAI Version</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                      v{appVersion}
+                    </span>
+                    {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
+                        Update Available: v{updateInfo.version}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-brand-subtext">Free on-demand updates powered directly via official GitHub Releases.</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      setShowUpdateModal(true);
+                      if (updateStatus === 'idle') handleCheckForUpdates();
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${
+                      updateStatus === 'available' || updateStatus === 'downloaded'
+                        ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:scale-105 active:scale-95 animate-pulse border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10 hover:border-cyan-400/40'
+                    }`}
+                  >
+                    <Sparkles size={13} />
+                    <span>{updateStatus === 'available' || updateStatus === 'downloaded' ? 'View & Install Update' : 'Check for Updates'}</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
             {/* Display */}
             <section>
               <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><LayoutPanelTop size={16}/> Display Settings</h3>
@@ -4350,7 +4695,7 @@ function App() {
       )}
 
       {/* Dashboard Empty State */}
-      {!isRecording && !showSettings && !showInfo && (
+      {!isRecording && !showSettings && !showInfo && !showUpdateModal && (
         <div className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
@@ -4705,6 +5050,17 @@ function App() {
                           <span className="text-[11px] font-black text-white">Clue<span className="text-cyan-400">AI</span></span>
                           <span className="text-cyan-300 font-mono font-bold text-[10px] ml-1 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">{formatTimer(recordingSeconds)}</span>
                         </div>
+                        {(updateStatus === 'available' || updateStatus === 'downloaded') && (
+                          <button 
+                            onClick={() => setShowUpdateModal(true)}
+                            className="px-2 py-0.5 rounded-lg font-black text-[9px] flex items-center gap-1 uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse shrink-0 cursor-pointer"
+                            title="New version available! Click to update"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            <Sparkles size={10} />
+                            <span>Update Available</span>
+                          </button>
+                        )}
 
                         {/* Stealth Shield Toggle Button */}
                         <button

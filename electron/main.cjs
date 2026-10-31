@@ -1,5 +1,16 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, screen, globalShortcut } = require('electron');
 const path = require('path');
+let autoUpdater = null;
+try {
+  const updaterModule = require('electron-updater');
+  autoUpdater = updaterModule.autoUpdater;
+  // USER-CONTROLLED: Never auto-download or auto-install without consent
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+} catch (e) {
+  console.warn('electron-updater failed to load:', e.message);
+}
 let audio = null;
 try {
   if (process.platform === 'win32') {
@@ -555,6 +566,39 @@ function createWindow() {
     }
   });
 
+  // --- AUTO-UPDATER IPC HANDLERS ---
+  ipcMain.handle('check-for-updates', async () => {
+    if (!autoUpdater) return { error: 'Updater not available' };
+    try {
+      const res = await autoUpdater.checkForUpdates();
+      return { success: true, updateInfo: res ? res.updateInfo : null };
+    } catch (e) {
+      console.warn('check-for-updates error:', e.message);
+      return { error: e.message };
+    }
+  });
+
+  ipcMain.handle('download-update', async () => {
+    if (!autoUpdater) return { error: 'Updater not available' };
+    try {
+      await autoUpdater.downloadUpdate();
+      return { success: true };
+    } catch (e) {
+      console.warn('download-update error:', e.message);
+      return { error: e.message };
+    }
+  });
+
+  ipcMain.handle('quit-and-install-update', () => {
+    if (autoUpdater) {
+      autoUpdater.quitAndInstall(false, true);
+    }
+  });
+
+  ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+  });
+
   let snipWindow = null;
 
   ipcMain.handle('start-snipping', async (event, sourceId) => {
@@ -697,6 +741,73 @@ if (!gotTheLock) {
 
   app.whenReady().then(() => {
     createWindow();
+
+    if (autoUpdater) {
+      autoUpdater.on('checking-for-update', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', { status: 'checking' });
+        }
+      });
+
+      autoUpdater.on('update-available', (info) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'available',
+            version: info.version,
+            releaseDate: info.releaseDate,
+            releaseNotes: info.releaseNotes,
+          });
+        }
+      });
+
+      autoUpdater.on('update-not-available', (info) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'not-available',
+            version: info.version,
+          });
+        }
+      });
+
+      autoUpdater.on('download-progress', (progressObj) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'downloading',
+            percent: Math.round(progressObj.percent || 0),
+            bytesPerSecond: progressObj.bytesPerSecond || 0,
+            transferred: progressObj.transferred || 0,
+            total: progressObj.total || 0,
+          });
+        }
+      });
+
+      autoUpdater.on('update-downloaded', (info) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'downloaded',
+            version: info.version,
+            releaseNotes: info.releaseNotes,
+          });
+        }
+      });
+
+      autoUpdater.on('error', (err) => {
+        console.warn('Updater background notice:', err ? err.message : err);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'error',
+            message: err ? err.message : 'Update check failed',
+          });
+        }
+      });
+
+      // Quiet startup check after 4 seconds
+      setTimeout(() => {
+        try {
+          autoUpdater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
+        } catch (e) {}
+      }, 4000);
+    }
   
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
