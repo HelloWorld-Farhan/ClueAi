@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, MessageSquare, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert } from 'lucide-react';
+import { Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste , Copy, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
 import { initSTT, transcribeAudioChunk, setSTTApiKey } from './STTClient';
@@ -2260,6 +2261,16 @@ function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // If Virtual Keyboard Editor is open, completely bypass ALL interview shortcuts so user can type on physical keyboard!
+      if (showVirtualKeyboard) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowVirtualKeyboard(false);
+          if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+        }
+        return;
+      }
+
       // If hotkeys toggle is OFF, block all shortcut keys entirely
       if (!globalHotkeysEnabled) return;
 
@@ -3152,80 +3163,112 @@ function App() {
           </div>
         </div>
       ) : (
-        // --- MAIN DASHBOARD HEADER (1 ROW) ---
-        <div className="w-full flex-none bg-brand-bg/80 backdrop-blur-3xl px-4 py-3 border-b border-brand-border flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.5)] relative z-30 drag-area rounded-t-2xl shrink-0">
-          <div className="flex items-center gap-3 no-drag">
-            <div className="p-1.5 bg-white/5 rounded-md text-white/50 shadow-sm border border-white/5 flex items-center justify-center cursor-default shrink-0">
-              <Move size={16} />
+        // --- MAIN DASHBOARD HEADER (PREMIUM OBSIDIAN GLASS) ---
+        <div className="w-full flex-none bg-[#0a0b12]/90 backdrop-blur-2xl px-5 py-3 border-b border-white/10 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.7)] relative z-30 drag-area rounded-t-2xl shrink-0">
+          {/* Left: Brand & User Profile */}
+          <div className="flex items-center gap-3.5 no-drag">
+            <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors" title="Drag Window">
+              <Move size={15} />
             </div>
-            <div className="flex items-center">
-              <h1 className="text-xl font-black tracking-tighter flex items-center gap-2 text-brand-accent leading-none">
-                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-md shadow-sm border border-brand-accent/20" /> 
-                <div className="flex flex-col items-start">
-                  <span>ClueAI</span>
-                  <span className="text-[8px] text-brand-accent/70 uppercase tracking-widest font-bold mt-0.5">Version - V5.0.0</span>
-                </div>
-                {username && (
-                  <span className="text-white text-lg font-bold ml-1 tracking-tight flex items-center gap-2 opacity-90 transition-opacity">
-                    <span className="mx-2 text-white/30">|</span> {username}
-                    <button 
-                      onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
-                      className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-md transition-colors shadow-sm ml-1"
-                      title="Rename"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                  </span>
-                )}
-              </h1>
+            
+            <div className="flex items-center gap-2.5">
+              <div className="relative flex items-center justify-center">
+                <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-lg shadow-sm border border-cyan-400/30" />
+                <div className="absolute -inset-0.5 rounded-lg bg-cyan-500/20 blur-[2px] -z-10" />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+                  Clue<span className="text-cyan-400">AI</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                  v5.0.0
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 no-drag">
-            {stealthMode ? (
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-emerald-500/15 text-emerald-400 border-emerald-500/30 mr-1 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Stealth ON
-              </span>
-            ) : (
-              <span className="text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider flex items-center gap-1.5 leading-none bg-rose-600/90 text-white border-rose-400 animate-pulse shadow-[0_0_12px_rgba(225,29,72,0.6)] mr-1">
-                <AlertTriangle size={11} /> STEALTH OFF
-              </span>
+
+            {username && (
+              <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-xl px-2.5 py-1 text-white/90 text-xs font-semibold ml-1">
+                <User size={13} className="text-cyan-400" />
+                <span>{username}</span>
+                <button 
+                  onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
+                  className="p-1 hover:bg-white/10 text-white/50 hover:text-cyan-300 rounded-md transition-colors ml-0.5"
+                  title="Rename Profile"
+                >
+                  <Edit2 size={12} />
+                </button>
+              </div>
             )}
-            <button onClick={() => {
+          </div>
+
+          {/* Right: Actions, Stealth Shield, Utilities, Controls */}
+          <div className="flex items-center gap-2.5 no-drag">
+            {/* Unified Stealth Button */}
+            <button 
+              onClick={() => {
                 if (stealthMode) {
                   setShowStealthWarning(true);
                 } else {
                   setStealthMode(true);
                   ipcRenderer.invoke('set-stealth', true);
                 }
-              }} title={stealthMode ? "Stealth Mode ON (Click to disable)" : "Stealth Mode OFF (Click to enable)"} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${stealthMode ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
-                {stealthMode ? <Shield size={16} /> : <ShieldAlert size={16} />}
-              </button>
-              <button onClick={() => setShowInfo(!showInfo)} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showInfo ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
-              <Info size={16} />
+              }} 
+              title={stealthMode ? "Stealth Shield Active (Invisible in screen-shares). Click to disable." : "Stealth Shield OFF (You are visible). Click to activate."} 
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm border ${
+                stealthMode 
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]' 
+                  : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
+              }`}
+            >
+              {stealthMode ? <ShieldCheck size={14} className="text-emerald-400" /> : <ShieldAlert size={14} className="text-rose-400" />}
+              <span className="tracking-wide uppercase text-[10.5px]">
+                {stealthMode ? "Stealth ON" : "Stealth OFF"}
+              </span>
             </button>
-            <button onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }} className={`p-1.5 mr-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${showSettings ? 'bg-brand-accent text-white' : 'hover:bg-white/10 text-brand-subtext hover:text-white'}`}>
-              <Settings size={16} />
+
+            {/* Guide Info Button */}
+            <button 
+              onClick={() => setShowInfo(!showInfo)} 
+              className={`p-2 rounded-xl transition-all border ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+              title="Information Guide"
+            >
+              <Info size={15} />
             </button>
-            <button onClick={handleStartCaptureClick} className="flex items-center gap-2 bg-brand-accentSec hover:bg-brand-accentSec text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:scale-105 active:scale-95 transition-all duration-150 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/30">
-              <Play size={14} fill="currentColor" /> Start Interview
+
+            {/* Settings Button */}
+            <button 
+              onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }} 
+              className={`p-2 rounded-xl transition-all border ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+              title="Settings & Models"
+            >
+              <Settings size={15} />
             </button>
-            {/* Minimize / Maximize / Close */}
-            <div className="flex items-center gap-1 ml-4 pl-4 border-l border-brand-border shrink-0">
-              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Shrink Window (Alt -)">
-                <ZoomOut size={16} />
+
+            {/* Start Interview Primary CTA */}
+            <button 
+              onClick={handleStartCaptureClick} 
+              className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40"
+            >
+              <Play size={13} fill="currentColor" /> Start Interview
+            </button>
+
+            {/* Window Controls */}
+            <div className="flex items-center gap-1 ml-2 pl-3 border-l border-white/10 shrink-0">
+              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Shrink Window (Alt -)">
+                <ZoomOut size={15} />
               </button>
-              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors" title="Enlarge Window (Alt +)">
-                <ZoomIn size={16} />
+              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+                <ZoomIn size={15} />
               </button>
-              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-                <Maximize size={16} />
+              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Fullscreen">
+                <Maximize size={15} />
               </button>
-              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-brand-subtext hover:text-white transition-colors">
-                <Minus size={16} />
+              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Minimize">
+                <Minus size={15} />
               </button>
-              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-brand-subtext hover:text-rose-400 transition-colors">
-                <X size={16} />
+              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors" title="Close">
+                <X size={15} />
               </button>
             </div>
           </div>
@@ -3444,10 +3487,22 @@ function App() {
       </div>
       )}
 
-      {/* Full-Screen Settings Modal */}
-      {showSettings && (
-        <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xl flex flex-col animate-in fade-in duration-200 overflow-hidden">
-          <div className={`w-full max-w-4xl mx-auto my-auto bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex flex-col h-[90vh] overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
+      {/* Full-Screen Settings Modal with Framer Motion & Perfect Sizing */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28 }}
+              className={`w-full max-w-4xl max-h-[92vh] h-full min-h-0 bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
             <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
               <div className="flex items-center gap-4">
                   <div>
@@ -4375,9 +4430,10 @@ function App() {
             </section>
             </div>
             </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Audio Error Modal */}
       {showAudioErrorModal && (
@@ -4720,177 +4776,204 @@ function App() {
 {/* Main UI */}
         {isRecording && (
           <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4">
-            {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock */}
-            <div 
-              className={`w-full max-w-[1040px] mx-auto relative z-20 drag-area transition-all duration-200 ${isTranscriptMinimized ? 'w-12 h-12 bg-[#09090b]/90 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] rounded-full p-0 cursor-pointer group border border-white/10 flex items-center justify-center' : 'bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2'}`}
-            >
-              {isTranscriptMinimized ? (
-                <div 
-                  className="w-full h-full flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-colors"
-                  onClick={() => setIsTranscriptMinimized(false)}
-                  title="Expand Transcript"
-                >
-                  <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
-                  <div className="absolute inset-0 rounded-full border border-cyan-400/30 group-hover:border-cyan-400/60 animate-[spin_4s_linear_infinite]" />
-                </div>
-              ) : (
-                <>
-                {/* 1. Sleek Controls & Status Ribbon */}
-                <div className="flex items-center justify-between w-full no-drag px-1">
-                  {/* Left: Live Status & Hotkey Pills */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-                      <span className="relative flex h-2 w-2">
+            {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
+            <div className="w-full flex justify-center items-center relative z-20">
+              <AnimatePresence mode="wait">
+                {isTranscriptMinimized ? (
+                  <motion.div
+                    key="minimized-dock"
+                    initial={{ opacity: 0, scale: 0.85, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.85, y: -10 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                    onClick={() => setIsTranscriptMinimized(false)}
+                    className="drag-area cursor-pointer group bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 rounded-full px-5 py-2.5 shadow-[0_12px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.25)] flex items-center gap-3.5 hover:border-cyan-400 hover:scale-105 transition-all select-none"
+                    title="Click to expand transcription dock"
+                  >
+                    <div className="flex items-center gap-1.5 text-cyan-400">
+                      <span className="relative flex h-2.5 w-2.5">
                         <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                        <span className={`relative inline-flex rounded-full h-2 w-2 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
                       </span>
-                      <span className="text-[10px] font-black uppercase tracking-wider">
-                        {!isPaused ? "Live STT" : "Paused"}
-                      </span>
+                      <div className="flex items-end gap-0.5 h-3">
+                        <span className="w-0.5 h-2 bg-cyan-400 animate-pulse rounded-full" />
+                        <span className="w-0.5 h-3 bg-cyan-300 animate-pulse delay-75 rounded-full" />
+                        <span className="w-0.5 h-1.5 bg-cyan-500 animate-pulse delay-150 rounded-full" />
+                      </div>
+                    </div>
+                    <span className="text-xs font-black text-white/90 tracking-wide uppercase flex items-center gap-1.5">
+                      {!isPaused ? "Live STT Active" : "STT Paused"}
+                    </span>
+                    <span className="text-[10px] font-bold text-cyan-400/90 bg-cyan-500/15 border border-cyan-500/30 px-2.5 py-0.5 rounded-full group-hover:bg-cyan-500/30 group-hover:text-cyan-200 transition-colors flex items-center gap-1">
+                      Expand ▾
+                    </span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="expanded-dock"
+                    initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                    className="w-full max-w-[1040px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
+                  >
+                    {/* 1. Sleek Controls & Status Ribbon */}
+                    <div className="flex items-center justify-between w-full no-drag px-1">
+                      {/* Left: Live Status & Hotkey Pills */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                          <span className="relative flex h-2 w-2">
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                          </span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">
+                            {!isPaused ? "Live STT" : "Paused"}
+                          </span>
+                        </div>
+
+                        <button 
+                          onClick={handlePauseToggle}
+                          className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                          title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
+                        >
+                          {isPaused ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
+                          <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                          <span className="text-[8.5px] opacity-60 font-mono">1</span>
+                        </button>
+
+                        <button 
+                          onClick={handleSnipClick}
+                          className="px-2 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
+                          title="Snip Screen Question (4 / A)"
+                        >
+                          <Crop size={10} />
+                          <span>Snip</span>
+                          <span className="text-[8.5px] opacity-60 font-mono">4</span>
+                        </button>
+
+                        <button 
+                          onClick={handleClearAll}
+                          className="px-2 py-0.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
+                          title="Clear Transcript (3 / C)"
+                        >
+                          <Trash2 size={10} />
+                          <span>Clear</span>
+                          <span className="text-[8.5px] opacity-60 font-mono">3</span>
+                        </button>
+
+                        <button 
+                          onClick={() => setShowVirtualKeyboard(true)}
+                          className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
+                          title="Edit Transcript (7 / Q)"
+                        >
+                          <Edit2 size={10} /> Edit <span className="text-[8.5px] opacity-60 font-mono">7</span>
+                        </button>
+
+                        {currentSessionHistory.length > 0 && (
+                          <button 
+                            onClick={() => setShowPreviousQuestions(true)}
+                            className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
+                            title="Session History"
+                          >
+                            <Clock size={10} /> {currentSessionHistory.length} Qs
+                          </button>
+                        )}
+
+                        {isGenerating && (
+                          <span className="text-[9.5px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full animate-pulse font-bold flex items-center gap-1">
+                            <Loader2 size={9} className="animate-spin" /> Drafting Answer...
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Right: Settings and Minimize */}
+                      <div className="flex items-center gap-1.5">
+                        <button 
+                          onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
+                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
+                          title="Settings"
+                        >
+                          <Settings size={12} />
+                        </button>
+                        <button 
+                          onClick={() => setIsTranscriptMinimized(true)}
+                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
+                          title="Minimize Transcript"
+                        >
+                          <Minus size={12} />
+                        </button>
+                      </div>
                     </div>
 
-                    <button 
-                      onClick={handlePauseToggle}
-                      className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
-                      title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
-                    >
-                      {isPaused ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
-                      <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                      <span className="text-[8.5px] opacity-60 font-mono">1</span>
-                    </button>
-
-                    <button 
-                      onClick={handleSnipClick}
-                      className="px-2 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
-                      title="Snip Screen Question (4 / A)"
-                    >
-                      <Crop size={10} />
-                      <span>Snip</span>
-                      <span className="text-[8.5px] opacity-60 font-mono">4</span>
-                    </button>
-
-                    <button 
-                      onClick={handleClearAll}
-                      className="px-2 py-0.5 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10.5px] flex items-center gap-1 transition-all"
-                      title="Clear Transcript (3 / C)"
-                    >
-                      <Trash2 size={10} />
-                      <span>Clear</span>
-                      <span className="text-[8.5px] opacity-60 font-mono">3</span>
-                    </button>
-
-                    <button 
-                      onClick={() => setShowVirtualKeyboard(true)}
-                      className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
-                      title="Edit Transcript (7 / Q)"
-                    >
-                      <Edit2 size={10} /> Edit <span className="text-[8.5px] opacity-60 font-mono">7</span>
-                    </button>
-
-                    {currentSessionHistory.length > 0 && (
-                      <button 
-                        onClick={() => setShowPreviousQuestions(true)}
-                        className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-colors"
-                        title="Session History"
+                    {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
+                    <div className="flex items-center gap-2.5 w-full no-drag">
+                      <div 
+                        ref={transcriptScrollRef}
+                        className="flex-1 min-h-[42px] max-h-[64px] overflow-y-auto custom-scrollbar bg-black/70 border border-white/12 hover:border-cyan-500/40 rounded-xl px-3.5 py-1.5 select-text transition-colors shadow-inner flex items-center"
+                        style={{ fontSize: `${transcriptTextSize}px` }}
                       >
-                        <Clock size={10} /> {currentSessionHistory.length} Qs
-                      </button>
-                    )}
-
-                    {isGenerating && (
-                      <span className="text-[9.5px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full animate-pulse font-bold flex items-center gap-1">
-                        <Loader2 size={9} className="animate-spin" /> Drafting Answer...
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Right: Settings and Minimize */}
-                  <div className="flex items-center gap-1.5">
-                    <button 
-                      onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
-                      className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
-                      title="Settings"
-                    >
-                      <Settings size={12} />
-                    </button>
-                    <button 
-                      onClick={() => setIsTranscriptMinimized(true)}
-                      className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
-                      title="Minimize Transcript"
-                    >
-                      <Minus size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
-                <div className="flex items-center gap-2.5 w-full no-drag">
-                  <div 
-                    ref={transcriptScrollRef}
-                    className="flex-1 min-h-[42px] max-h-[64px] overflow-y-auto custom-scrollbar bg-black/70 border border-white/12 hover:border-cyan-500/40 rounded-xl px-3.5 py-1.5 select-text transition-colors shadow-inner flex items-center"
-                    style={{ fontSize: `${transcriptTextSize}px` }}
-                  >
-                    {transcript ? (
-                      <span className="text-white font-medium leading-relaxed tracking-wide select-text">
-                        {transcript}
-                      </span>
-                    ) : (
-                      <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
-                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-ping"></span>
-                        Listening to conversation... (Interviewer questions appear here)
-                      </span>
-                    )}
-                  </div>
-
-                  {/* High-Impact Integrated Generate Answer Button */}
-                  <button 
-                    onClick={() => { if (!isGenerating) manualTriggerAI(); }}
-                    disabled={isGenerating}
-                    className="h-[42px] px-5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[170px]"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin text-white" />
-                        <span>Generating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Cpu size={13} className="text-cyan-200" />
-                        <span>Generate Answer</span>
-                        <span className="bg-black/30 text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-0.5">2 / X</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Snapshots Strip (if any exist) */}
-                {currentSnapshots.length > 0 && (
-                  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 px-2 bg-black/50 rounded-lg border border-white/5 no-drag">
-                    <span className="text-[9.5px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-                      <Crop size={10} /> Snips:
-                    </span>
-                    {currentSnapshots.map((snap, idx) => (
-                      <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
-                        <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                          <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
-                            <Eye size={9} />
-                          </button>
-                          <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
-                            <Trash2 size={9} />
-                          </button>
-                        </div>
+                        {transcript ? (
+                          <span className="text-white font-medium leading-relaxed tracking-wide select-text">
+                            {transcript}
+                          </span>
+                        ) : (
+                          <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-ping"></span>
+                            Listening to conversation... (Interviewer questions appear here)
+                          </span>
+                        )}
                       </div>
-                    ))}
-                    {currentSnapshots.length > 1 && (
-                      <button onClick={() => setCurrentSnapshots([])} className="h-[36px] px-2 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9px] font-bold shrink-0">
-                        <Trash2 size={10} /> Clear
+
+                      {/* High-Impact Integrated Generate Answer Button */}
+                      <button 
+                        onClick={() => { if (!isGenerating) manualTriggerAI(); }}
+                        disabled={isGenerating}
+                        className="h-[42px] px-5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[170px]"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin text-white" />
+                            <span>Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Cpu size={13} className="text-cyan-200" />
+                            <span>Generate Answer</span>
+                            <span className="bg-black/30 text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-0.5">2 / X</span>
+                          </>
+                        )}
                       </button>
+                    </div>
+
+                    {/* Snapshots Strip (if any exist) */}
+                    {currentSnapshots.length > 0 && (
+                      <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 px-2 bg-black/50 rounded-lg border border-white/5 no-drag">
+                        <span className="text-[9.5px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                          <Crop size={10} /> Snips:
+                        </span>
+                        {currentSnapshots.map((snap, idx) => (
+                          <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
+                            <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
+                                <Eye size={9} />
+                              </button>
+                              <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
+                                <Trash2 size={9} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {currentSnapshots.length > 1 && (
+                          <button onClick={() => setCurrentSnapshots([])} className="h-[36px] px-2 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9px] font-bold shrink-0">
+                            <Trash2 size={10} /> Clear
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
-                </>
-              )}
+              </AnimatePresence>
             </div>
           </div>
         )}
@@ -5647,131 +5730,227 @@ function App() {
         </div>
       )}
 
-      {/* Virtual Keyboard Transcript Editor */}
-      {showVirtualKeyboard && (
-        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden stealth-exempt">
-            
-            <div className="flex justify-between items-center bg-black/40 px-6 py-4 border-b border-brand-border">
-              <h2 className="text-lg font-black text-white flex items-center gap-2">
-                <FileText size={20} className="text-brand-accent"/> Virtual Keyboard Editor
-              </h2>
-              <div className="flex gap-2 text-[10px] text-white/50 uppercase font-black tracking-wider">
-                <span className="bg-black/30 px-2 py-1 rounded">Enter: Save</span>
-                <span className="bg-black/30 px-2 py-1 rounded">Shift/Alt+Enter: New Line</span>
-              </div>
-              <button 
-                onClick={() => {
-                  setShowVirtualKeyboard(false);
-                  if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                }}
-                className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-rose-500 rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-bold"
-              >
-                <X size={16} /> Cancel (Esc)
-              </button>
-            </div>
-
-            <textarea 
-              ref={virtualKeyboardTextareaRef}
-              className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20"
-              value={editTranscript}
-              onChange={(e) => setEditTranscript(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setShowVirtualKeyboard(false);
-                  if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
-                  e.preventDefault();
-                  setTranscript(editTranscript);
-                  finalizedTranscriptRef.current = editTranscript;
-                  interimTranscriptRef.current = '';
-                  clearAudioBuffer();
-                  setShowVirtualKeyboard(false);
-                  if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                } else if (e.key === 'Enter' && e.altKey) {
-                  e.preventDefault();
-                  setEditTranscript(prev => prev + '\n');
-                }
-              }}
-              placeholder="Start typing..."
-              autoFocus
-            />
-
-            <div className="bg-black/60 p-4 flex flex-col gap-2 items-center border-t border-brand-border/50 select-none">
-              <div className="flex flex-col gap-1.5 w-full max-w-4xl">
-                {/* Special characters row */}
-                <div className="flex gap-1.5 w-full justify-center mb-1">
-                  {['@','#','$','%','&','*','(',')','{','}','[',']','<','>','_','+','-','=','/','\\','|'].map(key => (
-                    <button 
-                      key={key} 
-                      onClick={() => setEditTranscript(prev => prev + key)}
-                      className="w-8 h-8 bg-brand-accent/10 hover:bg-brand-accent/30 text-brand-accent rounded-lg font-bold text-sm transition-all flex items-center justify-center border border-brand-accent/20"
-                    >
-                      {key}
-                    </button>
-                  ))}
+      {/* Virtual Keyboard Transcript Editor with Framer Motion & Native Physical Keyboard Support */}
+      <AnimatePresence>
+        {showVirtualKeyboard && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-6 md:p-8"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="w-full max-w-4xl bg-[#0a0b12]/95 border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden stealth-exempt"
+            >
+              <div className="flex justify-between items-center bg-white/[0.03] px-6 py-4 border-b border-white/10">
+                <h2 className="text-base font-black text-white flex items-center gap-2">
+                  <FileText size={18} className="text-cyan-400"/> Virtual & Physical Keyboard Editor
+                </h2>
+                <div className="flex gap-2 text-[10.5px] text-white/50 uppercase font-black tracking-wider">
+                  <span className="bg-black/40 border border-white/10 px-2 py-1 rounded">Enter: Save</span>
+                  <span className="bg-black/40 border border-white/10 px-2 py-1 rounded">Shift+Enter: New Line</span>
+                  <span className="bg-black/40 border border-white/10 px-2 py-1 rounded text-cyan-300">Physical Keyboard Ready</span>
                 </div>
-                {[
-                  ['1','2','3','4','5','6','7','8','9','0'],
-                  ['q','w','e','r','t','y','u','i','o','p'],
-                  ['a','s','d','f','g','h','j','k','l',';',"'"],
-                  ['z','x','c','v','b','n','m',',','.','?']
-                ].map((row, i) => (
-                  <div key={i} className="flex gap-1.5 w-full justify-center">
-                    {row.map(key => (
+                <button 
+                  onClick={() => {
+                    setShowVirtualKeyboard(false);
+                    if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                  }}
+                  className="text-white/60 hover:text-white transition-colors bg-white/5 hover:bg-rose-500/80 rounded-lg px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-bold border border-white/10"
+                >
+                  <X size={15} /> Cancel (Esc)
+                </button>
+              </div>
+
+              <textarea 
+                ref={virtualKeyboardTextareaRef}
+                className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20 select-text"
+                value={editTranscript}
+                onChange={(e) => setEditTranscript(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setShowVirtualKeyboard(false);
+                    if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                  } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+                    e.preventDefault();
+                    setTranscript(editTranscript);
+                    finalizedTranscriptRef.current = editTranscript;
+                    interimTranscriptRef.current = '';
+                    clearAudioBuffer();
+                    setShowVirtualKeyboard(false);
+                    if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                  }
+                  // Shift+Enter, Alt+Enter, Ctrl+Enter and all physical typing keys work natively with 0 interference!
+                }}
+                placeholder="Type question or prompt with your physical keyboard, or click on-screen buttons below..."
+                autoFocus
+              />
+
+              <div className="bg-black/60 p-4 flex flex-col gap-2 items-center border-t border-white/10 select-none">
+                <div className="flex flex-col gap-1.5 w-full max-w-4xl">
+                  {/* Special characters row */}
+                  <div className="flex gap-1.5 w-full justify-center mb-1">
+                    {['@','#','$','%','&','*','(',')','{','}','[',']','<','>','_','+','-','=','/','\\','|'].map(key => (
                       <button 
                         key={key} 
-                        onClick={() => setEditTranscript(prev => prev + key)}
-                        className="w-10 h-10 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-lg font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          const ta = virtualKeyboardTextareaRef.current;
+                          if (ta) {
+                            const start = ta.selectionStart ?? editTranscript.length;
+                            const end = ta.selectionEnd ?? editTranscript.length;
+                            const updated = editTranscript.slice(0, start) + key + editTranscript.slice(end);
+                            setEditTranscript(updated);
+                            requestAnimationFrame(() => {
+                              ta.focus();
+                              ta.selectionStart = ta.selectionEnd = start + key.length;
+                            });
+                          } else {
+                            setEditTranscript(prev => prev + key);
+                          }
+                        }}
+                        className="w-8 h-8 bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-300 rounded-lg font-bold text-sm transition-all flex items-center justify-center border border-cyan-500/20 active:scale-95"
                       >
                         {key}
                       </button>
                     ))}
                   </div>
-                ))}
-                
-                <div className="flex gap-2 w-full justify-center mt-2">
-                   <button 
-                     onClick={() => setEditTranscript(prev => prev.slice(0, -1))} 
-                     className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all"
-                   >
-                     Backspace
-                   </button>
-                   <button 
-                     onClick={() => setEditTranscript(prev => prev + '\n')} 
-                     className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/5 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
-                   >
-                     <span>Next Line</span>
-                     <span className="text-[10px] opacity-70 font-normal">(Alt+Enter)</span>
-                   </button>
-                   <button 
-                     onClick={() => setEditTranscript(prev => prev + ' ')} 
-                     className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/5 transition-all"
-                   >
-                     Space
-                   </button>
-                   <button 
-                     onClick={() => {
-                        setTranscript(editTranscript);
-                        finalizedTranscriptRef.current = editTranscript;
-                        interimTranscriptRef.current = '';
-                        clearAudioBuffer();
-                        setShowVirtualKeyboard(false);
-                        if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
-                     }} 
-                     className="px-6 py-3 bg-brand-accent hover:bg-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] rounded-xl font-bold flex-[1] border border-brand-accent/30 transition-all flex flex-col items-center justify-center gap-0.5 leading-none"
-                   >
-                     <span>Done / Save</span>
-                     <span className="text-[10px] opacity-90 font-normal">(Enter)</span>
-                   </button>
+                  {[
+                    ['1','2','3','4','5','6','7','8','9','0'],
+                    ['q','w','e','r','t','y','u','i','o','p'],
+                    ['a','s','d','f','g','h','j','k','l',';',"'"],
+                    ['z','x','c','v','b','n','m',',','.','?']
+                  ].map((row, i) => (
+                    <div key={i} className="flex gap-1.5 w-full justify-center">
+                      {row.map(key => (
+                        <button 
+                          key={key} 
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            const ta = virtualKeyboardTextareaRef.current;
+                            if (ta) {
+                              const start = ta.selectionStart ?? editTranscript.length;
+                              const end = ta.selectionEnd ?? editTranscript.length;
+                              const updated = editTranscript.slice(0, start) + key + editTranscript.slice(end);
+                              setEditTranscript(updated);
+                              requestAnimationFrame(() => {
+                                ta.focus();
+                                ta.selectionStart = ta.selectionEnd = start + key.length;
+                              });
+                            } else {
+                              setEditTranscript(prev => prev + key);
+                            }
+                          }}
+                          className="w-10 h-10 bg-white/5 hover:bg-white/20 active:bg-white/30 text-white rounded-lg font-bold uppercase text-sm border border-white/5 shadow-sm transition-all flex items-center justify-center"
+                        >
+                          {key}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                  
+                  <div className="flex gap-2 w-full justify-center mt-2">
+                     <button 
+                       onMouseDown={(e) => e.preventDefault()}
+                       onClick={() => {
+                         const ta = virtualKeyboardTextareaRef.current;
+                         if (ta) {
+                           const start = ta.selectionStart ?? editTranscript.length;
+                           const end = ta.selectionEnd ?? editTranscript.length;
+                           if (start === end && start > 0) {
+                             const updated = editTranscript.slice(0, start - 1) + editTranscript.slice(end);
+                             setEditTranscript(updated);
+                             requestAnimationFrame(() => {
+                               ta.focus();
+                               ta.selectionStart = ta.selectionEnd = start - 1;
+                             });
+                           } else if (start !== end) {
+                             const updated = editTranscript.slice(0, start) + editTranscript.slice(end);
+                             setEditTranscript(updated);
+                             requestAnimationFrame(() => {
+                               ta.focus();
+                               ta.selectionStart = ta.selectionEnd = start;
+                             });
+                           }
+                         } else {
+                           setEditTranscript(prev => prev.slice(0, -1));
+                         }
+                       }} 
+                       className="px-6 py-3 bg-white/5 hover:bg-rose-500/80 text-white rounded-xl font-bold flex-[1] border border-white/10 transition-all active:scale-95"
+                     >
+                       Backspace
+                     </button>
+                     <button 
+                       onMouseDown={(e) => e.preventDefault()}
+                       onClick={() => {
+                         const ta = virtualKeyboardTextareaRef.current;
+                         if (ta) {
+                           const start = ta.selectionStart ?? editTranscript.length;
+                           const end = ta.selectionEnd ?? editTranscript.length;
+                           const updated = editTranscript.slice(0, start) + '\n' + editTranscript.slice(end);
+                           setEditTranscript(updated);
+                           requestAnimationFrame(() => {
+                             ta.focus();
+                             ta.selectionStart = ta.selectionEnd = start + 1;
+                           });
+                         } else {
+                           setEditTranscript(prev => prev + '\n');
+                         }
+                       }} 
+                       className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[1] border border-white/10 transition-all flex flex-col items-center justify-center gap-0.5 leading-none active:scale-95"
+                     >
+                       <span>Next Line</span>
+                       <span className="text-[10px] opacity-70 font-normal">(Shift+Enter)</span>
+                     </button>
+                     <button 
+                       onMouseDown={(e) => e.preventDefault()}
+                       onClick={() => {
+                         const ta = virtualKeyboardTextareaRef.current;
+                         if (ta) {
+                           const start = ta.selectionStart ?? editTranscript.length;
+                           const end = ta.selectionEnd ?? editTranscript.length;
+                           const updated = editTranscript.slice(0, start) + ' ' + editTranscript.slice(end);
+                           setEditTranscript(updated);
+                           requestAnimationFrame(() => {
+                             ta.focus();
+                             ta.selectionStart = ta.selectionEnd = start + 1;
+                           });
+                         } else {
+                           setEditTranscript(prev => prev + ' ');
+                         }
+                       }} 
+                       className="px-6 py-3 bg-white/5 hover:bg-white/20 text-white rounded-xl font-bold flex-[2] border border-white/10 transition-all active:scale-95"
+                     >
+                       Space
+                     </button>
+                     <button 
+                       onClick={() => {
+                          setTranscript(editTranscript);
+                          finalizedTranscriptRef.current = editTranscript;
+                          interimTranscriptRef.current = '';
+                          clearAudioBuffer();
+                          setShowVirtualKeyboard(false);
+                          if (globalHotkeysEnabled && isRecording) ipcRenderer.invoke('toggle-global-hotkeys', true);
+                       }} 
+                       className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] rounded-xl font-bold flex-[1] border border-cyan-400/40 transition-all flex flex-col items-center justify-center gap-0.5 leading-none active:scale-95"
+                     >
+                       <span>Done / Save</span>
+                       <span className="text-[10px] opacity-90 font-normal">(Enter)</span>
+                     </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          </div>
-        </div>
-      )}
       {/* Alert Message Modal */}
       
         {stealthWarningToast && (
