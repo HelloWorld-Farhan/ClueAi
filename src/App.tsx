@@ -17,6 +17,7 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 // Clean plain-English bullet point release notes formatter without any raw tags
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
+    { title: "Native macOS & Windows Support", desc: "Added full macOS DMG installer and universal multi-platform release pipeline alongside Windows." },
     { title: "Zero Code Overlap", desc: "Language selector dropdown and copy button reside in a dedicated editor header above the code, never covering code lines." },
     { title: "Split View & Text Size Harmony", desc: "Split View toggle and high-contrast font size controls are aligned side-by-side in a unified toolbar with zero button collisions." },
     { title: "MCQ-Only Option Detection", desc: "Coding problems provide direct algorithm solutions without dummy Option A banners; MCQ quiz questions prominently show the selected choice." },
