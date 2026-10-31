@@ -23,6 +23,15 @@ try {
 let mainWindow;
 let isStealthMode = true;
 
+function applyStealthProtection(win, enabled) {
+  if (!win || win.isDestroyed()) return;
+  try {
+    win.setContentProtection(Boolean(enabled));
+  } catch (err) {
+    console.warn('setContentProtection non-fatal notice:', err.message);
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
@@ -59,7 +68,7 @@ function createWindow() {
 
   mainWindow.on('restore', () => {
     if (mainWindow) {
-      mainWindow.setContentProtection(isStealthMode);
+      applyStealthProtection(mainWindow, isStealthMode);
       mainWindow.setIgnoreMouseEvents(false);
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.webContents.send('window-shown');
@@ -75,7 +84,7 @@ function createWindow() {
 
   mainWindow.on('show', () => {
     if (mainWindow) {
-      mainWindow.setContentProtection(isStealthMode);
+      applyStealthProtection(mainWindow, isStealthMode);
       mainWindow.setIgnoreMouseEvents(false);
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.webContents.send('window-shown');
@@ -120,7 +129,7 @@ function createWindow() {
 
 
   // Stealth Mode: Hide window from screen sharing software - always on by default
-  mainWindow.setContentProtection(isStealthMode); // Hide from OBS, screen sharing, etc.
+  applyStealthProtection(mainWindow, isStealthMode); // Hide from OBS, screen sharing, etc.
 
   ipcMain.handle('focus-window', () => {
     if (mainWindow) {
@@ -135,7 +144,7 @@ function createWindow() {
   ipcMain.handle('set-stealth', (event, enable) => {
     isStealthMode = enable;
     if (mainWindow) {
-      mainWindow.setContentProtection(enable);
+      applyStealthProtection(mainWindow, enable);
     }
   });
 
@@ -472,8 +481,8 @@ function createWindow() {
       const { width } = primaryDisplay.workAreaSize;
       
       const w = layout === 'horizontal' ? 1080 : 450;
-      // Low profile compact dock height while listening/transcribing: 175px fits both controls & live transcript perfectly!
-      const h = 175;
+      // Low profile compact dock height while listening/transcribing: 195px fits two-tier controls & live transcript perfectly!
+      const h = 195;
 
       mainWindow.setBounds({
         width: w,
@@ -506,7 +515,7 @@ function createWindow() {
         });
       } else {
         // Shrink back to low-profile transcription dock at the top
-        const h = 175;
+        const h = 195;
         mainWindow.setBounds({
           width: w,
           height: h,
@@ -655,7 +664,7 @@ function createWindow() {
       
       snipWindow.setAlwaysOnTop(true, 'screen-saver');
       // Critical: snip window must also be content-protected
-      snipWindow.setContentProtection(isStealthMode);
+      applyStealthProtection(snipWindow, isStealthMode);
       snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
       
       snipWindow.webContents.once('did-finish-load', () => {
@@ -733,7 +742,7 @@ if (!gotTheLock) {
       if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.setIgnoreMouseEvents(false);
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      mainWindow.setContentProtection(isStealthMode);
+      applyStealthProtection(mainWindow, isStealthMode);
       mainWindow.webContents.send('window-shown');
       mainWindow.focus();
     }
@@ -810,23 +819,27 @@ if (!gotTheLock) {
     }
   
   globalShortcut.register('CommandOrControl+Shift+K', () => {
-    if (mainWindow) {
-      if (!mainWindow.isVisible() || mainWindow.isMinimized()) {
-        if (mainWindow.isMinimized()) {
-          mainWindow.restore();
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (!mainWindow.isVisible() || mainWindow.isMinimized()) {
+          try {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+          } catch(e) {}
+          mainWindow.show();
+          try { mainWindow.setIgnoreMouseEvents(false); } catch(e) {}
+          try { mainWindow.setAlwaysOnTop(true, 'screen-saver', 1); } catch(e) {}
+          applyStealthProtection(mainWindow, isStealthMode);
+          try { mainWindow.focus(); } catch(e) {}
+          try { mainWindow.webContents.send('window-shown'); } catch(e) {}
+          if (hotkeysActive) {
+            registerAllHotkeys();
+          }
+        } else {
+          mainWindow.hide();
         }
-        mainWindow.show();
-        mainWindow.setIgnoreMouseEvents(false);
-        mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-        mainWindow.setContentProtection(isStealthMode);
-        mainWindow.focus();
-        mainWindow.webContents.send('window-shown');
-        if (hotkeysActive) {
-          registerAllHotkeys();
-        }
-      } else {
-        mainWindow.hide();
       }
+    } catch (err) {
+      console.warn('CommandOrControl+Shift+K handler non-fatal notice:', err.message);
     }
   });
 });

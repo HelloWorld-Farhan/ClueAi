@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -248,7 +248,7 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
 function App() {
 
   const [preferredCodeLanguage, setPreferredCodeLanguage] = useState<string>(() => {
-    return localStorage.getItem('clueai_code_language') || 'Auto';
+    return localStorage.getItem('clueai_code_language') || 'Java';
   });
   const [provider, setProvider] = useState<'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'>(() => {
     return (localStorage.getItem('selected_provider') as any) || 'groq';
@@ -394,23 +394,9 @@ function App() {
 
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const aiAnswerScrollRef = useRef<HTMLDivElement>(null);
-  const scrollRafRef = useRef<number | null>(null);
 
-  // Auto-scroll to bottom when new AI answer text arrives (smooth, hardware-synced RAF)
-  useEffect(() => {
-    if (aiAnswerScrollRef.current) {
-      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
-      scrollRafRef.current = requestAnimationFrame(() => {
-        if (aiAnswerScrollRef.current) {
-          aiAnswerScrollRef.current.scrollTop = aiAnswerScrollRef.current.scrollHeight;
-        }
-        scrollRafRef.current = null;
-      });
-    }
-    return () => {
-      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
-    };
-  }, [aiAnswer]);
+  // User-controlled scrolling: Forced auto-scroll to bottom disabled during AI generation
+  // so the user can read from the beginning and scroll freely without the view continually jumping.
 
   const [editTranscript, setEditTranscript] = useState('');
 
@@ -430,6 +416,8 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [isHistoryScrolled, setIsHistoryScrolled] = useState(false);
+  const [isCodeSplitView, setIsCodeSplitView] = useState(true);
 
 
   const [username, setUsername] = useState(() => {
@@ -2710,30 +2698,38 @@ function App() {
       else if (currentLang === 'ts') displayLang = 'typescript';
       else if (currentLang === 'csharp') displayLang = 'c#';
 
+      if (match && (match[1] === 'exact-answer' || match[1] === 'exact_answer')) {
+        return (
+          <div className="w-full my-3 p-4 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-cyan-500/25 border-2 border-emerald-400/70 rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.3)] flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/30 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-lg shrink-0 shadow-sm">
+              ✓
+            </div>
+            <div>
+              <div className="text-[10px] uppercase font-black tracking-widest text-emerald-400 mb-0.5">MCQ Top Answer</div>
+              <div className="text-white font-black text-base md:text-lg tracking-tight">{codeText}</div>
+            </div>
+          </div>
+        );
+      }
+
       return match ? (
-        <div className="w-full flex justify-center my-6">
+        <div className="w-full flex justify-center my-4">
           <div className="relative group/code max-w-4xl w-full">
             <CopyButton
               text={codeText}
               className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
               tooltip="Copy code"
             />
-            <div className="absolute top-4 right-14 z-50 opacity-100 transition-opacity w-32">
+            <div className="absolute top-4 right-14 z-50 opacity-100 transition-opacity w-36">
               <CustomSelect
-                value={displayLang}
+                value={displayLang || preferredCodeLanguage.toLowerCase()}
                 onChange={async (targetLang: string) => {
                   if (!targetLang || targetLang === displayLang) return;
-                  // Capitalize first letter for the language name used in the AI prompt
                   const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
-                  // Update the preferred language state and persist it
                   setPreferredCodeLanguage(langLabel);
                   localStorage.setItem('clueai_code_language', langLabel);
-                  // Re-generate the FULL answer (code + explanation) in the new language
                   let currentTranscript = finalizedTranscriptRef.current || transcript || '';
-
-                  // Append a note to the transcript so the user sees the language change in the UI history
                   const langNote = `\n[User requested code in ${langLabel}]`;
-                  // Remove any previous language note to prevent stacking
                   currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
                   currentTranscript += langNote;
 
@@ -2744,10 +2740,8 @@ function App() {
                   );
                 }}
                 options={[
-                  { value: 'auto', label: 'Auto (Transcript)' },
-                  { value: '', label: 'Translate...' },
+                  { value: 'java', label: 'Java (Default)' },
                   { value: 'python', label: 'Python' },
-                  { value: 'java', label: 'Java' },
                   { value: 'c++', label: 'C++' },
                   { value: 'javascript', label: 'JavaScript' },
                   { value: 'typescript', label: 'TypeScript' },
@@ -2756,7 +2750,7 @@ function App() {
                   { value: 'rust', label: 'Rust' },
                 ]}
                 className="bg-[#18181b] hover:bg-[#27272a] text-white border border-white/20 text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer backdrop-blur-md font-medium"
-                listClassName="text-xs bg-[#18181b] !max-h-40 overflow-y-auto custom-scrollbar"
+                listClassName="text-xs bg-[#18181b] !max-h-48 overflow-y-auto custom-scrollbar"
               />
             </div>
             <SyntaxHighlighter
@@ -2777,7 +2771,24 @@ function App() {
       );
     },
     p({ children, ...props }: any) {
-      return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
+      const textContent = Array.isArray(children) 
+        ? children.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children) : '')).join('') 
+        : (typeof children === 'string' ? children : '');
+      const isMcqHeader = /^(?:\*\*)?Option\s+[A-D][: -]/i.test(textContent.trim()) || /^(?:\*\*)?Correct\s+(?:Option|Answer)[: -]/i.test(textContent.trim());
+      if (isMcqHeader) {
+        return (
+          <div className="w-full my-3 p-4 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-cyan-500/25 border-2 border-emerald-400/70 rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.3)] flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/30 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-lg shrink-0 shadow-sm">
+              ✓
+            </div>
+            <div>
+              <div className="text-[10px] uppercase font-black tracking-widest text-emerald-400 mb-0.5">MCQ Direct Answer</div>
+              <div className="text-white font-black text-base md:text-lg tracking-tight">{children}</div>
+            </div>
+          </div>
+        );
+      }
+      return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>;
     },
     h1({ children, ...props }: any) {
       return <h1 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.2em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
@@ -3059,32 +3070,34 @@ function App() {
                   onDoubleClick={() => setIsAnswerMinimized(false)}
                   title="Double-click anywhere to expand"
                 >
-                  <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-bl-lg p-1 flex items-center gap-1">
+                  <div className="absolute top-1 right-2 z-30 opacity-100 bg-[#0a0b12]/95 border border-white/20 backdrop-blur-xl rounded-xl px-2 py-0.5 flex items-center gap-1.5 shadow-md">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setStealthFontSize(prev => {
-                          const newVal = prev - 0.5;
+                          const newVal = Math.max(9, prev - 0.5);
                           localStorage.setItem('clueai_stealth_font_size', newVal.toString());
                           return newVal;
                         });
                       }}
-                      className="text-white/50 hover:text-white p-1"
+                      className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors"
                       title="Decrease font size"
-                    ><Minus size={10} /></button>
+                    ><Minus size={12} /></button>
+                    <span className="text-[10px] font-mono text-cyan-400 font-bold px-0.5 select-none">{stealthFontSize}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setStealthFontSize(prev => {
-                          const newVal = prev + 0.5;
+                          const newVal = Math.min(24, prev + 0.5);
                           localStorage.setItem('clueai_stealth_font_size', newVal.toString());
                           return newVal;
                         });
                       }}
-                      className="text-white/50 hover:text-white p-1"
+                      className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors"
                       title="Increase font size"
-                    ><Plus size={10} /></button>
-                    <button onClick={() => setIsAnswerMinimized(false)} className="text-white/50 hover:text-white p-1 ml-1" title="Expand"><Maximize size={10} /></button>
+                    ><Plus size={12} /></button>
+                    <div className="w-[1px] h-3 bg-white/20 mx-0.5" />
+                    <button onClick={() => setIsAnswerMinimized(false)} className="text-cyan-400 hover:text-cyan-300 p-1 hover:bg-cyan-500/10 rounded transition-colors" title="Expand Answer Panel"><Maximize size={12} /></button>
                   </div>
                   <div
                     ref={aiAnswerScrollRef}
@@ -3102,27 +3115,115 @@ function App() {
                 </div>
               ) : (
                 <>
-                  {/* Top-right controls: Minimize answer panel */}
-                  <div className="absolute top-3 right-3 z-50 no-drag flex items-center gap-1.5">
+                  {/* High-Visibility Floating Answer Controls */}
+                  <div className="absolute top-3 right-4 z-50 no-drag flex items-center gap-1.5 bg-[#0a0b12]/95 border border-white/20 backdrop-blur-2xl px-2.5 py-1 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
+                    <button
+                      onClick={() => {
+                        const next = Math.max(10, aiAnswerTextSize - 1);
+                        setAiAnswerTextSize(next);
+                        localStorage.setItem('clueai_answer_size', next.toString());
+                      }}
+                      className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
+                      title="Decrease Text Size (A-)"
+                    >
+                      <Minus size={13} className="text-white" />
+                    </button>
+
+                    <span className="text-[11px] font-mono font-bold text-cyan-300 px-1 select-none">
+                      {aiAnswerTextSize}px
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        const next = Math.min(40, aiAnswerTextSize + 1);
+                        setAiAnswerTextSize(next);
+                        localStorage.setItem('clueai_answer_size', next.toString());
+                      }}
+                      className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
+                      title="Increase Text Size (A+)"
+                    >
+                      <Plus size={13} className="text-white" />
+                    </button>
+
+                    <div className="w-[1px] h-4 bg-white/20 mx-0.5" />
+
                     <button
                       onClick={() => setIsAnswerMinimized(true)}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/20 text-white/50 hover:text-white transition-all shadow-sm text-base"
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-cyan-500/20 text-white/80 hover:text-cyan-300 transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
                       title="Minimize Answer Panel"
                     >
-                      🗕
+                      <Minimize2 size={13} />
                     </button>
                   </div>
+
                   <div className="w-full flex justify-center pt-3 cursor-grab active:cursor-grabbing no-drag opacity-30 hover:opacity-100 transition-opacity">
                     <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
                   </div>
+
                   <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
-                    <div className={`max-w-4xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
+                    <div className={`max-w-5xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                       {aiAnswer ? (
-                        <ReactMarkdown
-                          components={markdownComponents}
-                        >
-                          {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
-                        </ReactMarkdown>
+                        <>
+                          {aiAnswer.includes('```') && (
+                            <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-white/10">
+                              <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 uppercase tracking-wider">
+                                <Code2 size={14} /> Coding Solution Active ({preferredCodeLanguage})
+                              </span>
+                              <button
+                                onClick={() => setIsCodeSplitView(!isCodeSplitView)}
+                                className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                                  isCodeSplitView 
+                                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.25)]' 
+                                    : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                              >
+                                <Columns size={13} /> {isCodeSplitView ? 'Split View (Code & Info)' : 'Unified View'}
+                              </button>
+                            </div>
+                          )}
+
+                          {aiAnswer.includes('```') && isCodeSplitView ? (
+                            (() => {
+                              const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
+                              const matches = [...aiAnswer.matchAll(codeRegex)];
+                              const codeOnly = matches.map(m => m[0]).join('\n\n');
+                              const explanationOnly = aiAnswer.replace(codeRegex, '').trim();
+
+                              return (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full items-start">
+                                  {/* Code Solution Area */}
+                                  <div className="flex flex-col bg-[#05060a]/95 border border-cyan-500/30 rounded-2xl p-4 shadow-xl">
+                                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-white/10">
+                                      <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-wider">
+                                        <Code2 size={16} /> Solution Code ({preferredCodeLanguage})
+                                      </div>
+                                      <CopyButton text={matches.map(m => m[2]).join('\n\n')} className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs" tooltip="Copy Code" />
+                                    </div>
+                                    <ReactMarkdown components={markdownComponents}>
+                                      {codeOnly}
+                                    </ReactMarkdown>
+                                  </div>
+
+                                  {/* Technical Info Area */}
+                                  <div className="flex flex-col bg-white/[0.03] border border-white/10 rounded-2xl p-4 shadow-xl">
+                                    <div className="flex items-center gap-2 text-fuchsia-400 font-bold text-xs uppercase tracking-wider pb-3 mb-2 border-b border-white/10">
+                                      <BookOpen size={16} /> Technical Explanation & Info
+                                    </div>
+                                    <div className="space-y-3 font-medium">
+                                      <ReactMarkdown components={markdownComponents}>
+                                        {explanationOnly || "Code provided in solution block."}
+                                      </ReactMarkdown>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <ReactMarkdown components={markdownComponents}>
+                              {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                            </ReactMarkdown>
+                          )}
+                        </>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full opacity-50 py-20">
                           <Loader2 size={48} className="animate-spin text-cyan-500 mb-4" />
@@ -3157,166 +3258,168 @@ function App() {
                     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
                   }}
                 >
-                  {/* MAIN DASHBOARD HEADER (PREMIUM OBSIDIAN GLASS) */}
-                  <div className="w-full flex-none bg-[#0a0b12]/90 backdrop-blur-2xl px-5 py-3 border-b border-white/10 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.7)] relative z-30 drag-area rounded-t-2xl shrink-0">
-                    {/* Left: Brand & User Profile */}
-                    <div className="flex items-center gap-3.5 no-drag">
-                      <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors" title="Drag Window">
-                        <Move size={15} />
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <div className="relative flex items-center justify-center">
-                          <img src="./logo.png" alt="Logo" className="w-7 h-7 object-cover rounded-lg shadow-sm border border-cyan-400/30" />
-                          <div className="absolute -inset-0.5 rounded-lg bg-cyan-500/20 blur-[2px] -z-10" />
+                  {/* MAIN DASHBOARD HEADER: TWO-TIER OBSIDIAN GLASS ARCHITECTURE */}
+                  <div className="w-full flex-none bg-[#0a0b12]/95 backdrop-blur-2xl border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.7)] relative z-30 drag-area rounded-t-2xl shrink-0">
+                    {/* Top Tier (Tier 1): Titlebar, Identity, Version & Window Controls */}
+                    <div className="w-full px-5 py-2.5 flex items-center justify-between border-b border-white/5">
+                      {/* Left: Move Handle, Logo, App Name, Version & Profile */}
+                      <div className="flex items-center gap-3 no-drag">
+                        <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors" title="Drag Window">
+                          <Move size={14} />
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+                          <div className="relative flex items-center justify-center">
+                            <img src="./logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-lg shadow-sm border border-cyan-400/30" />
+                            <div className="absolute -inset-0.5 rounded-lg bg-cyan-500/20 blur-[2px] -z-10" />
+                          </div>
+
+                          <span className="text-base font-black tracking-tight text-white flex items-center gap-1">
                             Clue<span className="text-cyan-400">AI</span>
                           </span>
+
                           <button
                             onClick={() => setShowUpdateModal(true)}
-                            className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer ml-1"
                             title="Current App Version"
                           >
                             <span>v{appVersion}</span>
                           </button>
-
-                          {/* Always-Visible Electric Blue Update Button matching START INTERVIEW */}
-                          <motion.button
-                            whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(6,182,212,0.6)" }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                              setShowUpdateModal(true);
-                              if (updateStatus === 'idle') handleCheckForUpdates();
-                            }}
-                            className={`flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-cyan-400/50 cursor-pointer ${
-                              (updateStatus === 'available')
-                                ? 'shadow-[0_0_25px_rgba(6,182,212,0.8)] border-cyan-200/90 animate-pulse'
-                                : (updateStatus === 'downloaded')
-                                ? 'shadow-[0_0_25px_rgba(16,185,129,0.8)] border-emerald-300 animate-bounce'
-                                : (updateStatus === 'downloading')
-                                ? 'shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
-                                : 'shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                            }`}
-                            title="ClueAI Live Update Center"
-                          >
-                            {updateStatus === 'downloading' ? (
-                              <>
-                                <Loader2 size={13} className="animate-spin text-white" />
-                                <span>Downloading {downloadProgress.percent}%</span>
-                              </>
-                            ) : updateStatus === 'downloaded' ? (
-                              <>
-                                <Sparkles size={13} className="text-white" />
-                                <span>Restart & Install v{updateInfo.version || '5.5.0'}</span>
-                              </>
-                            ) : updateStatus === 'available' ? (
-                              <>
-                                <span className="relative flex h-2.5 w-2.5 mr-0.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-200 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                                </span>
-                                <Sparkles size={13} className="text-white" />
-                                <span>Hello! Update v{updateInfo.version || '5.5.0'} Ready</span>
-                              </>
-                            ) : updateStatus === 'checking' ? (
-                              <>
-                                <RefreshCw size={12} className="animate-spin text-white" />
-                                <span>Checking...</span>
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw size={12} className="text-white" />
-                                <span>Check Updates</span>
-                              </>
-                            )}
-                          </motion.button>
                         </div>
+
+                        {username && (
+                          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-xl px-2.5 py-0.5 text-white/90 text-xs font-semibold ml-2">
+                            <User size={12} className="text-cyan-400" />
+                            <span>{username}</span>
+                            <button
+                              onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
+                              className="p-0.5 hover:bg-white/10 text-white/50 hover:text-cyan-300 rounded-md transition-colors ml-0.5 cursor-pointer"
+                              title="Rename Profile"
+                            >
+                              <Edit2 size={11} />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      {username && (
-                        <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-xl px-2.5 py-1 text-white/90 text-xs font-semibold ml-1">
-                          <User size={13} className="text-cyan-400" />
-                          <span>{username}</span>
-                          <button
-                            onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
-                            className="p-1 hover:bg-white/10 text-white/50 hover:text-cyan-300 rounded-md transition-colors ml-0.5"
-                            title="Rename Profile"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                        </div>
-                      )}
+                      {/* Right: Window Controls */}
+                      <div className="flex items-center gap-1 no-drag">
+                        <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Shrink Window (Alt -)">
+                          <ZoomOut size={14} />
+                        </button>
+                        <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Enlarge Window (Alt +)">
+                          <ZoomIn size={14} />
+                        </button>
+                        <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Fullscreen">
+                          <Maximize size={14} />
+                        </button>
+                        <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Minimize">
+                          <Minus size={14} />
+                        </button>
+                        <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors cursor-pointer" title="Close">
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Right: Actions, Stealth Shield, Utilities, Controls */}
-                    <div className="flex items-center gap-2.5 no-drag">
-                      {/* Unified Stealth Button */}
-                      <button
-                        onClick={() => {
-                          if (stealthMode) {
-                            setShowStealthWarning(true);
-                          } else {
-                            setStealthMode(true);
-                            ipcRenderer.invoke('set-stealth', true);
-                          }
-                        }}
-                        title={stealthMode ? "Stealth Shield Active (Invisible in screen-shares). Click to disable." : "Stealth Shield OFF (You are visible). Click to activate."}
-                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm border ${stealthMode
-                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
-                          : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
+                    {/* Bottom Tier (Tier 2): Command Ribbon & Action Bar */}
+                    <div className="w-full px-5 py-2 flex items-center justify-between bg-white/[0.015]">
+                      {/* Left: Electric Blue Update Button & Stealth Mode Toggle */}
+                      <div className="flex items-center gap-3 no-drag">
+                        {/* Always-Visible Electric Blue Update Button matching START INTERVIEW */}
+                        <motion.button
+                          whileHover={{ scale: 1.04, boxShadow: "0 0 25px rgba(6,182,212,0.6)" }}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => {
+                            setShowUpdateModal(true);
+                            if (updateStatus === 'idle') handleCheckForUpdates();
+                          }}
+                          className={`flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-cyan-400/50 cursor-pointer ${
+                            (updateStatus === 'available')
+                              ? 'shadow-[0_0_25px_rgba(6,182,212,0.8)] border-cyan-200/90 animate-pulse'
+                              : (updateStatus === 'downloaded')
+                              ? 'shadow-[0_0_25px_rgba(16,185,129,0.8)] border-emerald-300 animate-bounce'
+                              : (updateStatus === 'downloading')
+                              ? 'shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
+                              : 'shadow-[0_0_20px_rgba(6,182,212,0.4)]'
                           }`}
-                      >
-                        {stealthMode ? <ShieldCheck size={14} className="text-emerald-400" /> : <ShieldAlert size={14} className="text-rose-400" />}
-                        <span className="tracking-wide uppercase text-[10.5px]">
-                          {stealthMode ? "Stealth ON" : "Stealth OFF"}
-                        </span>
-                      </button>
+                          title="ClueAI Live Update Center"
+                        >
+                          {updateStatus === 'downloading' ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin text-white" />
+                              <span>Downloading {downloadProgress.percent}%</span>
+                            </>
+                          ) : updateStatus === 'downloaded' ? (
+                            <>
+                              <Sparkles size={13} className="text-white" />
+                              <span>Restart & Install v{updateInfo.version || appVersion}</span>
+                            </>
+                          ) : updateStatus === 'available' ? (
+                            <>
+                              <span className="relative flex h-2.5 w-2.5 mr-0.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-200 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                              </span>
+                              <Sparkles size={13} className="text-white" />
+                              <span>Hello! Update v{updateInfo.version || appVersion} Ready</span>
+                            </>
+                          ) : updateStatus === 'checking' ? (
+                            <>
+                              <RefreshCw size={12} className="animate-spin text-white" />
+                              <span>Checking...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw size={12} className="text-white" />
+                              <span>Check Updates</span>
+                            </>
+                          )}
+                        </motion.button>
 
-                      {/* Guide Info Button */}
-                      <button
-                        onClick={() => setShowInfo(!showInfo)}
-                        className={`p-2 rounded-xl transition-all border ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
-                        title="Information Guide"
-                      >
-                        <Info size={15} />
-                      </button>
+                        {/* Stealth Shield Button - Compact Glowing Icon */}
+                        <button
+                          onClick={() => {
+                            if (stealthMode) {
+                              setShowStealthWarning(true);
+                            } else {
+                              setStealthMode(true);
+                              ipcRenderer.invoke('set-stealth', true);
+                            }
+                          }}
+                          title={stealthMode ? "Stealth Shield Active (Green: Protected from screen-shares). Click to disable." : "Stealth Shield OFF (Red: Visible). Click to activate."}
+                          className={`p-2 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm border cursor-pointer ${stealthMode
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                            : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse'
+                            }`}
+                        >
+                          {stealthMode ? <ShieldCheck size={16} className="text-emerald-400" /> : <ShieldAlert size={16} className="text-rose-400" />}
+                        </button>
+                      </div>
 
-                      {/* Settings Button */}
-                      <button
-                        onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }}
-                        className={`p-2 rounded-xl transition-all border ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
-                        title="Settings & Models"
-                      >
-                        <Settings size={15} />
-                      </button>
+                      {/* Right: Info, Settings & Primary START INTERVIEW CTA */}
+                      <div className="flex items-center gap-2.5 no-drag">
+                        <button
+                          onClick={() => setShowInfo(!showInfo)}
+                          className={`p-2 rounded-xl transition-all border cursor-pointer ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+                          title="Information Guide"
+                        >
+                          <Info size={15} />
+                        </button>
 
-                      {/* Start Interview Primary CTA */}
-                      <button
-                        onClick={handleStartCaptureClick}
-                        className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40"
-                      >
-                        <Play size={13} fill="currentColor" /> Start Interview
-                      </button>
+                        <button
+                          onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }}
+                          className={`p-2 rounded-xl transition-all border cursor-pointer ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+                          title="Settings & Models"
+                        >
+                          <Settings size={15} />
+                        </button>
 
-                      {/* Window Controls */}
-                      <div className="flex items-center gap-1 ml-2 pl-3 border-l border-white/10 shrink-0">
-                        <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Shrink Window (Alt -)">
-                          <ZoomOut size={15} />
-                        </button>
-                        <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Enlarge Window (Alt +)">
-                          <ZoomIn size={15} />
-                        </button>
-                        <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Fullscreen">
-                          <Maximize size={15} />
-                        </button>
-                        <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Minimize">
-                          <Minus size={15} />
-                        </button>
-                        <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors" title="Close">
-                          <X size={15} />
+                        <button
+                          onClick={handleStartCaptureClick}
+                          className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 cursor-pointer"
+                        >
+                          <Play size={13} fill="currentColor" /> Start Interview
                         </button>
                       </div>
                     </div>
@@ -3551,7 +3654,7 @@ function App() {
                 )}
               </AnimatePresence>
 
-              {/* Full-Screen Update Center Modal with Framer Motion */}
+              {/* Modern Horizontal Update Center Modal with Framer Motion */}
               <AnimatePresence>
                 {showUpdateModal && (
                   <motion.div
@@ -3559,23 +3662,23 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
-                      initial={{ scale: 0.92, opacity: 0, y: 15 }}
+                      initial={{ scale: 0.94, opacity: 0, y: 15 }}
                       animate={{ scale: 1, opacity: 1, y: 0 }}
-                      exit={{ scale: 0.92, opacity: 0, y: 15 }}
-                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                      className="bg-[#0c0d16]/95 backdrop-blur-3xl border border-cyan-500/40 w-full max-w-xl rounded-3xl p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] flex flex-col gap-3.5 relative max-h-[86vh] overflow-hidden"
+                      exit={{ scale: 0.94, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className="bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 w-full max-w-4xl rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.2)] flex flex-col gap-4 relative max-h-[88vh] overflow-hidden"
                     >
-                      {/* Fixed Modal Header */}
-                      <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+                      {/* Modal Header */}
+                      <div className="flex items-center justify-between pb-3.5 border-b border-white/10 shrink-0">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center shadow-inner">
                             <Sparkles size={20} className="text-cyan-300" />
                           </div>
                           <div>
-                            <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                            <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
                               ClueAI Update Center
                             </h2>
                             <p className="text-xs text-white/50">Official real-time updates powered by GitHub Releases</p>
@@ -3590,159 +3693,167 @@ function App() {
                         </button>
                       </div>
 
-                      {/* Scrollable Center Body */}
-                      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-3.5 pr-1">
-                        {/* Version Comparison Cards */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 flex flex-col gap-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Current Installed</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl font-black text-white">v{appVersion}</span>
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/70 border border-white/15">Active</span>
+                      {/* Wide Horizontal Dual-Column Body */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1 min-h-0 overflow-hidden items-stretch">
+                        {/* Left Column: Version Info, Progress & Action Controls */}
+                        <div className="flex flex-col gap-3.5 justify-between">
+                          <div className="space-y-3">
+                            {/* Version Comparison Cards */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3.5 flex flex-col gap-1">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Current Installed</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl font-black text-white">v{appVersion}</span>
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/70 border border-white/15">Active</span>
+                                </div>
+                              </div>
+
+                              <div className={`border rounded-2xl p-3.5 flex flex-col gap-1 ${
+                                updateStatus === 'available' || updateStatus === 'downloaded'
+                                  ? 'bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+                                  : 'bg-white/[0.03] border-white/10'
+                              }`}>
+                                <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Latest Available</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl font-black text-white">
+                                    v{updateInfo.version || appVersion}
+                                  </span>
+                                  {updateStatus === 'available' || updateStatus === 'downloaded' ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse">
+                                      New Release
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                      Up to Date
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
+
+                            {/* Status Display Banner */}
+                            {updateStatus === 'checking' && (
+                              <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-2xl p-3.5 flex items-center gap-3">
+                                <Loader2 size={18} className="animate-spin text-cyan-400 shrink-0" />
+                                <span className="text-xs text-cyan-200 font-medium">Checking GitHub Releases repository for latest packages...</span>
+                              </div>
+                            )}
+
+                            {updateStatus === 'not-available' && (
+                              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3.5 flex items-center gap-3">
+                                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-emerald-200 font-bold">You are using the latest version of ClueAI!</p>
+                                  <p className="text-[11px] text-emerald-200/60 mt-0.5">Your system is fully up to date.</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {updateStatus === 'error' && (
+                              <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3.5 flex items-center gap-3">
+                                <AlertTriangle size={18} className="text-rose-400 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-rose-200 font-bold">Update Notice</p>
+                                  <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not verify GitHub Releases'}</p>
+                                </div>
+                                <button
+                                  onClick={handleCheckForUpdates}
+                                  className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer"
+                                >
+                                  Retry
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Real-Time Download Progress Bar */}
+                            {updateStatus === 'downloading' && (
+                              <div className="bg-white/[0.04] border border-cyan-500/40 rounded-2xl p-4 flex flex-col gap-2.5 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-white flex items-center gap-2">
+                                    <Loader2 size={15} className="animate-spin text-cyan-400" />
+                                    Downloading Update Package...
+                                  </span>
+                                  <span className="font-mono text-cyan-300 font-bold px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/30">
+                                    {downloadProgress.percent}%
+                                  </span>
+                                </div>
+
+                                {/* Progress track */}
+                                <div className="w-full h-3 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5 relative">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 rounded-full transition-all duration-200 shadow-[0_0_12px_rgba(6,182,212,0.8)]"
+                                    style={{ width: `${Math.max(downloadProgress.percent, 3)}%` }}
+                                  />
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] text-white/60 font-mono">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                                    Speed: {downloadProgress.bytesPerSecond > 1024 * 1024
+                                      ? `${(downloadProgress.bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`
+                                      : `${Math.round(downloadProgress.bytesPerSecond / 1024)} KB/s`}
+                                  </span>
+                                  <span>
+                                    {(downloadProgress.transferred / (1024 * 1024)).toFixed(1)} MB / {(downloadProgress.total / (1024 * 1024)).toFixed(1)} MB
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
-                          <div className={`border rounded-2xl p-3.5 flex flex-col gap-1 ${
-                            updateStatus === 'available' || updateStatus === 'downloaded'
-                              ? 'bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
-                              : 'bg-white/[0.03] border-white/10'
-                          }`}>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Latest Available</span>
+                          {/* Primary CTA Buttons for Left Column */}
+                          <div className="pt-2 flex flex-col gap-2.5">
+                            {updateStatus === 'downloaded' ? (
+                              <button
+                                onClick={handleRestartToInstall}
+                                className="w-full py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_25px_rgba(6,182,212,0.6)] border border-cyan-300/60 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 animate-pulse cursor-pointer"
+                              >
+                                <Sparkles size={16} />
+                                <span>Restart & Install Now</span>
+                              </button>
+                            ) : updateStatus === 'available' ? (
+                              <button
+                                onClick={handleDownloadUpdate}
+                                className="w-full py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_25px_rgba(6,182,212,0.5)] border border-cyan-400/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <Download size={16} />
+                                <span>Download Update Package</span>
+                              </button>
+                            ) : null}
+
                             <div className="flex items-center gap-2">
-                              <span className="text-xl font-black text-white">
-                                v{updateInfo.version || appVersion}
-                              </span>
-                              {updateStatus === 'available' || updateStatus === 'downloaded' ? (
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse">
-                                  New Release
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                                  Up to Date
-                                </span>
-                              )}
+                              <button
+                                onClick={handleCheckForUpdates}
+                                disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                              >
+                                <RefreshCw size={13} className={updateStatus === 'checking' ? 'animate-spin' : ''} />
+                                <span>Check Again</span>
+                              </button>
+
+                              <button
+                                onClick={() => setShowUpdateModal(false)}
+                                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white bg-white/[0.02] hover:bg-white/10 border border-white/5 transition-colors cursor-pointer"
+                              >
+                                Close
+                              </button>
                             </div>
                           </div>
                         </div>
 
-                        {/* Status Display Banner */}
-                        {updateStatus === 'checking' && (
-                          <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-2xl p-3.5 flex items-center gap-3">
-                            <Loader2 size={18} className="animate-spin text-cyan-400 shrink-0" />
-                            <span className="text-xs text-cyan-200 font-medium">Checking GitHub Releases repository for latest packages...</span>
+                        {/* Right Column: Dedicated "What's New in ClueAI" Pane */}
+                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-4 flex flex-col gap-2.5 h-full min-h-0 overflow-hidden shadow-inner">
+                          <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                              <FileText size={14} />
+                              What's New in {updateInfo.version ? `v${updateInfo.version}` : `v${appVersion}`}
+                            </h3>
+                            <span className="text-[10px] text-white/40 font-mono">Release Notes</span>
                           </div>
-                        )}
 
-                        {updateStatus === 'not-available' && (
-                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3.5 flex items-center gap-3">
-                            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-                            <div>
-                              <p className="text-xs text-emerald-200 font-bold">You are using the latest version of ClueAI!</p>
-                              <p className="text-[11px] text-emerald-200/60 mt-0.5">Your system is fully up to date.</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {updateStatus === 'error' && (
-                          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3.5 flex items-center gap-3">
-                            <AlertTriangle size={18} className="text-rose-400 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-rose-200 font-bold">Update Notice</p>
-                              <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not verify GitHub Releases'}</p>
-                            </div>
-                            <button
-                              onClick={handleCheckForUpdates}
-                              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold rounded-lg transition-colors shrink-0 cursor-pointer"
-                            >
-                              Retry
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Real-Time Download Progress Bar */}
-                        {updateStatus === 'downloading' && (
-                          <div className="bg-white/[0.04] border border-cyan-500/40 rounded-2xl p-4 flex flex-col gap-2.5 shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-bold text-white flex items-center gap-2">
-                                <Loader2 size={15} className="animate-spin text-cyan-400" />
-                                Downloading Update Package...
-                              </span>
-                              <span className="font-mono text-cyan-300 font-bold px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/30">
-                                {downloadProgress.percent}%
-                              </span>
-                            </div>
-
-                            {/* Progress track */}
-                            <div className="w-full h-3 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5 relative">
-                              <div
-                                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 rounded-full transition-all duration-200 shadow-[0_0_12px_rgba(6,182,212,0.8)]"
-                                style={{ width: `${Math.max(downloadProgress.percent, 3)}%` }}
-                              />
-                            </div>
-
-                            <div className="flex items-center justify-between text-[11px] text-white/60 font-mono">
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-                                Speed: {downloadProgress.bytesPerSecond > 1024 * 1024
-                                  ? `${(downloadProgress.bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`
-                                  : `${Math.round(downloadProgress.bytesPerSecond / 1024)} KB/s`}
-                              </span>
-                              <span>
-                                {(downloadProgress.transferred / (1024 * 1024)).toFixed(1)} MB / {(downloadProgress.total / (1024 * 1024)).toFixed(1)} MB
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Release Notes / What's New with HTML Tag Stripping & Clean Formatting */}
-                        <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex flex-col gap-2">
-                          <h3 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                            <FileText size={13} />
-                            What's New in {updateInfo.version ? `v${updateInfo.version}` : `v${appVersion}`}
-                          </h3>
-
-                          <div className="max-h-40 overflow-y-auto custom-scrollbar pr-1 leading-relaxed">
+                          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 leading-relaxed text-xs">
                             {renderReleaseNotes(updateInfo.releaseNotes)}
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Fixed Footer Action Buttons */}
-                      <div className="flex items-center justify-between pt-3 border-t border-white/10 shrink-0">
-                        <button
-                          onClick={handleCheckForUpdates}
-                          disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-white/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                        >
-                          <RefreshCw size={13} className={updateStatus === 'checking' ? 'animate-spin' : ''} />
-                          <span>Check Again</span>
-                        </button>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setShowUpdateModal(false)}
-                            className="px-4 py-2 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                          >
-                            Close
-                          </button>
-
-                          {updateStatus === 'downloaded' ? (
-                            <button
-                              onClick={handleRestartToInstall}
-                              className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_20px_rgba(6,182,212,0.6)] border border-cyan-300/60 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 animate-pulse cursor-pointer"
-                            >
-                              <Sparkles size={14} />
-                              <span>Restart & Install Now</span>
-                            </button>
-                          ) : updateStatus === 'available' ? (
-                            <button
-                              onClick={handleDownloadUpdate}
-                              className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-                            >
-                              <Download size={14} />
-                              <span>Download Update</span>
-                            </button>
-                          ) : null}
                         </div>
                       </div>
                     </motion.div>
@@ -3847,6 +3958,31 @@ function App() {
                                   value={selectedSource}
                                   onChange={(val: any) => setSelectedSource(val)}
                                   options={sources.map(s => ({ value: s.id, label: s.name }))}
+                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5 flex items-center justify-between">
+                                  <span>Default Code Language</span>
+                                  <span className="text-[10px] text-cyan-400 font-mono">Default: Java</span>
+                                </label>
+                                <CustomSelect
+                                  value={preferredCodeLanguage}
+                                  onChange={(val: string) => {
+                                    setPreferredCodeLanguage(val);
+                                    localStorage.setItem('clueai_code_language', val);
+                                  }}
+                                  options={[
+                                    { value: 'Java', label: 'Java (System Default)' },
+                                    { value: 'Python', label: 'Python' },
+                                    { value: 'C++', label: 'C++' },
+                                    { value: 'JavaScript', label: 'JavaScript' },
+                                    { value: 'TypeScript', label: 'TypeScript' },
+                                    { value: 'C#', label: 'C#' },
+                                    { value: 'Go', label: 'Go' },
+                                    { value: 'Rust', label: 'Rust' },
+                                    { value: 'Auto', label: 'Auto-detect' }
+                                  ]}
                                   className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
                                 />
                               </div>
@@ -4780,26 +4916,162 @@ function App() {
                 </div>
               )}
 
-              {/* Dashboard Empty State */}
+              {/* Dashboard Empty State with Scroll-Collapsing Top Sections */}
               {!isRecording && !showSettings && !showInfo && !showUpdateModal && (
-                <div className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
-                      <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
-                      <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br /><br />Development driven by real users<br />Faster iteration on features that matter</p>
-                      <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-150">✨ View Portfolio &rarr;</button>
+                <div className="flex-1 min-h-0 flex flex-col mt-2 px-2 pb-4 overflow-hidden">
+                  {/* Upper Two Sections with Smooth Scroll-Collapse Transition */}
+                  <motion.div 
+                    animate={{ 
+                      height: isHistoryScrolled ? 74 : 205,
+                      marginBottom: isHistoryScrolled ? 10 : 18
+                    }}
+                    transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                    className="grid grid-cols-2 gap-4 shrink-0 overflow-hidden"
+                  >
+                    {/* Card 1: Farhan Khalid Portfolio Card */}
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl px-5 py-3 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col justify-center text-center cursor-default h-full transition-all">
+                      <div className="absolute -top-12 -right-12 w-28 h-28 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
+                      {!isHistoryScrolled ? (
+                        <>
+                          <h2 className="text-2xl font-bold text-white mb-1.5 tracking-tight">Made by Farhan Khalid</h2>
+                          <p className="text-blue-100/80 text-xs mb-4 leading-relaxed font-medium">Developer & Engineer<br />Development driven by real users • Faster iteration on features</p>
+                          <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-5 py-2 rounded-full font-bold text-xs shadow-md flex items-center justify-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all self-center cursor-pointer">✨ View Portfolio &rarr;</button>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between w-full px-2">
+                          <div className="text-left">
+                            <h2 className="text-sm font-black text-white tracking-tight flex items-center gap-2">
+                              <span>Made by Farhan Khalid</span>
+                              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-normal">Engineer</span>
+                            </h2>
+                            <p className="text-blue-200/80 text-[11px] mt-0.5">Development driven by real users</p>
+                          </div>
+                          <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-3.5 py-1.5 rounded-full font-bold text-[11px] shadow flex items-center gap-1.5 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all cursor-pointer">✨ Portfolio &rarr;</button>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="relative h-full w-full">
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 overflow-hidden shadow-lg border border-blue-400/30 flex flex-col cursor-default">
-                        <div className="flex flex-col mb-3 w-full shrink-0">
-                          <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-xl w-full mb-3">
-                            <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
-                              <CheckCircle2 size={12} />
+                    {/* Card 2: Interview and Notes Reminder Card */}
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl px-5 py-3 relative overflow-hidden shadow-lg border border-blue-400/30 flex flex-col justify-center cursor-default h-full transition-all">
+                      {!isHistoryScrolled ? (
+                        <>
+                          <div className="flex flex-col mb-2 w-full shrink-0">
+                            <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-lg w-full mb-2">
+                              <div className="w-5 h-5 rounded bg-white/20 text-white flex items-center justify-center">
+                                <CheckCircle2 size={12} />
+                              </div>
+                              Interview and Notes Reminder
+                            </h3>
+                            <div className="flex justify-center items-center gap-3 w-full px-2">
+                              <button
+                                onClick={() => {
+                                  setReminderForm({ id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM' });
+                                  setLocalReminderStealth(stealthMode);
+                                  setReminderPopupMode('create');
+                                  setShowReminderPopup(true);
+                                }}
+                                className="bg-white/20 text-white hover:bg-white px-3 py-1 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
+                              >
+                                <Plus size={13} /> Create Reminder
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setNotesForm({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
+                                  setLocalNotesStealth(stealthMode);
+                                  setNotesPopupMode('create');
+                                  setShowNotesPopup(true);
+                                }}
+                                className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
+                              >
+                                <Plus size={13} /> New Note
+                              </button>
                             </div>
-                            Interview and Notes Reminder
-                          </h3>
-                          <div className="flex justify-center items-center gap-4 w-full px-2">
+                          </div>
+
+                          <div className="w-full space-y-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar max-h-24">
+                            {(() => {
+                              const combined = [
+                                ...reminderProfiles.map(p => ({ ...p, type: 'reminder' as const })),
+                                ...notesProfiles.map(p => ({ ...p, type: 'note' as const }))
+                              ].sort((a, b) => Number(b.id) - Number(a.id));
+
+                              if (combined.length === 0) {
+                                return <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders or notes saved yet.</p>;
+                              }
+
+                              return combined.map(prof => {
+                                let isPast = false;
+                                try {
+                                  const [d, m, y] = prof.date.split('-');
+                                  const [h, min] = prof.time.split(':');
+                                  let hours = parseInt(h);
+                                  if (prof.ampm === 'PM' && hours < 12) hours += 12;
+                                  if (prof.ampm === 'AM' && hours === 12) hours = 0;
+                                  const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
+                                  isPast = new Date() > targetDate;
+                                } catch (e) { }
+
+                                if (prof.type === 'reminder') {
+                                  return (
+                                    <div
+                                      key={prof.id}
+                                      className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                                      onClick={() => {
+                                        setReminderForm(prof as any);
+                                        setLocalReminderStealth(stealthMode);
+                                        setReminderPopupMode('preview');
+                                        setShowReminderPopup(true);
+                                      }}
+                                    >
+                                      <div className="flex flex-col flex-1 min-w-0 pr-2">
+                                        <span className="font-bold text-xs text-white truncate flex items-center gap-1.5">
+                                          {prof.name}
+                                          {isPast ? <span className="px-1 py-0.2 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[8.5px] uppercase">Sent</span> : <span className="px-1 py-0.2 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[8.5px] uppercase animate-pulse">Pending</span>}
+                                        </span>
+                                        <span className="text-[10px] text-blue-200 font-bold truncate">Reminder • <span className="opacity-70 font-normal">{prof.jobTitle}</span></span>
+                                      </div>
+                                      <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded shrink-0">{prof.date}</span>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div
+                                      key={prof.id}
+                                      className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
+                                      onClick={() => {
+                                        setNotesForm(prof as any);
+                                        setLocalNotesStealth(stealthMode);
+                                        setNotesPopupMode('preview');
+                                        setShowNotesPopup(true);
+                                      }}
+                                    >
+                                      <div className="flex flex-col flex-1 min-w-0 pr-2">
+                                        <span className="font-bold text-xs text-white truncate flex items-center gap-1.5">
+                                          Note
+                                          {isPast ? <span className="px-1 py-0.2 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[8.5px] uppercase">Sent</span> : <span className="px-1 py-0.2 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[8.5px] uppercase animate-pulse">Pending</span>}
+                                        </span>
+                                        <span className="text-[10px] text-teal-200 font-bold truncate">Note • <span className="opacity-70 font-normal">{prof.email}</span></span>
+                                      </div>
+                                      <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded shrink-0">{prof.time} {prof.ampm}</span>
+                                    </div>
+                                  );
+                                }
+                              });
+                            })()}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between w-full px-2">
+                          <div className="text-left flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0">
+                              <CheckCircle2 size={14} />
+                            </div>
+                            <div>
+                              <h3 className="font-black text-sm text-white tracking-tight">Interview & Reminders</h3>
+                              <p className="text-blue-200/80 text-[11px]">{reminderProfiles.length + notesProfiles.length} active scheduled</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => {
                                 setReminderForm({ id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM' });
@@ -4807,9 +5079,9 @@ function App() {
                                 setReminderPopupMode('create');
                                 setShowReminderPopup(true);
                               }}
-                              className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                              className="bg-white/20 text-white hover:bg-white hover:text-blue-600 px-2.5 py-1 rounded-lg font-bold transition-all text-xs flex items-center gap-1 cursor-pointer"
                             >
-                              <Plus size={14} /> Create Reminder
+                              <Plus size={12} /> Reminder
                             </button>
                             <button
                               onClick={() => {
@@ -4818,117 +5090,43 @@ function App() {
                                 setNotesPopupMode('create');
                                 setShowNotesPopup(true);
                               }}
-                              className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                              className="bg-teal-500/80 text-white hover:bg-teal-400 px-2.5 py-1 rounded-lg font-bold transition-all text-xs flex items-center gap-1 cursor-pointer"
                             >
-                              <Plus size={14} /> New Note
+                              <Plus size={12} /> Note
                             </button>
                           </div>
                         </div>
-
-                        <div className="w-full space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                          {(() => {
-                            const combined = [
-                              ...reminderProfiles.map(p => ({ ...p, type: 'reminder' as const })),
-                              ...notesProfiles.map(p => ({ ...p, type: 'note' as const }))
-                            ].sort((a, b) => Number(b.id) - Number(a.id));
-
-                            if (combined.length === 0) {
-                              return <p className="text-blue-100/50 text-xs italic py-2 text-center h-full flex items-center justify-center">No reminders or notes saved yet.</p>;
-                            }
-
-                            return combined.map(prof => {
-                              // Check status
-                              let isPast = false;
-                              try {
-                                const [d, m, y] = prof.date.split('-');
-                                const [h, min] = prof.time.split(':');
-                                let hours = parseInt(h);
-                                if (prof.ampm === 'PM' && hours < 12) hours += 12;
-                                if (prof.ampm === 'AM' && hours === 12) hours = 0;
-                                const targetDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, parseInt(min));
-                                isPast = new Date() > targetDate;
-                              } catch (e) { }
-
-                              if (prof.type === 'reminder') {
-                                return (
-                                  <div
-                                    key={prof.id}
-                                    className="bg-blue-900/40 hover:bg-blue-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-blue-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                                    onClick={() => {
-                                      setReminderForm(prof as any);
-                                      setLocalReminderStealth(stealthMode);
-                                      setReminderPopupMode('preview');
-                                      setShowReminderPopup(true);
-                                    }}
-                                  >
-                                    <div className="flex flex-col flex-1 min-w-0 pr-3">
-                                      <span className="font-bold text-xs text-white truncate flex items-center gap-2">
-                                        {prof.name}
-                                        {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
-                                      </span>
-                                      <span className="text-[10px] text-blue-200 font-bold truncate">Reminder <span className="opacity-70 font-normal">• {prof.jobTitle}</span></span>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                      <div className="flex flex-wrap items-center justify-end gap-2">
-                                        <span className="text-[10px] text-blue-300 font-medium bg-blue-500/20 px-1.5 py-0.5 rounded">{prof.date}</span>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setItemToDelete({ id: prof.id, type: 'reminder', name: prof.name, isPast });
-                                          }}
-                                          className="text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <X size={14} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              } else {
-                                return (
-                                  <div
-                                    key={prof.id}
-                                    className="bg-teal-900/40 hover:bg-teal-900/60 rounded-xl p-2.5 backdrop-blur-md flex justify-between items-center w-full border border-teal-400/20 group cursor-pointer transition-colors text-left shrink-0"
-                                    onClick={() => {
-                                      setNotesForm(prof as any);
-                                      setLocalNotesStealth(stealthMode);
-                                      setNotesPopupMode('preview');
-                                      setShowNotesPopup(true);
-                                    }}
-                                  >
-                                    <div className="flex flex-col flex-1 min-w-0 pr-1">
-                                      <span className="font-bold text-xs text-white truncate flex items-center gap-2">
-                                        Note
-                                        {isPast ? <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 text-[9px] uppercase tracking-wider">Sent Successfully</span> : <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] uppercase tracking-wider animate-pulse">In Process</span>}
-                                      </span>
-                                      <span className="text-[10px] text-teal-200 font-bold truncate">Note <span className="opacity-70 font-normal">• {prof.email}</span></span>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                      <div className="flex flex-wrap items-center justify-end gap-2">
-                                        <span className="text-[10px] text-teal-300 font-medium bg-teal-500/20 px-1.5 py-0.5 rounded">{prof.time} {prof.ampm}</span>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setItemToDelete({ id: prof.id, type: 'note', name: 'Note Scheduled', isPast });
-                                          }}
-                                          className="text-teal-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-0.5 flex-shrink-0"
-                                        >
-                                          <X size={14} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            });
-                          })()}
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-3 mt-4 pb-4">
-                    <h3 className="text-brand-subtext font-bold mb-3 text-sm px-2">Yesterday</h3>
+                  {/* Session History Container with Scroll-Collapse Detection */}
+                  <div 
+                    className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-3 pb-4"
+                    onScroll={(e) => {
+                      const top = e.currentTarget.scrollTop;
+                      if (top > 20 && !isHistoryScrolled) {
+                        setIsHistoryScrolled(true);
+                      } else if (top <= 5 && isHistoryScrolled) {
+                        setIsHistoryScrolled(false);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between px-2 mb-2 sticky top-0 bg-[#09090b]/90 backdrop-blur-md py-1.5 z-20">
+                      <h3 className="text-brand-subtext font-bold text-sm flex items-center gap-2">
+                        <span>Yesterday</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 font-mono text-white/50">{sessions.length} sessions</span>
+                      </h3>
+                      {isHistoryScrolled && (
+                        <button
+                          onClick={() => setIsHistoryScrolled(false)}
+                          className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 bg-cyan-500/10 hover:bg-cyan-500/20 px-2.5 py-1 rounded-full border border-cyan-500/30 transition-all cursor-pointer"
+                        >
+                          <ChevronUp size={12} /> Expand Cards
+                        </button>
+                      )}
+                    </div>
+                    
                     <div className="space-y-3">
                       {sessions.length === 0 ? (
                         <div className="text-brand-subtext text-sm italic px-2 py-4">No sessions saved yet. Start capturing to see history here!</div>
@@ -5122,8 +5320,9 @@ function App() {
                           transition={{ type: "spring", stiffness: 420, damping: 28 }}
                           className="w-full max-w-[1040px] bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.12)] flex flex-col gap-2 drag-area"
                         >
-                          {/* 1. Sleek Controls & Status Ribbon */}
-                          <div className="flex items-center justify-between w-full no-drag px-1">
+                          {/* 1. COMMAND DOCK TWO-TIER ARCHITECTURE */}
+                          {/* Tier 1: Identity, Brand, Stealth, Hotkeys, Model & Window Controls */}
+                          <div className="flex items-center justify-between w-full no-drag px-1 pb-1 border-b border-white/5">
                             {/* Left: Drag Handle, Brand, Timer, Stealth, Hotkeys, Model Selector */}
                             <div className="flex items-center gap-2">
                               <div className="p-1 bg-white/5 hover:bg-white/10 rounded text-white/40 hover:text-white/80 cursor-grab active:cursor-grabbing shrink-0" title="Drag Dock">
@@ -5131,11 +5330,12 @@ function App() {
                               </div>
 
                               {/* Brand Logo & Live Recording Timer */}
-                              <div className="flex items-center gap-1.5 shrink-0 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/10 shadow-sm">
+                              <div className="flex items-center gap-1.5 shrink-0 bg-white/[0.04] px-2 py-0.5 rounded-lg border border-white/10 shadow-sm">
                                 <img src="./logo.png" alt="Logo" className="w-4 h-4 object-cover rounded shadow-sm border border-cyan-400/30" />
                                 <span className="text-[11px] font-black text-white">Clue<span className="text-cyan-400">AI</span></span>
                                 <span className="text-cyan-300 font-mono font-bold text-[10px] ml-1 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">{formatTimer(recordingSeconds)}</span>
                               </div>
+
                               {(updateStatus === 'available' || updateStatus === 'downloaded') && (
                                 <button
                                   onClick={() => setShowUpdateModal(true)}
@@ -5144,11 +5344,11 @@ function App() {
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
                                   <Sparkles size={10} />
-                                  <span>Update Available</span>
+                                  <span>Update</span>
                                 </button>
                               )}
 
-                              {/* Stealth Shield Toggle Button */}
+                              {/* Stealth Shield Toggle Button - Compact Glowing Icon */}
                               <button
                                 onClick={() => {
                                   if (stealthMode) {
@@ -5158,18 +5358,17 @@ function App() {
                                     ipcRenderer.invoke('set-stealth', true);
                                   }
                                 }}
-                                className={`px-2 py-1 rounded-lg font-bold text-[9.5px] flex items-center gap-1 border transition-all ${stealthMode
-                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                                className={`p-1.5 rounded-lg flex items-center justify-center border transition-all cursor-pointer ${stealthMode
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                                   : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'
                                   }`}
-                                title={stealthMode ? "Stealth Shield Active (Click to disable)" : "Stealth Shield OFF (Click to activate)"}
+                                title={stealthMode ? "Stealth Shield Active (Green). Click to disable" : "Stealth Shield OFF (Red). Click to activate"}
                               >
-                                {stealthMode ? <ShieldCheck size={11} className="text-emerald-400" /> : <AlertTriangle size={11} className="text-rose-400" />}
-                                <span className="uppercase tracking-wider">{stealthMode ? "Stealth ON" : "Stealth OFF"}</span>
+                                {stealthMode ? <ShieldCheck size={13} className="text-emerald-400" /> : <ShieldAlert size={13} className="text-rose-400" />}
                               </button>
 
                               {/* Global Hotkeys Toggle */}
-                              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-1 rounded-lg shrink-0" title="Toggle Global Hotkeys">
+                              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-0.5 rounded-lg shrink-0" title="Toggle Global Hotkeys">
                                 <button
                                   onClick={() => {
                                     const newState = !globalHotkeysEnabled;
@@ -5202,79 +5401,14 @@ function App() {
                                     { value: 'deepseek', label: 'DeepSeek Coder' },
                                     { value: 'glm', label: 'GLM / NVIDIA' }
                                   ]}
-                                  className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[125px]"
+                                  className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[130px]"
                                   icon={<Cpu size={10} className="text-brand-accent pointer-events-none" />}
                                 />
                               </div>
                             </div>
 
-                            {/* Right: Actions, History, Stop & Window Controls */}
+                            {/* Right: Window Controls */}
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
-                                </span>
-                                <span className="text-[9px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
-                              </div>
-
-                              <button
-                                onClick={handlePauseToggle}
-                                className={`px-2 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
-                                title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
-                              >
-                                {isPaused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
-                                <span>{isPaused ? 'Resume' : 'Pause'}</span>
-                                <span className="text-[8px] opacity-60 font-mono">1</span>
-                              </button>
-
-                              <button
-                                onClick={handleSnipClick}
-                                className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
-                                title="Snip Screen Question (4 / A)"
-                              >
-                                <Crop size={9} />
-                                <span>Snip</span>
-                                <span className="text-[8px] opacity-60 font-mono">4</span>
-                              </button>
-
-                              <button
-                                onClick={handleClearAll}
-                                className="px-2 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
-                                title="Clear Transcript (3 / C)"
-                              >
-                                <Trash2 size={9} />
-                                <span>Clear</span>
-                                <span className="text-[8px] opacity-60 font-mono">3</span>
-                              </button>
-
-                              <button
-                                onClick={() => setShowVirtualKeyboard(true)}
-                                className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
-                                title="Edit Transcript (7 / Q)"
-                              >
-                                <Edit2 size={9} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
-                              </button>
-
-                              {currentSessionHistory.length > 0 && (
-                                <button
-                                  onClick={() => setShowPreviousQuestions(true)}
-                                  className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
-                                  title="Session History (8 / H)"
-                                >
-                                  <Clock size={9} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
-                                </button>
-                              )}
-
-                              {/* STOP Recording Session */}
-                              <button
-                                onClick={stopRecording}
-                                className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
-                                title="Stop Recording Session (6 / D)"
-                              >
-                                <Square size={9} fill="currentColor" /> STOP <span className="text-[8px] opacity-60 font-mono">6</span>
-                              </button>
-
                               {/* Settings Button */}
                               <button
                                 onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
@@ -5302,6 +5436,77 @@ function App() {
                                 <X size={12} />
                               </button>
                             </div>
+                          </div>
+
+                          {/* Tier 2: Interview Action Ribbon (Live STT, Controls & STOP) */}
+                          <div className="flex items-center justify-between w-full no-drag px-1 py-0.5">
+                            {/* Left: Live STT, Mic Controls, Snip, Clear, Edit, History */}
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
+                                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                                </span>
+                                <span className="text-[9.5px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
+                              </div>
+
+                              <button
+                                onClick={handlePauseToggle}
+                                className={`px-2.5 py-1 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                                title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
+                              >
+                                {isPaused ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
+                                <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                                <span className="text-[8px] opacity-60 font-mono">1</span>
+                              </button>
+
+                              <button
+                                onClick={handleSnipClick}
+                                className="px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all"
+                                title="Snip Screen Question (4 / A)"
+                              >
+                                <Crop size={10} />
+                                <span>Snip</span>
+                                <span className="text-[8px] opacity-60 font-mono">4</span>
+                              </button>
+
+                              <button
+                                onClick={handleClearAll}
+                                className="px-2.5 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all"
+                                title="Clear Transcript (3 / C)"
+                              >
+                                <Trash2 size={10} />
+                                <span>Clear</span>
+                                <span className="text-[8px] opacity-60 font-mono">3</span>
+                              </button>
+
+                              <button
+                                onClick={() => setShowVirtualKeyboard(true)}
+                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1.5 transition-colors"
+                                title="Edit Transcript (7 / Q)"
+                              >
+                                <Edit2 size={10} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
+                              </button>
+
+                              {currentSessionHistory.length > 0 && (
+                                <button
+                                  onClick={() => setShowPreviousQuestions(true)}
+                                  className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1.5 transition-colors"
+                                  title="Session History (8 / H)"
+                                >
+                                  <Clock size={10} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Right: Prominent STOP Recording Button */}
+                            <button
+                              onClick={stopRecording}
+                              className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 hover:border-rose-400 rounded-md font-black text-[10px] flex items-center gap-1.5 transition-all shadow-sm"
+                              title="Stop Recording Session (6 / D)"
+                            >
+                              <Square size={9} fill="currentColor" /> STOP SESSION <span className="text-[8.5px] opacity-75 font-mono">6</span>
+                            </button>
                           </div>
 
                           {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
