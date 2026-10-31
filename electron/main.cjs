@@ -1,6 +1,13 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, screen, globalShortcut } = require('electron');
 const path = require('path');
-const audio = require('win-audio');
+let audio = null;
+try {
+  if (process.platform === 'win32') {
+    audio = require('win-audio');
+  }
+} catch (e) {
+  console.warn('win-audio module not available or platform not win32:', e.message);
+}
 
 let mainWindow;
 
@@ -57,7 +64,10 @@ function createWindow() {
   // --- AUDIO API IPC HANDLERS ---
   ipcMain.handle('get-mic-state', () => {
     try {
-      return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
+      if (audio && audio.mic) {
+        return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
+      }
+      return { volume: 100, muted: false };
     } catch (e) {
       return { volume: 100, muted: false };
     }
@@ -65,17 +75,21 @@ function createWindow() {
 
   ipcMain.handle('set-mic-volume', (event, volume) => {
     try {
-      audio.mic.set(volume);
+      if (audio && audio.mic) {
+        audio.mic.set(volume);
+      }
     } catch (e) {}
   });
 
   ipcMain.handle('toggle-mic-mute', (event, muteState) => {
     try {
-      if (muteState !== undefined) {
-         if (muteState) audio.mic.mute();
-         else audio.mic.unmute();
-      } else {
-         audio.mic.toggle();
+      if (audio && audio.mic) {
+        if (muteState !== undefined) {
+           if (muteState) audio.mic.mute();
+           else audio.mic.unmute();
+        } else {
+           audio.mic.toggle();
+        }
       }
     } catch (e) {}
   });

@@ -13,7 +13,10 @@
     "electron:start": "cross-env NODE_ENV=development electron .",
     "start": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:dev\"",
     "dist": "npm run build && electron-builder",
-    "pack": "npm run build && electron-builder --dir"
+    "pack": "npm run build && electron-builder --dir",
+    "docker:build": "docker build -t clueai:latest .",
+    "docker:run": "docker run -d -p 3000:80 --name clueai-app clueai:latest",
+    "docker:compose": "docker compose up -d --build"
   },
   "build": {
     "appId": "com.clueai.app",

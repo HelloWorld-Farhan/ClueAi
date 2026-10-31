@@ -72,6 +72,32 @@ npm run dist
 
 ---
 
+## 🐳 Docker Deployment (Cross-Device & Web Support)
+
+ClueAI can be deployed anywhere with Docker, allowing you to access and run ClueAI seamlessly on any device (Windows, macOS, Linux, tablet, or phone) through your browser:
+
+### Option A — Using Docker Compose (Recommended)
+```bash
+docker compose up -d --build
+```
+Then open your browser at **`http://localhost:3000`**.
+
+### Option B — Using Docker CLI
+```bash
+# Build the Docker image
+npm run docker:build
+
+# Run the container
+npm run docker:run
+```
+
+To stop the container:
+```bash
+docker compose down
+```
+
+---
+
 ## 👨‍💻 Author
 
 **Farhan Khalid**  

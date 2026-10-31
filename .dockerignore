@@ -1,0 +1,16 @@
+node_modules
+dist
+release
+.git
+.github
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+scripts
+temp_leveldb
+ALL-APIKey.txt
+user_input.txt
+Resume_IT.pdf
+*.pdf
