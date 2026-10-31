@@ -14,65 +14,69 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 
 
 
-// Clean release notes HTML/Markdown formatter to eliminate raw tags
-  const renderReleaseNotes = (notes: any) => {
-    if (!notes) {
-      return (
-        <div className="space-y-2 text-xs text-white/70">
-          <div className="flex items-start gap-2">
-            <span className="text-cyan-400 font-bold">•</span>
-            <span><strong className="text-white">One-Click Modern Silent Installer</strong>: Zero-friction instant installation matching Discord & VS Code.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-cyan-400 font-bold">•</span>
-            <span><strong className="text-white">Compact Window Geometry (1000x600)</strong>: Restored comfortable height ensuring window sits neatly above Windows taskbar without Start tooltips.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-cyan-400 font-bold">•</span>
-            <span><strong className="text-white">Command Dock De-Crowding</strong>: Ribbon expanded to 1080px with dedicated controls cluster.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-cyan-400 font-bold">•</span>
-            <span><strong className="text-white">Dynamic Real-Time STT Audio Waves</strong>: Live audio activity bars reacting during interviews.</span>
+// Clean plain-English bullet point release notes formatter without any raw tags
+const renderReleaseNotes = (notes: any) => {
+  const defaultHighlights = [
+    { title: "One-Click Instant Setup", desc: "Installs in 2 seconds silently with zero confusing wizard questions." },
+    { title: "Vibrant Electric Blue Theme", desc: "Top bar update button and controls match the signature ClueAI glowing cyan-blue UI." },
+    { title: "Frosted Glass Popups", desc: "Background-blurred dialogs for Update Center, Settings, Info Guide, and Interview Setup." },
+    { title: "Real-Time Download Monitoring", desc: "Track exact transfer speed (MB/s or KB/s), MB downloaded, and percentage live." },
+    { title: "Perfect 1000x600 Geometry", desc: "Restored comfortable desktop window height with zero Windows taskbar interference." },
+    { title: "Dynamic Soundwave Equalizer", desc: "Multi-frequency animated audio equalizer reacting in real-time during interviews." }
+  ];
+
+  let points: { title: string, desc: string }[] = [];
+
+  if (notes) {
+    let text = typeof notes === 'string' ? notes : Array.isArray(notes) ? notes.map(n => n.note || n).join('\n') : JSON.stringify(notes);
+    // Replace HTML entities
+    text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+
+    // Extract list items
+    const liMatches = text.match(/<li[^>]*>([\s\S]*?)<\/li>/gi);
+    if (liMatches && liMatches.length > 0) {
+      liMatches.forEach(item => {
+        const clean = item.replace(/<[^>]+>/g, '').replace(/\?\?/g, '').trim();
+        if (!clean) return;
+        const colonIdx = clean.indexOf(':');
+        if (colonIdx > 0 && colonIdx < 50) {
+          points.push({ title: clean.substring(0, colonIdx).trim(), desc: clean.substring(colonIdx + 1).trim() });
+        } else {
+          points.push({ title: clean, desc: '' });
+        }
+      });
+    } else {
+      // Split by markdown lines
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.startsWith('-') || l.startsWith('*') || l.startsWith('•'));
+      lines.forEach(l => {
+        const clean = l.replace(/^[-*•]\s*/, '').replace(/<[^>]+>/g, '').replace(/\*\*/g, '').replace(/\?\?/g, '').trim();
+        if (!clean) return;
+        const colonIdx = clean.indexOf(':');
+        if (colonIdx > 0 && colonIdx < 50) {
+          points.push({ title: clean.substring(0, colonIdx).trim(), desc: clean.substring(colonIdx + 1).trim() });
+        } else {
+          points.push({ title: clean, desc: '' });
+        }
+      });
+    }
+  }
+
+  const listToRender = points.length > 0 ? points : defaultHighlights;
+
+  return (
+    <div className="space-y-2">
+      {listToRender.map((p, idx) => (
+        <div key={idx} className="flex items-start gap-2.5 bg-white/[0.03] border border-white/5 rounded-xl p-2.5 hover:border-cyan-500/30 transition-colors">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+          <div className="text-xs leading-relaxed">
+            <span className="font-bold text-white tracking-wide">{p.title}</span>
+            {p.desc && <span className="text-white/70">: {p.desc}</span>}
           </div>
         </div>
-      );
-    }
-
-    if (typeof notes === 'string') {
-      if (notes.includes('<') && notes.includes('>')) {
-        return (
-          <div
-            className="text-xs text-white/80 space-y-2 [&_h2]:text-sm [&_h2]:font-black [&_h2]:text-cyan-300 [&_h2]:mb-1.5 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-blue-300 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_li]:text-white/75 [&_strong]:text-white [&_strong]:font-bold [&_p]:text-white/75 [&_p]:mb-1"
-            dangerouslySetInnerHTML={{ __html: notes }}
-          />
-        );
-      }
-      return <div className="whitespace-pre-wrap text-xs text-white/80 leading-relaxed">{notes}</div>;
-    }
-
-    if (Array.isArray(notes)) {
-      return (
-        <div className="space-y-2 text-xs text-white/80">
-          {notes.map((note: any, idx: number) => {
-            const text = note.note || (typeof note === 'string' ? note : JSON.stringify(note));
-            if (typeof text === 'string' && text.includes('<') && text.includes('>')) {
-              return (
-                <div
-                  key={idx}
-                  className="space-y-1 [&_h2]:text-sm [&_h2]:font-black [&_h2]:text-cyan-300 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:text-blue-300 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:text-white/75 [&_strong]:text-white"
-                  dangerouslySetInnerHTML={{ __html: text }}
-                />
-              );
-            }
-            return <div key={idx} className="whitespace-pre-wrap leading-relaxed">{text}</div>;
-          })}
-        </div>
-      );
-    }
-
-    return <div className="text-xs text-white/70">{JSON.stringify(notes)}</div>;
-  };
+      ))}
+    </div>
+  );
+};
 
 const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
   const [copied, setCopied] = useState(false);
@@ -421,7 +425,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.0.0');
+  const [appVersion, setAppVersion] = useState('5.5.0');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -3179,51 +3183,52 @@ function App() {
                             <span>v{appVersion}</span>
                           </button>
 
-                          {/* ClueAI Blue-Glowing Dynamic Update Pill */}
+                          {/* Always-Visible Electric Blue Update Button matching START INTERVIEW */}
                           <motion.button
-                            whileHover={{ scale: 1.05 }}
+                            whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(6,182,212,0.6)" }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => {
                               setShowUpdateModal(true);
                               if (updateStatus === 'idle') handleCheckForUpdates();
                             }}
-                            className={`px-3 py-1 rounded-xl font-black text-[10.5px] flex items-center gap-1.5 uppercase tracking-wider transition-all cursor-pointer border ${
-                              updateStatus === 'downloading'
-                                ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-500 text-white border-cyan-300/80 shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
-                                : updateStatus === 'downloaded'
-                                ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-white border-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.8)] animate-pulse'
-                                : updateStatus === 'available'
-                                ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-400 text-white border-cyan-400/80 shadow-[0_0_20px_rgba(6,182,212,0.6)] animate-pulse'
-                                : updateStatus === 'checking'
-                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                                : 'bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-300 border-cyan-500/30 hover:border-cyan-400/60 hover:shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                            className={`flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-cyan-400/50 cursor-pointer ${
+                              (updateStatus === 'available')
+                                ? 'shadow-[0_0_25px_rgba(6,182,212,0.8)] border-cyan-200/90 animate-pulse'
+                                : (updateStatus === 'downloaded')
+                                ? 'shadow-[0_0_25px_rgba(16,185,129,0.8)] border-emerald-300 animate-bounce'
+                                : (updateStatus === 'downloading')
+                                ? 'shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
+                                : 'shadow-[0_0_20px_rgba(6,182,212,0.4)]'
                             }`}
-                            title="ClueAI Update Center"
+                            title="ClueAI Live Update Center"
                           >
                             {updateStatus === 'downloading' ? (
                               <>
-                                <Loader2 size={12} className="animate-spin text-cyan-200" />
+                                <Loader2 size={13} className="animate-spin text-white" />
                                 <span>Downloading {downloadProgress.percent}%</span>
                               </>
                             ) : updateStatus === 'downloaded' ? (
                               <>
-                                <Sparkles size={12} className="text-cyan-200" />
-                                <span>Restart & Install v{updateInfo.version || appVersion}</span>
+                                <Sparkles size={13} className="text-white" />
+                                <span>Restart & Install v{updateInfo.version || '5.5.0'}</span>
                               </>
                             ) : updateStatus === 'available' ? (
                               <>
-                                <span className="w-2 h-2 rounded-full bg-cyan-200 animate-ping" />
-                                <Sparkles size={12} className="text-cyan-200" />
-                                <span>Update v{updateInfo.version} Available</span>
+                                <span className="relative flex h-2.5 w-2.5 mr-0.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-200 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                                </span>
+                                <Sparkles size={13} className="text-white" />
+                                <span>Hello! Update v{updateInfo.version || '5.5.0'} Ready</span>
                               </>
                             ) : updateStatus === 'checking' ? (
                               <>
-                                <RefreshCw size={11} className="animate-spin text-cyan-400" />
+                                <RefreshCw size={12} className="animate-spin text-white" />
                                 <span>Checking...</span>
                               </>
                             ) : (
                               <>
-                                <RefreshCw size={11} className="text-cyan-400" />
+                                <RefreshCw size={12} className="text-white" />
                                 <span>Check Updates</span>
                               </>
                             )}
@@ -3327,7 +3332,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
