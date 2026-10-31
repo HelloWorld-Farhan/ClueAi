@@ -32,8 +32,11 @@
       "icon": "public/icon.ico"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
       "installerIcon": "public/icon.ico",
       "uninstallerIcon": "public/icon.ico",
       "uninstallDisplayName": "ClueAI"
