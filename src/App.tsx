@@ -2834,14 +2834,17 @@ function App() {
                     </button>
 
                     {/* Copy Button */}
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
                       onClick={() => {
                         if (!aiAnswer) return;
                         clipboard.writeText(aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim());
                         setAiCopied(true);
                         setTimeout(() => setAiCopied(false), 2000);
                       }}
-                      className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5"
+                      className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
                       title="Copy Answer to Clipboard"
                     >
                       {aiCopied ? (
@@ -2849,10 +2852,13 @@ function App() {
                       ) : (
                         <><FileText size={13} /> COPY</>
                       )}
-                    </button>
+                    </motion.button>
 
                     {/* Next Question Button */}
-                    <button 
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
                       onClick={() => {
                         if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
                         setIsGenerating(false);
@@ -2868,13 +2874,16 @@ function App() {
                         isPausedRef.current = false;
                       }} 
                       title="Next Question (Press Z or 1)"
-                      className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
+                      className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 cursor-pointer"
                     >
                       <Play size={12} fill="currentColor" /> NEXT Q. <span className="text-[9px] bg-black/20 px-1 rounded ml-0.5">1</span>
-                    </button>
+                    </motion.button>
 
                     {/* Close Button */}
-                    <button 
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
                       onClick={() => {
                         if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
                         setIsGenerating(false);
@@ -2889,10 +2898,10 @@ function App() {
                         setCurrentSnapshots([]);
                       }}
                       title="Close Answer (Press C or 3)"
-                      className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
+                      className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
                     >
                       <X size={13} /> CLOSE <span className="text-[9px] bg-white/10 px-1 rounded ml-0.5">3</span>
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
@@ -3149,7 +3158,10 @@ function App() {
           {/* Right: Actions, Stealth Shield, Utilities, Controls */}
           <div className="flex items-center gap-2.5 no-drag">
             {/* Unified Stealth Button */}
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 500, damping: 25 }}
               onClick={() => {
                 if (stealthMode) {
                   setShowStealthWarning(true);
@@ -3159,7 +3171,7 @@ function App() {
                 }
               }} 
               title={stealthMode ? "Stealth Shield Active (Invisible in screen-shares). Click to disable." : "Stealth Shield OFF (You are visible). Click to activate."} 
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm border ${
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-sm border cursor-pointer ${
                 stealthMode 
                   ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]' 
                   : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
@@ -3169,51 +3181,60 @@ function App() {
               <span className="tracking-wide uppercase text-[10.5px]">
                 {stealthMode ? "Stealth ON" : "Stealth OFF"}
               </span>
-            </button>
+            </motion.button>
 
             {/* Guide Info Button */}
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: "spring", stiffness: 500, damping: 25 }}
               onClick={() => setShowInfo(!showInfo)} 
-              className={`p-2 rounded-xl transition-all border ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+              className={`p-2 rounded-xl transition-all border cursor-pointer ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
               title="Information Guide"
             >
               <Info size={15} />
-            </button>
+            </motion.button>
 
             {/* Settings Button */}
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: "spring", stiffness: 500, damping: 25 }}
               onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }} 
-              className={`p-2 rounded-xl transition-all border ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
+              className={`p-2 rounded-xl transition-all border cursor-pointer ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
               title="Settings & Models"
             >
               <Settings size={15} />
-            </button>
+            </motion.button>
 
             {/* Start Interview Primary CTA */}
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(6,182,212,0.6)" }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 500, damping: 25 }}
               onClick={handleStartCaptureClick} 
-              className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40"
+              className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 cursor-pointer"
             >
               <Play size={13} fill="currentColor" /> Start Interview
-            </button>
+            </motion.button>
 
-            {/* Window Controls */}
+            {/* Window Controls with Tactile Springs */}
             <div className="flex items-center gap-1 ml-2 pl-3 border-l border-white/10 shrink-0">
-              <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Shrink Window (Alt -)">
+              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Shrink Window (Alt -)">
                 <ZoomOut size={15} />
-              </button>
-              <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Enlarge Window (Alt +)">
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Enlarge Window (Alt +)">
                 <ZoomIn size={15} />
-              </button>
-              <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Fullscreen">
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Fullscreen">
                 <Maximize size={15} />
-              </button>
-              <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Minimize">
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Minimize">
                 <Minus size={15} />
-              </button>
-              <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors" title="Close">
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors cursor-pointer" title="Close">
                 <X size={15} />
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -4694,18 +4715,40 @@ function App() {
         </div>
       )}
 
-      {/* Dashboard Empty State */}
+      {/* Dashboard Empty State with Staggered Framer Motion */}
       {!isRecording && !showSettings && !showInfo && !showUpdateModal && (
-        <div className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="flex-1 min-h-0 flex flex-col gap-6 mt-2 px-2 pb-6"
+        >
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/30 flex flex-col items-center justify-center text-center cursor-default h-full">
+            <motion.div 
+              whileHover={{ y: -4, scale: 1.008, boxShadow: "0 25px 45px -12px rgba(37,99,235,0.4)" }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-2xl p-6 relative overflow-hidden shadow-lg border border-blue-500/40 flex flex-col items-center justify-center text-center cursor-default h-full backdrop-blur-xl"
+            >
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
               <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Made by Farhan Khalid</h2>
               <p className="text-blue-100/80 text-sm mb-6 leading-relaxed font-medium">Developer & Engineer<br/><br/>Development driven by real users<br/>Faster iteration on features that matter</p>
-              <button onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 hover:scale-105 active:scale-95 transition-all duration-150">✨ View Portfolio &rarr;</button>
-            </div>
+              <motion.button 
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                onClick={() => { ipcRenderer.invoke('minimize-window'); shell.openExternal('https://farhan-khalid-portfolio.vercel.app/'); }} 
+                className="bg-[#FDE047] text-yellow-900 px-6 py-2.5 rounded-full font-bold text-sm shadow-md flex items-center gap-2 hover:bg-yellow-300 transition-colors cursor-pointer"
+              >
+                ✨ View Portfolio &rarr;
+              </motion.button>
+            </motion.div>
             
             <div className="relative h-full w-full">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 overflow-hidden shadow-lg border border-blue-400/30 flex flex-col cursor-default">
+              <motion.div 
+                whileHover={{ y: -4, scale: 1.008, boxShadow: "0 25px 45px -12px rgba(14,165,233,0.4)" }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl p-4 overflow-hidden shadow-lg border border-blue-400/40 flex flex-col cursor-default backdrop-blur-xl"
+              >
                 <div className="flex flex-col mb-3 w-full shrink-0">
                 <h3 className="font-bold text-white tracking-tight flex items-center justify-center gap-2 text-xl w-full mb-3">
                   <div className="w-6 h-6 rounded bg-white/20 text-white flex items-center justify-center">
@@ -4714,28 +4757,34 @@ function App() {
                   Interview and Notes Reminder
                 </h3>
                 <div className="flex justify-center items-center gap-4 w-full px-2">
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
                     onClick={() => {
                       setReminderForm({id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM'});
                       setLocalReminderStealth(stealthMode);
                       setReminderPopupMode('create');
                       setShowReminderPopup(true);
                     }} 
-                    className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                    className="bg-white/20 text-white hover:bg-white px-3 py-1.5 rounded-lg font-bold hover:text-blue-600 transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
                   >
                     <Plus size={14}/> Create Reminder
-                  </button>
-                  <button 
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
                     onClick={() => {
                       setNotesForm({id: '', notes: '', email: '', date: '', time: '', ampm: 'AM'});
                       setLocalNotesStealth(stealthMode);
                       setNotesPopupMode('create');
                       setShowNotesPopup(true);
                     }} 
-                    className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm"
+                    className="bg-teal-500/80 text-white hover:bg-teal-400 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
                   >
                     <Plus size={14}/> New Note
-                  </button>
+                  </motion.button>
                 </div>
               </div>
 
@@ -4837,7 +4886,7 @@ function App() {
                   });
                 })()}
               </div>
-            </div>
+            </motion.div>
             </div>
           </div>
           
@@ -4847,7 +4896,7 @@ function App() {
                 {sessions.length === 0 ? (
                   <div className="text-brand-subtext text-sm italic px-2 py-4">No sessions saved yet. Start capturing to see history here!</div>
                 ) : sessions.map((session) => (
-                  <div key={session.id} className={`flex flex-col bg-brand-secondary/30 rounded-xl transition-colors border border-brand-border group relative ${openMenuId === session.id ? "z-50 overflow-visible" : "z-10 overflow-hidden"}`}>
+                  <motion.div layout whileHover={{ scale: 1.004, backgroundColor: "rgba(255, 255, 255, 0.04)" }} transition={{ duration: 0.15 }} key={session.id} className={`flex flex-col bg-brand-secondary/30 rounded-xl border border-brand-border group relative ${openMenuId === session.id ? "z-50 overflow-visible" : "z-10 overflow-hidden"}`}>
                     <div 
                       className="flex justify-between items-center py-3 px-4 hover:bg-brand-secondary/80 cursor-pointer"
                       onClick={() => setExpandedSessionId(expandedSessionId === session.id ? null : session.id)}
@@ -4983,11 +5032,11 @@ function App() {
                         })}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
 {/* Main UI */}
@@ -5125,97 +5174,134 @@ function App() {
 
                       {/* Right: Actions, History, Stop & Window Controls */}
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-                          <span className="relative flex h-1.5 w-1.5">
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+                          <span className="relative flex h-2 w-2">
                             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isPaused ? 'bg-cyan-400' : 'bg-amber-400'}`}></span>
-                            <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${!isPaused ? 'bg-cyan-500' : 'bg-amber-500'}`}></span>
                           </span>
+                          <div className="flex items-end gap-0.5 h-3 px-0.5">
+                            {[7, 14, 18, 11, 5].map((maxH, i) => (
+                              <motion.span
+                                key={i}
+                                animate={!isPaused ? { height: ['3px', `${maxH}px`, '3px'] } : { height: '3px' }}
+                                transition={{ repeat: Infinity, duration: 0.6 + i * 0.12, ease: 'easeInOut' }}
+                                className="w-0.5 bg-cyan-400 rounded-full"
+                              />
+                            ))}
+                          </div>
                           <span className="text-[9px] font-black uppercase tracking-wider">{!isPaused ? "Live STT" : "Paused"}</span>
                         </div>
 
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.06, y: -1 }}
+                          whileTap={{ scale: 0.94 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={handlePauseToggle}
-                          className={`px-2 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
+                          className={`px-2 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
                           title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
                         >
                           {isPaused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
                           <span>{isPaused ? 'Resume' : 'Pause'}</span>
                           <span className="text-[8px] opacity-60 font-mono">1</span>
-                        </button>
+                        </motion.button>
 
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.06, y: -1 }}
+                          whileTap={{ scale: 0.94 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={handleSnipClick}
-                          className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                          className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_8px_rgba(6,182,212,0.15)]"
                           title="Snip Screen Question (4 / A)"
                         >
                           <Crop size={9} />
                           <span>Snip</span>
                           <span className="text-[8px] opacity-60 font-mono">4</span>
-                        </button>
+                        </motion.button>
 
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.06, y: -1 }}
+                          whileTap={{ scale: 0.94 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={handleClearAll}
-                          className="px-2 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                          className="px-2 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
                           title="Clear Transcript (3 / C)"
                         >
                           <Trash2 size={9} />
                           <span>Clear</span>
                           <span className="text-[8px] opacity-60 font-mono">3</span>
-                        </button>
+                        </motion.button>
 
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.06, y: -1 }}
+                          whileTap={{ scale: 0.94 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={() => setShowVirtualKeyboard(true)}
-                          className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
+                          className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                           title="Edit Transcript (7 / Q)"
                         >
                           <Edit2 size={9} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
-                        </button>
+                        </motion.button>
 
                         {currentSessionHistory.length > 0 && (
-                          <button 
+                          <motion.button 
+                            whileHover={{ scale: 1.06, y: -1 }}
+                            whileTap={{ scale: 0.94 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
                             onClick={() => setShowPreviousQuestions(true)}
-                            className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors"
+                            className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                             title="Session History (8 / H)"
                           >
                             <Clock size={9} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
-                          </button>
+                          </motion.button>
                         )}
 
                         {/* STOP Recording Session */}
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.06, y: -1 }}
+                          whileTap={{ scale: 0.94 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={stopRecording} 
-                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-[0_0_10px_rgba(244,63,94,0.2)]"
                           title="Stop Recording Session (6 / D)"
                         >
                           <Square size={9} fill="currentColor" /> STOP <span className="text-[8px] opacity-60 font-mono">6</span>
-                        </button>
+                        </motion.button>
 
                         {/* Settings Button */}
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
-                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
+                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
                           title="Settings"
                         >
                           <Settings size={12} />
-                        </button>
+                        </motion.button>
 
                         {/* Minimize Dock Button */}
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={() => setIsTranscriptMinimized(true)}
-                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
+                          className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors cursor-pointer"
                           title="Minimize Dock"
                         >
                           <Minus size={12} />
-                        </button>
+                        </motion.button>
 
                         {/* Close Window */}
-                        <button 
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
                           onClick={closeApp}
-                          className="p-1 bg-white/5 hover:bg-rose-500/20 text-white/50 hover:text-rose-400 rounded-md border border-white/10 transition-colors"
+                          className="p-1 bg-white/5 hover:bg-rose-500/20 text-white/50 hover:text-rose-400 rounded-md border border-white/10 transition-colors cursor-pointer"
                           title="Close App"
                         >
                           <X size={12} />
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
 
@@ -5239,10 +5325,13 @@ function App() {
                       </div>
 
                       {/* High-Impact Integrated Generate Answer Button */}
-                      <button 
+                      <motion.button 
+                        whileHover={{ scale: 1.03, boxShadow: "0 0 30px rgba(6,182,212,0.6)" }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
                         onClick={() => { if (!isGenerating) manualTriggerAI(); }}
                         disabled={isGenerating}
-                        className="h-[46px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[180px]"
+                        className="h-[46px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/40 flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer min-w-[180px]"
                       >
                         {isGenerating ? (
                           <>
@@ -5256,7 +5345,7 @@ function App() {
                             <span className="bg-black/30 text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20 ml-0.5">2 / X</span>
                           </>
                         )}
-                      </button>
+                      </motion.button>
                     </div>
 
                     {/* Snapshots Strip (if any exist) */}
