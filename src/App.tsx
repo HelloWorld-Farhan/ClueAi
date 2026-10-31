@@ -17,12 +17,12 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 // Clean plain-English bullet point release notes formatter without any raw tags
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
-    { title: "One-Click Instant Setup", desc: "Installs in 2 seconds silently with zero confusing wizard questions." },
-    { title: "Vibrant Electric Blue Theme", desc: "Top bar update button and controls match the signature ClueAI glowing cyan-blue UI." },
-    { title: "Frosted Glass Popups", desc: "Background-blurred dialogs for Update Center, Settings, Info Guide, and Interview Setup." },
-    { title: "Real-Time Download Monitoring", desc: "Track exact transfer speed (MB/s or KB/s), MB downloaded, and percentage live." },
-    { title: "Perfect 1000x600 Geometry", desc: "Restored comfortable desktop window height with zero Windows taskbar interference." },
-    { title: "Dynamic Soundwave Equalizer", desc: "Multi-frequency animated audio equalizer reacting in real-time during interviews." }
+    { title: "Zero Code Overlap", desc: "Language selector dropdown and copy button reside in a dedicated editor header above the code, never covering code lines." },
+    { title: "Split View & Text Size Harmony", desc: "Split View toggle and high-contrast font size controls are aligned side-by-side in a unified toolbar with zero button collisions." },
+    { title: "MCQ-Only Option Detection", desc: "Coding problems provide direct algorithm solutions without dummy Option A banners; MCQ quiz questions prominently show the selected choice." },
+    { title: "Fluid Spring Transitions", desc: "Framer Motion animated page navigation across Dashboard, Session Selector, Live Command Dock, and AI Answer views." },
+    { title: "Taskbar Protection", desc: "Optimized window height and strict modal mouse gating prevent Windows Start button tooltips from bleeding through during popups." },
+    { title: "Vibrant Electric Blue Theme", desc: "Top bar update button and controls match the signature ClueAI glowing cyan-blue UI." }
   ];
 
   let points: { title: string, desc: string }[] = [];
@@ -1271,8 +1271,9 @@ function App() {
       if (now - lastMouseSendRef.current < 50) return; // 20Hz throttle
       lastMouseSendRef.current = now;
 
-      // Only active during interview
-      if (!isAiFullscreen && !isRecording) {
+      // If any modal dialog is active (Settings, Info, Updates, Session setup, etc.) or app is on the dashboard, NEVER pass through mouse events!
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions;
+      if (isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
           ipcRenderer.send('set-ignore-mouse-events', false);
@@ -2714,44 +2715,59 @@ function App() {
 
       return match ? (
         <div className="w-full flex justify-center my-4">
-          <div className="relative group/code max-w-4xl w-full">
-            <CopyButton
-              text={codeText}
-              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg opacity-100 transition-opacity z-10"
-              tooltip="Copy code"
-            />
-            <div className="absolute top-4 right-14 z-50 opacity-100 transition-opacity w-36">
-              <CustomSelect
-                value={displayLang || preferredCodeLanguage.toLowerCase()}
-                onChange={async (targetLang: string) => {
-                  if (!targetLang || targetLang === displayLang) return;
-                  const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
-                  setPreferredCodeLanguage(langLabel);
-                  localStorage.setItem('clueai_code_language', langLabel);
-                  let currentTranscript = finalizedTranscriptRef.current || transcript || '';
-                  const langNote = `\n[User requested code in ${langLabel}]`;
-                  currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
-                  currentTranscript += langNote;
+          <div className="max-w-4xl w-full rounded-2xl border border-white/15 bg-black overflow-hidden shadow-2xl">
+            {/* Dedicated Code Header Toolbar: Language Selector & Copy Button cleanly positioned above code */}
+            <div className="flex items-center justify-between px-4 py-2 bg-[#12131c] border-b border-white/10 select-none">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 mr-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70 inline-block" />
+                </div>
+                <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-cyan-400">
+                  {displayLang || preferredCodeLanguage.toLowerCase()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-36">
+                  <CustomSelect
+                    value={displayLang || preferredCodeLanguage.toLowerCase()}
+                    onChange={async (targetLang: string) => {
+                      if (!targetLang || targetLang === displayLang) return;
+                      const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
+                      setPreferredCodeLanguage(langLabel);
+                      localStorage.setItem('clueai_code_language', langLabel);
+                      let currentTranscript = finalizedTranscriptRef.current || transcript || '';
+                      const langNote = `\n[User requested code in ${langLabel}]`;
+                      currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
+                      currentTranscript += langNote;
 
-                  await manualTriggerAI(
-                    currentSnapshots.length > 0 ? currentSnapshots : undefined,
-                    currentTranscript,
-                    langLabel
-                  );
-                }}
-                options={[
-                  { value: 'java', label: 'Java (Default)' },
-                  { value: 'python', label: 'Python' },
-                  { value: 'c++', label: 'C++' },
-                  { value: 'javascript', label: 'JavaScript' },
-                  { value: 'typescript', label: 'TypeScript' },
-                  { value: 'c#', label: 'C#' },
-                  { value: 'go', label: 'Go' },
-                  { value: 'rust', label: 'Rust' },
-                ]}
-                className="bg-[#18181b] hover:bg-[#27272a] text-white border border-white/20 text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer backdrop-blur-md font-medium"
-                listClassName="text-xs bg-[#18181b] !max-h-48 overflow-y-auto custom-scrollbar"
-              />
+                      await manualTriggerAI(
+                        currentSnapshots.length > 0 ? currentSnapshots : undefined,
+                        currentTranscript,
+                        langLabel
+                      );
+                    }}
+                    options={[
+                      { value: 'java', label: 'Java (Default)' },
+                      { value: 'python', label: 'Python' },
+                      { value: 'c++', label: 'C++' },
+                      { value: 'javascript', label: 'JavaScript' },
+                      { value: 'typescript', label: 'TypeScript' },
+                      { value: 'c#', label: 'C#' },
+                      { value: 'go', label: 'Go' },
+                      { value: 'rust', label: 'Rust' },
+                    ]}
+                    className="bg-[#18181b] hover:bg-[#27272a] text-white border border-white/20 text-xs rounded-lg px-2.5 py-1 outline-none cursor-pointer backdrop-blur-md font-medium"
+                    listClassName="text-xs bg-[#18181b] !max-h-48 overflow-y-auto custom-scrollbar"
+                  />
+                </div>
+                <CopyButton
+                  text={codeText}
+                  className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                  tooltip="Copy code"
+                />
+              </div>
             </div>
             <SyntaxHighlighter
               {...rest}
@@ -2759,8 +2775,8 @@ function App() {
               style={vscDarkPlus}
               language={match[1]}
               PreTag="div"
-              className={`rounded-2xl border !m-0 !p-6 !shadow-xl !bg-black`}
-              customStyle={{ backgroundColor: `#000000`, borderColor: `rgba(255, 255, 255, 0.1)`, fontSize: 'inherit' }}
+              className="!m-0 !p-5 !bg-black"
+              customStyle={{ backgroundColor: '#000000', fontSize: 'inherit', margin: 0 }}
             />
           </div>
         </div>
@@ -2774,7 +2790,7 @@ function App() {
       const textContent = Array.isArray(children) 
         ? children.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children) : '')).join('') 
         : (typeof children === 'string' ? children : '');
-      const isMcqHeader = /^(?:\*\*)?Option\s+[A-D][: -]/i.test(textContent.trim()) || /^(?:\*\*)?Correct\s+(?:Option|Answer)[: -]/i.test(textContent.trim());
+      const isMcqHeader = (/^(?:\*\*)?Option\s+[A-D][: -]/i.test(textContent.trim()) || /^(?:\*\*)?Correct\s+(?:Option|Answer)[: -]/i.test(textContent.trim())) && !textContent.includes('<Text of Option');
       if (isMcqHeader) {
         return (
           <div className="w-full my-3 p-4 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-cyan-500/25 border-2 border-emerald-400/70 rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.3)] flex items-center gap-3">
@@ -2788,6 +2804,7 @@ function App() {
           </div>
         );
       }
+      if (textContent.includes('<Text of Option')) return null;
       return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>;
     },
     h1({ children, ...props }: any) {
@@ -2814,8 +2831,16 @@ function App() {
         className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-150 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
         style={{ transition: 'none' }}
       >
-        {isAiFullscreen ? (
-          <div className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50">
+        <AnimatePresence mode="wait">
+          {isAiFullscreen ? (
+            <motion.div
+              key="ai-fullscreen-panel"
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: -12 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50"
+            >
             {/* Top Bar Panel */}
             <div
               className={`border border-white/15 shrink-0 drag-area rounded-2xl pointer-events-auto shadow-2xl mt-2 transition-all duration-150 ${isTopBarMinimized ? 'w-14 h-14 flex items-center justify-center p-0 rounded-full bg-black/80 backdrop-blur-md cursor-pointer group' : 'flex flex-col w-full max-w-[940px] mx-auto gap-3 p-4'}`}
@@ -3115,73 +3140,85 @@ function App() {
                 </div>
               ) : (
                 <>
-                  {/* High-Visibility Floating Answer Controls */}
-                  <div className="absolute top-3 right-4 z-50 no-drag flex items-center gap-1.5 bg-[#0a0b12]/95 border border-white/20 backdrop-blur-2xl px-2.5 py-1 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
-                    <button
-                      onClick={() => {
-                        const next = Math.max(10, aiAnswerTextSize - 1);
-                        setAiAnswerTextSize(next);
-                        localStorage.setItem('clueai_answer_size', next.toString());
-                      }}
-                      className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
-                      title="Decrease Text Size (A-)"
-                    >
-                      <Minus size={13} className="text-white" />
-                    </button>
-
-                    <span className="text-[11px] font-mono font-bold text-cyan-300 px-1 select-none">
-                      {aiAnswerTextSize}px
-                    </span>
-
-                    <button
-                      onClick={() => {
-                        const next = Math.min(40, aiAnswerTextSize + 1);
-                        setAiAnswerTextSize(next);
-                        localStorage.setItem('clueai_answer_size', next.toString());
-                      }}
-                      className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
-                      title="Increase Text Size (A+)"
-                    >
-                      <Plus size={13} className="text-white" />
-                    </button>
-
-                    <div className="w-[1px] h-4 bg-white/20 mx-0.5" />
-
-                    <button
-                      onClick={() => setIsAnswerMinimized(true)}
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-cyan-500/20 text-white/80 hover:text-cyan-300 transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
-                      title="Minimize Answer Panel"
-                    >
-                      <Minimize2 size={13} />
-                    </button>
-                  </div>
-
                   <div className="w-full flex justify-center pt-3 cursor-grab active:cursor-grabbing no-drag opacity-30 hover:opacity-100 transition-opacity">
                     <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
                   </div>
 
-                  <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-8'}`} ref={aiAnswerScrollRef}>
+                  <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-6 md:p-8'}`} ref={aiAnswerScrollRef}>
                     <div className={`max-w-5xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
-                      {aiAnswer ? (
-                        <>
-                          {aiAnswer.includes('```') && (
-                            <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-white/10">
-                              <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 uppercase tracking-wider">
-                                <Code2 size={14} /> Coding Solution Active ({preferredCodeLanguage})
-                              </span>
-                              <button
-                                onClick={() => setIsCodeSplitView(!isCodeSplitView)}
-                                className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-                                  isCodeSplitView 
-                                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.25)]' 
-                                    : 'bg-white/5 text-white/60 hover:text-white border-white/10'
-                                }`}
-                              >
-                                <Columns size={13} /> {isCodeSplitView ? 'Split View (Code & Info)' : 'Unified View'}
-                              </button>
-                            </div>
+                      {/* Unified Answer Header: Solution Title, Split View Toggle, Font Controls & Minimize in single row */}
+                      <div className="flex items-center justify-between gap-3 mb-4 pb-2.5 border-b border-white/10 select-none">
+                        <div className="flex items-center gap-2">
+                          {aiAnswer && aiAnswer.includes('```') ? (
+                            <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 uppercase tracking-wider">
+                              <Code2 size={15} /> Coding Solution Active ({preferredCodeLanguage})
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold text-cyan-400/90 flex items-center gap-1.5 uppercase tracking-wider">
+                              <Sparkles size={15} /> AI Solution
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2.5">
+                          {aiAnswer && aiAnswer.includes('```') && (
+                            <button
+                              onClick={() => setIsCodeSplitView(!isCodeSplitView)}
+                              className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                                isCodeSplitView 
+                                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.25)]' 
+                                  : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                              }`}
+                            >
+                              <Columns size={13} /> {isCodeSplitView ? 'Split View (Code & Info)' : 'Unified View'}
+                            </button>
                           )}
 
+                          {/* High-Visibility Floating Answer Controls: Font Size & Minimize */}
+                          <div className="flex items-center gap-1 bg-[#0a0b12]/95 border border-white/20 backdrop-blur-2xl px-2.5 py-1 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
+                            <button
+                              onClick={() => {
+                                const next = Math.max(10, aiAnswerTextSize - 1);
+                                setAiAnswerTextSize(next);
+                                localStorage.setItem('clueai_answer_size', next.toString());
+                              }}
+                              className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
+                              title="Decrease Text Size (A-)"
+                            >
+                              <Minus size={13} className="text-white" />
+                            </button>
+
+                            <span className="text-[11px] font-mono font-bold text-cyan-300 px-1 select-none">
+                              {aiAnswerTextSize}px
+                            </span>
+
+                            <button
+                              onClick={() => {
+                                const next = Math.min(40, aiAnswerTextSize + 1);
+                                setAiAnswerTextSize(next);
+                                localStorage.setItem('clueai_answer_size', next.toString());
+                              }}
+                              className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
+                              title="Increase Text Size (A+)"
+                            >
+                              <Plus size={13} className="text-white" />
+                            </button>
+
+                            <div className="w-[1px] h-4 bg-white/20 mx-0.5" />
+
+                            <button
+                              onClick={() => setIsAnswerMinimized(true)}
+                              className="p-1.5 rounded-lg bg-white/10 hover:bg-cyan-500/20 text-white hover:text-cyan-300 transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
+                              title="Minimize Answer Panel"
+                            >
+                              <Minimize2 size={13} className="text-white" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {aiAnswer ? (
+                        <>
                           {aiAnswer.includes('```') && isCodeSplitView ? (
                             (() => {
                               const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
@@ -3235,15 +3272,27 @@ function App() {
                 </>
               )}
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <div className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}>
+          <motion.div
+            key="main-screen-container"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 0.2 }}
+            className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
+          >
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
             </datalist>
             <div className={`flex flex-col ${isRecording ? 'w-full h-full' : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar'}`}>
               {!isRecording && (
-                <div
+                <motion.div
+                  key="dashboard-header"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
                   className="flex flex-col mb-4 pb-2 border-b border-indigo-500/20"
                   onPointerDown={(e) => {
                     const target = e.target as HTMLElement;
@@ -3424,7 +3473,7 @@ function App() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* Full-Screen Info Modal with Framer Motion */}
@@ -3869,14 +3918,14 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden"
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.94, y: 15 }}
                       transition={{ type: "spring", stiffness: 380, damping: 28 }}
-                      className={`w-full max-w-4xl max-h-[92vh] h-full min-h-0 bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
+                      className={`w-full max-w-4xl max-h-[86vh] h-full min-h-0 bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_35px_rgba(6,182,212,0.15)] flex flex-col overflow-hidden ${!localSettingsStealth ? 'stealth-exempt' : ''}`}>
                       <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
                         <div className="flex items-center gap-4">
                           <div>
@@ -5276,7 +5325,14 @@ function App() {
 
               {/* Main UI */}
               {isRecording && (
-                <div className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto">
+                <motion.div
+                  key="command-dock-view"
+                  initial={{ opacity: 0, scale: 0.96, y: -16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: -16 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                  className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto"
+                >
                   {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
                   <div className="w-full flex justify-center items-center relative z-20">
                     <AnimatePresence mode="popLayout" initial={false}>
@@ -5579,7 +5635,7 @@ function App() {
                       )}
                     </AnimatePresence>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* API Key Missing Error Modal */}
@@ -6828,8 +6884,9 @@ function App() {
                 )}
               </AnimatePresence>
             </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
         {modelChangeMsg && (
           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
             <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-150 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">

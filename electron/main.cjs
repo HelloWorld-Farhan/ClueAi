@@ -505,8 +505,8 @@ function createWindow() {
       const w = 1080;
 
       if (isFullscreen) {
-        // Expand window downwards to display the full AI Answer view
-        const h = Math.min(850, height - 20);
+        // Expand window downwards to display the full AI Answer view, staying strictly above the Windows taskbar
+        const h = Math.min(800, height - 40);
         mainWindow.setBounds({
           width: w,
           height: h,
