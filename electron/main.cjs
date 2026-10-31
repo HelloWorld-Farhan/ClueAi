@@ -35,9 +35,7 @@ function createWindow() {
   mainWindow.setIgnoreMouseEvents(false);
 
   mainWindow.on('minimize', () => {
-    if (hotkeysActive) {
-      unregisterAllHotkeys();
-    }
+    unregisterAllHotkeys();
   });
 
   mainWindow.on('restore', () => {
@@ -47,9 +45,7 @@ function createWindow() {
   });
 
   mainWindow.on('hide', () => {
-    if (hotkeysActive) {
-      unregisterAllHotkeys();
-    }
+    unregisterAllHotkeys();
   });
 
   mainWindow.on('show', () => {
@@ -239,6 +235,18 @@ function createWindow() {
     if (enable && mainWindow && !mainWindow.isMinimized() && mainWindow.isVisible()) {
       registerAllHotkeys();
     }
+  });
+
+  ipcMain.handle('is-cursor-inside-window', () => {
+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) return false;
+    const cursor = screen.getCursorScreenPoint();
+    const bounds = mainWindow.getBounds();
+    return (
+      cursor.x >= bounds.x &&
+      cursor.x <= bounds.x + bounds.width &&
+      cursor.y >= bounds.y &&
+      cursor.y <= bounds.y + bounds.height
+    );
   });
 
   ipcMain.on('app-quit', () => {
@@ -470,6 +478,7 @@ function createWindow() {
   });
 
   ipcMain.handle('minimize-window', () => {
+    unregisterAllHotkeys();
     if (mainWindow) {
       mainWindow.hide();
     }
@@ -617,9 +626,13 @@ if (!gotTheLock) {
   globalShortcut.register('CommandOrControl+Shift+K', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
+        unregisterAllHotkeys();
         mainWindow.hide();
       } else {
         mainWindow.showInactive();
+        if (hotkeysActive) {
+          registerAllHotkeys();
+        }
       }
     }
   });

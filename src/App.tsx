@@ -1201,7 +1201,7 @@ function App() {
   }, [isAiFullscreen, isRecording]);
 
 
-  // Stealth Mode click-through handler — throttled to ~20Hz to avoid flooding Electron IPC
+  // Stealth Mode click-through & mouse-boundary hotkey gating — throttled to ~20Hz
   const lastMouseSendRef = useRef<number>(0);
   const currentIgnoreRef = useRef<boolean | null>(null);
   useEffect(() => {
@@ -1220,22 +1220,65 @@ function App() {
       }
       
       const target = e.target as HTMLElement;
-      if (target.closest && target.closest('.stealth-exempt')) return;
+      if (target.closest && target.closest('.stealth-exempt')) {
+        if (currentIgnoreRef.current !== false) {
+          currentIgnoreRef.current = false;
+          ipcRenderer.send('set-ignore-mouse-events', false);
+          if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
+        }
+        return;
+      }
+
       const shouldPassThrough = target.classList.contains('click-through-bg') || target === document.body || target === document.documentElement || target.id === 'root';
       
       if (currentIgnoreRef.current !== shouldPassThrough) {
         currentIgnoreRef.current = shouldPassThrough;
         ipcRenderer.send('set-ignore-mouse-events', shouldPassThrough);
+        // Deactivate global hotkeys when cursor is in the passthrough area outside active UI controls
+        // Re-activate hotkeys when hovering directly over ClueAI panels
+        if (globalHotkeysEnabled) {
+          ipcRenderer.invoke('toggle-global-hotkeys', !shouldPassThrough);
+        }
       }
     };
+
+    const handleMouseLeave = () => {
+      // When mouse leaves the entire window area, disable hotkeys so other apps can receive them freely
+      if (globalHotkeysEnabled) {
+        ipcRenderer.invoke('toggle-global-hotkeys', false);
+      }
+      if (currentIgnoreRef.current !== true) {
+        currentIgnoreRef.current = true;
+        ipcRenderer.send('set-ignore-mouse-events', true);
+      }
+    };
+
     window.addEventListener('pointermove', handlePointerMove);
-    return () => window.removeEventListener('pointermove', handlePointerMove);
-  }, [isAiFullscreen, isRecording]);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [isAiFullscreen, isRecording, globalHotkeysEnabled]);
+
+  // Auto-pause Stealth Mode when settings/API key config is open,
+  // and automatically resume stealth mode once closed
+  useEffect(() => {
+    if (showSettings) {
+      ipcRenderer.invoke('set-stealth', false);
+    } else {
+      if (stealthMode) {
+        ipcRenderer.invoke('set-stealth', true);
+      }
+    }
+  }, [showSettings, stealthMode]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
-    ipcRenderer.invoke('set-stealth', stealthMode);
-  }, [stealthMode]);
+    if (!showSettings) {
+      ipcRenderer.invoke('set-stealth', stealthMode);
+    }
+  }, [stealthMode, showSettings]);
 
   useEffect(() => {
     localStorage.setItem('appOpacity', opacity.toString());
