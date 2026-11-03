@@ -2,35 +2,9 @@
 !include "LogicLib.nsh"
 
 !macro customInit
-  ; Check command line parameters
-  ${GetParameters} $R0
-  ClearErrors
-  ${GetOptions} $R0 "--updated" $R1
-  ${IfNot} ${Errors}
-    ; Invoked by in-app autoUpdater: Preserve user settings, resumes, and API keys
-    Goto endCustomInit
-  ${EndIf}
-
-  ; Check if in-app update token file exists in AppData
-  IfFileExists "$APPDATA\ClueAI\.in_app_update" 0 checkClueaiLower
-    Delete "$APPDATA\ClueAI\.in_app_update"
-    Goto endCustomInit
-
-  checkClueaiLower:
-  IfFileExists "$APPDATA\clueai\.in_app_update" 0 isFreshInstall
-    Delete "$APPDATA\clueai\.in_app_update"
-    Goto endCustomInit
-
-  isFreshInstall:
-    ; Fresh installer download run:
-    ; 1. Clean previous user data and cache to ensure clean slate
-    RMDir /r "$APPDATA\ClueAI"
-    RMDir /r "$APPDATA\clueai"
-    RMDir /r "$LOCALAPPDATA\ClueAI"
-    RMDir /r "$LOCALAPPDATA\clueai"
-    RMDir /r "$LOCALAPPDATA\clueai-updater"
-
-  endCustomInit:
+  ; Safe initialization for fresh installs and in-app updates
+  ; Do NOT delete $LOCALAPPDATA\clueai-updater because in-app updates run directly from that folder
+  ; Do NOT delete user data/settings during installation
 !macroend
 
 !macro customUnInstall

@@ -12,6 +12,7 @@ try {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
+  autoUpdater.disableDifferentialDownload = true;
 } catch (e) {
   console.warn('electron-updater failed to load:', e.message);
 }
