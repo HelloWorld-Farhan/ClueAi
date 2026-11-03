@@ -25,9 +25,9 @@
 ### 🪟 1. For Windows
 
 - **Direct Download Link**: [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
-- **One-line Command** (PowerShell / Command Prompt):
+- **One-line Command** (PowerShell / Command Prompt - Auto-Resumes on network drop):
   ```powershell
-  curl.exe -L -o ClueAI.exe https://tinyurl.com/2a2lfo9a; .\ClueAI.exe
+  curl.exe -L --retry 10 --retry-delay 2 --retry-all-errors -C - -o ClueAI.exe https://tinyurl.com/2a2lfo9a && .\ClueAI.exe
   ```
 
 ---
