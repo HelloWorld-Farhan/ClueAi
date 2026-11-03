@@ -1,5 +1,9 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, screen, globalShortcut } = require('electron');
 const path = require('path');
+
+process.on('uncaughtException', (err) => {
+  console.error('ClueAI uncaught exception:', err);
+});
 let autoUpdater = null;
 try {
   const updaterModule = require('electron-updater');
@@ -32,30 +36,54 @@ function applyStealthProtection(win, enabled) {
   }
 }
 
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 600,
     center: true,
+    show: false,
     transparent: true,
     frame: false,
-    hasShadow: false,
+    hasShadow: true,
     minWidth: 100,
     minHeight: 100,
     thickFrame: false,
-    roundedCorners: false,
+    roundedCorners: true,
     resizable: false,
     backgroundColor: '#00000000',
     alwaysOnTop: true,
     focusable: true,
-    skipTaskbar: true,
-    type: 'toolbar',
+    skipTaskbar: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      backgroundThrottling: false,
     },
   });
   
+  mainWindow.once('ready-to-show', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      applyStealthProtection(mainWindow, isStealthMode);
+    }
+  });
+
+  // Safety fallback: if GPU delays ready-to-show, force show after 1000ms
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      applyStealthProtection(mainWindow, isStealthMode);
+    }
+  }, 1000);
+
   // Force the window to the absolute highest z-level, above all fullscreen apps
   // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
   mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
@@ -600,12 +628,24 @@ function createWindow() {
 
   ipcMain.handle('quit-and-install-update', () => {
     if (autoUpdater) {
+      try {
+        const fs = require('fs');
+        const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
+        fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
+      } catch (err) {
+        console.warn('Failed to write .in_app_update token:', err.message);
+      }
       autoUpdater.quitAndInstall(false, true);
     }
   });
 
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
+  });
+
+  ipcMain.handle('restart-app', () => {
+    app.relaunch();
+    app.exit(0);
   });
 
   let snipWindow = null;
@@ -726,18 +766,61 @@ function createWindow() {
   });
 
   // In production, load the built index.html. In dev, load Vite's dev server.
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load URL:', errorCode, errorDescription, validatedURL);
+    if (app.isPackaged) {
+      mainWindow.loadFile(path.join(app.getAppPath(), 'dist/index.html')).catch(() => {});
+    }
+  });
+
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   } else {
     mainWindow.loadURL('http://localhost:5173');
   }
 }
+function terminateOtherInstances() {
+  try {
+    const { execSync } = require('child_process');
+    if (process.platform === 'win32') {
+      const output = execSync('tasklist /FO CSV /NH', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const lines = output.split(/\r?\n/);
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const match = line.match(/^"([^"]+)","(\d+)"/);
+        if (match) {
+          const procName = match[1].toLowerCase();
+          const pid = parseInt(match[2], 10);
+          if (procName.includes('clueai') && pid && pid !== process.pid) {
+            try {
+              execSync('taskkill /F /T /PID ' + pid, { stdio: 'ignore' });
+            } catch (_) {}
+          }
+        }
+      }
+    } else if (process.platform === 'darwin') {
+      try {
+        const currentPid = process.pid;
+        execSync(`pgrep -f "ClueAI" | grep -v "^${currentPid}$" | xargs kill -9 2>/dev/null || true`, { stdio: 'ignore' });
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn('Process scan notice:', err.message);
+  }
+}
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  app.quit();
+  // A previous or zombie background instance of ClueAI was lingering.
+  // Terminate it so that starting ClueAI always opens a fresh, active, responsive window!
+  terminateOtherInstances();
+  setTimeout(() => {
+    app.relaunch();
+    app.exit(0);
+  }, 250);
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.setIgnoreMouseEvents(false);
@@ -800,6 +883,16 @@ if (!gotTheLock) {
         }
       });
 
+      autoUpdater.on('before-quit-for-update', () => {
+        try {
+          const fs = require('fs');
+          const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
+          fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
+        } catch (err) {
+          console.warn('Failed to write .in_app_update token in before-quit-for-update:', err.message);
+        }
+      });
+
       autoUpdater.on('error', (err) => {
         console.warn('Updater background notice:', err ? err.message : err);
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -841,6 +934,16 @@ if (!gotTheLock) {
     } catch (err) {
       console.warn('CommandOrControl+Shift+K handler non-fatal notice:', err.message);
     }
+  });
+
+  globalShortcut.register('CommandOrControl+Shift+R', () => {
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+      }
+    } catch(e) {}
+    app.relaunch();
+    app.exit(0);
   });
 });
 

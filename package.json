@@ -1,7 +1,7 @@
 {
   "name": "clueai",
   "private": true,
-  "version": "5.5.3",
+  "version": "5.5.4",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -65,7 +65,10 @@
       "createStartMenuShortcut": true,
       "installerIcon": "public/icon.ico",
       "uninstallerIcon": "public/icon.ico",
-      "uninstallDisplayName": "ClueAI"
+      "uninstallDisplayName": "ClueAI",
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": true,
+      "runAfterFinish": true
     },
     "files": [
       "dist/**/*",

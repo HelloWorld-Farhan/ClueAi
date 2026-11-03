@@ -314,6 +314,15 @@ function App() {
   const [sysMicMuted, setSysMicMuted] = useState(false);
   const [showAudioErrorModal, setShowAudioErrorModal] = useState(false);
   const [activeMicName, setActiveMicName] = useState('Default Microphone');
+  const [availableMics, setAvailableMics] = useState<{ deviceId: string, label: string }[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string>(() => {
+    return localStorage.getItem('selected_audio_input_device') || 'default';
+  });
+  const [availableOutputs, setAvailableOutputs] = useState<{ deviceId: string, label: string }[]>([]);
+  const [selectedOutputId, setSelectedOutputId] = useState<string>(() => {
+    return localStorage.getItem('selected_audio_output_device') || 'default';
+  });
+  const [liveVoiceLevel, setLiveVoiceLevel] = useState(0);
 
 
   const cleanKeys = (keys: TimedApiKey[], limitDays: number) => {
@@ -1052,19 +1061,115 @@ function App() {
   }, [deepseekKeys]);
 
 
-  useEffect(() => {
-    const fetchMicName = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const mics = devices.filter(d => d.kind === 'audioinput');
-        if (mics.length > 0) {
+  const fetchAudioDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const mics = devices
+        .filter(d => d.kind === 'audioinput')
+        .map((d, index) => ({
+          deviceId: d.deviceId,
+          label: d.label || `Microphone ${index + 1}`
+        }));
+      setAvailableMics(mics);
+
+      const outputs = devices
+        .filter(d => d.kind === 'audiooutput')
+        .map((d, index) => ({
+          deviceId: d.deviceId,
+          label: d.label || `Speaker/Headphone ${index + 1}`
+        }));
+      setAvailableOutputs(outputs);
+
+      if (mics.length > 0) {
+        const currentSelected = mics.find(m => m.deviceId === selectedMicId);
+        if (currentSelected) {
+          setActiveMicName(currentSelected.label);
+        } else {
           const defaultMic = mics.find(m => m.deviceId === 'default') || mics[0];
-          setActiveMicName(defaultMic.label || 'Default Microphone');
+          setActiveMicName(defaultMic.label);
         }
-      } catch (e) { }
+      }
+    } catch (e) {
+      console.warn('Device enumeration notice:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAudioDevices();
+    navigator.mediaDevices.addEventListener('devicechange', fetchAudioDevices);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', fetchAudioDevices);
     };
-    fetchMicName();
-  }, []);
+  }, [selectedMicId]);
+
+  useEffect(() => {
+    localStorage.setItem('selected_audio_input_device', selectedMicId);
+  }, [selectedMicId]);
+
+  useEffect(() => {
+    localStorage.setItem('selected_audio_output_device', selectedOutputId);
+  }, [selectedOutputId]);
+
+  // Live Voice Activity meter when Settings panel is open
+  useEffect(() => {
+    if (!showSettings) {
+      setLiveVoiceLevel(0);
+      return;
+    }
+
+    let audioContext: AudioContext | null = null;
+    let meterStream: MediaStream | null = null;
+    let animId: number;
+
+    const startMeter = async () => {
+      try {
+        const constraints: MediaStreamConstraints = {
+          audio: selectedMicId && selectedMicId !== 'default'
+            ? { deviceId: { exact: selectedMicId } }
+            : true,
+          video: false,
+        };
+        meterStream = await navigator.mediaDevices.getUserMedia(constraints);
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(meterStream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const updateMeter = () => {
+          if (!analyser) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const avg = sum / dataArray.length;
+          // Scale from 0-128 to 0-100%
+          const pct = Math.min(100, Math.round((avg / 64) * 100));
+          setLiveVoiceLevel(pct);
+          animId = requestAnimationFrame(updateMeter);
+        };
+        updateMeter();
+      } catch (err) {
+        console.warn('Voice meter notice:', err);
+      }
+    };
+
+    startMeter();
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+      if (meterStream) {
+        meterStream.getTracks().forEach(t => t.stop());
+      }
+      if (audioContext && audioContext.state !== 'closed') {
+        audioContext.close().catch(() => {});
+      }
+      setLiveVoiceLevel(0);
+    };
+  }, [showSettings, selectedMicId]);
 
   // Sync mic state continuously to keep settings UI aligned with Windows system settings
   useEffect(() => {
@@ -1713,71 +1818,186 @@ function App() {
     clearAudioBuffer();
 
     try {
-      const freshSources = await ipcRenderer.invoke('get-desktop-sources');
-      let activeSourceId = selectedSource;
-      if (freshSources && freshSources.length > 0) {
-        const found = freshSources.find((s: any) => s.id === selectedSource);
-        if (!found) activeSourceId = freshSources[0].id;
+      let desktopStream: MediaStream | null = null;
+      let micStream: MediaStream | null = null;
+
+      // 1. Attempt Desktop Audio Capture (Interviewer / Meeting Voice from laptop or earpods)
+      try {
+        const freshSources = await ipcRenderer.invoke('get-desktop-sources');
+        let activeSourceId = selectedSource;
+        if (freshSources && freshSources.length > 0) {
+          const found = freshSources.find((s: any) => s.id === selectedSource);
+          activeSourceId = found ? found.id : freshSources[0].id;
+        }
+
+        desktopStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: activeSourceId,
+            }
+          } as any,
+          video: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: activeSourceId,
+            }
+          } as any
+        });
+
+        // Immediately stop unused video track so screen capture video doesn't run in background
+        desktopStream.getVideoTracks().forEach(t => t.stop());
+      } catch (errDesktop) {
+        console.warn('Meeting desktop loopback audio notice (non-fatal, continuing):', errDesktop);
+        desktopStream = null;
       }
 
-      const desktopStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: activeSourceId,
+      // 2. Attempt Microphone Capture (User Voice / Earpods Mic / Laptop Mic)
+      try {
+        const micConstraints: MediaTrackConstraints = {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        };
+        if (selectedMicId && selectedMicId !== 'default') {
+          micConstraints.deviceId = { exact: selectedMicId };
+        }
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: micConstraints,
+          video: false,
+        });
+      } catch (errMic1) {
+        console.warn('Direct mic with constraints notice, trying basic audio...', errMic1);
+        try {
+          const fallbackConstraints: MediaTrackConstraints = {};
+          if (selectedMicId && selectedMicId !== 'default') {
+            fallbackConstraints.deviceId = { exact: selectedMicId };
           }
-        } as any,
-        video: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: activeSourceId,
-          }
-        } as any
-      });
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: Object.keys(fallbackConstraints).length > 0 ? fallbackConstraints : true,
+            video: false,
+          });
+        } catch (errMic2) {
+          console.warn('Basic mic failed, enumerating connected audio devices (earpods / external mic)...', errMic2);
+          try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter(d => d.kind === 'audioinput');
+            for (const dev of audioInputs) {
+              try {
+                micStream = await navigator.mediaDevices.getUserMedia({
+                  audio: { deviceId: { exact: dev.deviceId } },
+                  video: false,
+                });
+                if (micStream && micStream.getAudioTracks().length > 0) break;
+              } catch (_) {}
+            }
+          } catch (_) {}
+        }
+      }
 
-      const micStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false
-      });
+      const hasDesktopAudio = Boolean(desktopStream && desktopStream.getAudioTracks().length > 0);
+      const hasMicAudio = Boolean(micStream && micStream.getAudioTracks().length > 0);
 
-      streamRef.current = new MediaStream([...desktopStream.getTracks(), ...micStream.getTracks()]);
+      if (!hasDesktopAudio && !hasMicAudio) {
+        throw new Error('No working audio input was detected. Please verify your earpods or microphone are connected and try again.');
+      }
 
+      const combinedTracks: MediaStreamTrack[] = [];
+      if (hasDesktopAudio && desktopStream) combinedTracks.push(...desktopStream.getAudioTracks());
+      if (hasMicAudio && micStream) combinedTracks.push(...micStream.getAudioTracks());
+      streamRef.current = new MediaStream(combinedTracks);
+
+      let recoveryTimeout: any = null;
       const handleDeviceBreak = () => {
         if (!isRecordingRef.current || isRecoveringRef.current) return;
         isRecoveringRef.current = true;
-        console.log("Audio device changed/disconnected. Auto-recovering...");
-        stopRecording(true);
-        setTimeout(() => {
-          startRecording(true).finally(() => {
-            isRecoveringRef.current = false;
-          });
-        }, 3000); // Wait 3s for Windows to fully route Bluetooth audio
+        console.log("Audio device routing changed (earpods/headphones connected or disconnected). Auto-recovering in 800ms...");
+        if (recoveryTimeout) clearTimeout(recoveryTimeout);
+        recoveryTimeout = setTimeout(async () => {
+          try {
+            stopRecording(true);
+            await startRecording(true);
+          } catch (e) {
+            console.warn("Auto-recovery first attempt failed, retrying in 1s...", e);
+            setTimeout(() => {
+              startRecording(true).catch(() => {}).finally(() => {
+                isRecoveringRef.current = false;
+              });
+            }, 1000);
+            return;
+          }
+          isRecoveringRef.current = false;
+        }, 800);
       };
 
-      micStream.getTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
-      desktopStream.getTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
+      if (hasMicAudio && micStream) {
+        micStream.getAudioTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
+      }
+      if (hasDesktopAudio && desktopStream) {
+        desktopStream.getAudioTracks().forEach(track => track.addEventListener('ended', handleDeviceBreak));
+      }
       navigator.mediaDevices.ondevicechange = handleDeviceBreak;
 
-      const audioCtx = new window.AudioContext({ sampleRate: 16000 });
+      // AudioContext: try 16000Hz, or fallback to device native sample rate (e.g. 48000Hz on Bluetooth earpods)
+      let audioCtx: AudioContext;
+      try {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      } catch (errCtx) {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
       audioContextRef.current = audioCtx;
 
-      const desktopSource = audioCtx.createMediaStreamSource(desktopStream);
-      const micSource = audioCtx.createMediaStreamSource(micStream);
-
       const mixer = audioCtx.createGain();
-      desktopSource.connect(mixer);
-      micSource.connect(mixer);
+      if (hasDesktopAudio && desktopStream) {
+        try {
+          const desktopSource = audioCtx.createMediaStreamSource(desktopStream);
+          // Boost meeting loopback audio so remote interviewer/participant voices in Zoom, Teams, Meet are crystal clear
+          const desktopGain = audioCtx.createGain();
+          desktopGain.gain.value = 1.35;
+          desktopSource.connect(desktopGain);
+          desktopGain.connect(mixer);
+        } catch (errConnectDesktop) {
+          console.warn('Could not connect desktop source to mixer:', errConnectDesktop);
+        }
+      }
+      if (hasMicAudio && micStream) {
+        try {
+          const micSource = audioCtx.createMediaStreamSource(micStream);
+          micSource.connect(mixer);
+        } catch (errConnectMic) {
+          console.warn('Could not connect mic source to mixer:', errConnectMic);
+        }
+      }
+
       const processor = audioCtx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
+
+      const inputSampleRate = audioCtx.sampleRate || 16000;
 
       processor.onaudioprocess = (e) => {
         if (isPausedRef.current) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
-        // Fast zero-churn allocation: only allocate the incoming small frame (16KB)
-        const chunk = new Float32Array(inputData);
-        audioChunksRef.current.push(chunk);
-        totalAudioSamplesRef.current += chunk.length;
+        let resampled: Float32Array;
+
+        if (inputSampleRate === 16000) {
+          resampled = new Float32Array(inputData);
+        } else {
+          // Accurate linear downsampling from Bluetooth / system sample rate (48kHz/44.1kHz) to 16kHz
+          const ratio = inputSampleRate / 16000;
+          const newLength = Math.round(inputData.length / ratio);
+          resampled = new Float32Array(newLength);
+          for (let i = 0; i < newLength; i++) {
+            const originIndex = i * ratio;
+            const indexFloor = Math.floor(originIndex);
+            const indexCeil = Math.min(inputData.length - 1, indexFloor + 1);
+            const t = originIndex - indexFloor;
+            resampled[i] = (1 - t) * inputData[indexFloor] + t * inputData[indexCeil];
+          }
+        }
+
+        audioChunksRef.current.push(resampled);
+        totalAudioSamplesRef.current += resampled.length;
       };
 
       mixer.connect(processor);
@@ -1796,14 +2016,18 @@ function App() {
       timerIntervalRef.current = setInterval(() => {
         setRecordingSeconds(prev => prev + 1);
       }, 1000);
-    } catch (e) {
+    } catch (e: any) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
       if (silent) {
         setTimeout(() => startRecording(true).finally(() => { isRecoveringRef.current = false; }), 2000);
         return;
       }
-      setAlertMessage({ title: 'Capture Failed', message: 'Failed to capture audio.', type: 'error' });
+      setAlertMessage({
+        title: 'Capture Notice',
+        message: e?.message || 'Failed to capture audio. If earpods were recently plugged in, click Restart ClueAI to reset your Windows audio routing.',
+        type: 'error'
+      });
       setIsRecording(false);
       setShowSessionPrompt(false);
     }
@@ -1852,8 +2076,9 @@ function App() {
         if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
       }
 
-      // Dynamic noise gate threshold. Raised to 0.04 to correctly ignore MS Teams static/hum (which sits at ~0.02)
-      if (maxVal < 0.04) {
+      // Dynamic noise gate threshold. Adjusted to 0.012 so remote participant voices (Zoom/Teams/Meet)
+      // are accurately transcribed while ignoring purely dead silence/low static.
+      if (maxVal < 0.012) {
         silenceFramesRef.current += 1;
         // If silent for more than 2 seconds (4 frames of 500ms) and buffer is not empty
         if (silenceFramesRef.current > 4 && totalAudioSamplesRef.current > 0) {
@@ -2074,13 +2299,13 @@ function App() {
     setIsGenerating(false);
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
 
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
-    // Reset to default main menu size cleanly
-    ipcRenderer.invoke('stop-interview-window');
-
     if (!silent) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+      // Reset to default main menu size cleanly
+      ipcRenderer.invoke('stop-interview-window');
+
       setProvider('groq');
       switchProvider('groq');
       setIsRecording(false);
@@ -2462,6 +2687,12 @@ function App() {
         return;
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (key === 'r' || key === 'R')) {
+        e.preventDefault();
+        restartApp();
+        return;
+      }
+
       if (!isRecording && !isAiFullscreen) return;
 
       if (key === '7' || key === 'q') {
@@ -2674,6 +2905,9 @@ function App() {
   const closeApp = () => ipcRenderer.send('app-quit');
   const minimizeApp = () => {
     ipcRenderer.invoke('minimize-window');
+  };
+  const restartApp = () => {
+    ipcRenderer.invoke('restart-app');
   };
 
   const handleShrinkWindow = () => {
@@ -3362,6 +3596,9 @@ function App() {
                         </button>
                         <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Fullscreen">
                           <Maximize size={14} />
+                        </button>
+                        <button onClick={restartApp} className="p-1.5 hover:bg-cyan-500/20 rounded-lg text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer" title="Restart ClueAI (Reset Audio & Windows Routing)">
+                          <RefreshCw size={14} />
                         </button>
                         <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Minimize">
                           <Minus size={14} />
@@ -4712,49 +4949,140 @@ function App() {
 
                           {/* Sound Settings */}
                           <section>
-                            <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Mic size={16} /> System Sound Settings</h3>
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider flex items-center gap-2">
+                                <Mic size={16} className="text-cyan-400" /> Audio & Microphone Settings
+                              </h3>
+                              <button
+                                onClick={fetchAudioDevices}
+                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-white/5"
+                                title="Refresh Audio Devices"
+                              >
+                                <RefreshCw size={12} /> Re-scan Devices
+                              </button>
+                            </div>
+
                             <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-5">
-                              <div className="flex items-center justify-between pb-4 border-b border-brand-border">
-                                <div>
-                                  <h4 className="text-sm font-bold text-white mb-1">Active Microphone</h4>
-                                  <p className="text-xs text-brand-accentSec font-mono truncate max-w-[250px]">{activeMicName}</p>
+                              {/* Microphone Input Device Selection */}
+                              <div className="pb-4 border-b border-brand-border">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white mb-0.5 flex items-center gap-2">
+                                      Active Microphone (Input)
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                        {availableMics.length} Available
+                                      </span>
+                                    </h4>
+                                    <p className="text-xs text-brand-subtext">Choose which microphone ClueAI listens to during meetings</p>
+                                  </div>
                                 </div>
-                                <button
-                                  onClick={() => shell.openExternal('ms-settings:sound')}
-                                  className="px-4 py-2 bg-brand-secondary hover:bg-white/10 border border-brand-border text-brand-text rounded-lg text-xs font-bold transition-colors"
-                                >
-                                  Change in Windows Settings
-                                </button>
+                                <div className="mt-2.5">
+                                  <select
+                                    value={selectedMicId}
+                                    onChange={(e) => setSelectedMicId(e.target.value)}
+                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white/90 outline-none focus:border-cyan-400/60 transition-colors cursor-pointer"
+                                  >
+                                    <option value="default">Default System Microphone ({activeMicName})</option>
+                                    {availableMics.filter(m => m.deviceId !== 'default').map((m) => (
+                                      <option key={m.deviceId} value={m.deviceId}>
+                                        {m.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
+
+                              {/* Live Voice Activity Meter (Voice Tester) */}
+                              <div className="pb-4 border-b border-brand-border">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white mb-0.5">Live Voice Activity Meter</h4>
+                                    <p className="text-xs text-brand-subtext">Speak now to test your voice pickup in real-time</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${sysMicMuted ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]' : liveVoiceLevel > 15 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse' : 'bg-white/20'}`} />
+                                    <span className="text-xs font-mono font-bold text-white/80">
+                                      {sysMicMuted ? 'Muted' : liveVoiceLevel > 15 ? 'Speaking' : 'Listening...'} ({liveVoiceLevel}%)
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 w-full bg-black/60 h-3.5 rounded-full border border-white/10 overflow-hidden p-0.5 flex items-center">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-75 ${sysMicMuted ? 'bg-rose-500/50' : 'bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 shadow-[0_0_12px_rgba(6,182,212,0.6)]'}`}
+                                    style={{ width: sysMicMuted ? '0%' : `${Math.max(3, liveVoiceLevel)}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Headphones / Audio Output Devices */}
+                              <div className="pb-4 border-b border-brand-border">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-white mb-0.5 flex items-center gap-2">
+                                      Connected Headphones / Speakers (Output)
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-white/70">
+                                        {availableOutputs.length} Detected
+                                      </span>
+                                    </h4>
+                                    <p className="text-xs text-brand-subtext">Where meeting and interviewer voices are currently playing</p>
+                                  </div>
+                                </div>
+                                <div className="mt-2.5">
+                                  <select
+                                    value={selectedOutputId}
+                                    onChange={(e) => setSelectedOutputId(e.target.value)}
+                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white/90 outline-none focus:border-cyan-400/60 transition-colors cursor-pointer"
+                                  >
+                                    <option value="default">Default System Audio Output</option>
+                                    {availableOutputs.filter(o => o.deviceId !== 'default').map((o) => (
+                                      <option key={o.deviceId} value={o.deviceId}>
+                                        {o.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {/* Microphone Volume Slider */}
                               <div className="flex items-center justify-between">
                                 <div>
                                   <h4 className="text-sm font-bold text-white mb-1">Microphone Volume</h4>
-                                  <p className="text-xs text-brand-subtext">Automatically synced with Windows system settings</p>
+                                  <p className="text-xs text-brand-subtext">Synced directly with Windows system audio</p>
                                 </div>
                                 <div className="flex items-center gap-3 w-1/2">
-                                  <span className="text-xs font-mono text-brand-subtext w-8 text-right">{sysMicVolume}%</span>
+                                  <span className="text-xs font-mono text-cyan-300 font-bold w-10 text-right">{sysMicVolume}%</span>
                                   <input
                                     type="range"
                                     min="0"
                                     max="100"
                                     value={sysMicVolume}
                                     onChange={handleMicVolumeChange}
-                                    className="w-full accent-brand-accent"
+                                    className="w-full accent-cyan-400 cursor-pointer"
                                     disabled={sysMicMuted}
                                   />
                                 </div>
                               </div>
+
+                              {/* Microphone Mute Toggle & Windows Sound Link */}
                               <div className="flex items-center justify-between pt-4 border-t border-brand-border">
                                 <div>
-                                  <h4 className="text-sm font-bold text-white mb-1">Microphone Mute</h4>
+                                  <h4 className="text-sm font-bold text-white mb-1">Microphone Mute Status</h4>
                                   <p className="text-xs text-brand-subtext">Toggle microphone on or off at the system level</p>
                                 </div>
-                                <button
-                                  onClick={handleMicMuteToggle}
-                                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${sysMicMuted ? 'bg-rose-500/20 text-rose-500 border border-rose-500/50' : 'bg-brand-secondary border border-brand-border text-white hover:bg-white/10'}`}
-                                >
-                                  {sysMicMuted ? 'Unmute' : 'Mute'}
-                                </button>
+                                <div className="flex items-center gap-2.5">
+                                  <button
+                                    onClick={() => shell.openExternal('ms-settings:sound')}
+                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-brand-border text-white/80 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                                  >
+                                    Windows Sound Settings
+                                  </button>
+                                  <button
+                                    onClick={handleMicMuteToggle}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md ${sysMicMuted ? 'bg-rose-500/25 text-rose-300 border border-rose-500/50 hover:bg-rose-500/35' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'}`}
+                                  >
+                                    {sysMicMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </section>
@@ -5556,14 +5884,23 @@ function App() {
                               )}
                             </div>
 
-                            {/* Right: Prominent STOP Recording Button */}
-                            <button
-                              onClick={stopRecording}
-                              className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 hover:border-rose-400 rounded-md font-black text-[10px] flex items-center gap-1.5 transition-all shadow-sm"
-                              title="Stop Recording Session (6 / D)"
-                            >
-                              <Square size={9} fill="currentColor" /> STOP SESSION <span className="text-[8.5px] opacity-75 font-mono">6</span>
-                            </button>
+                            {/* Right: Prominent RESTART & STOP Recording Buttons */}
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={restartApp}
+                                className="px-2.5 py-1 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                title="Restart App & Reset Audio (Ctrl+Shift+R)"
+                              >
+                                <RefreshCw size={9} /> RESTART <span className="text-[8.5px] opacity-75 font-mono">^R</span>
+                              </button>
+                              <button
+                                onClick={stopRecording}
+                                className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 hover:border-rose-400 rounded-md font-black text-[10px] flex items-center gap-1.5 transition-all shadow-sm"
+                                title="Stop Recording Session (6 / D)"
+                              >
+                                <Square size={9} fill="currentColor" /> STOP SESSION <span className="text-[8.5px] opacity-75 font-mono">6</span>
+                              </button>
+                            </div>
                           </div>
 
                           {/* 2. Main Stage: Ultra-Wide Transcript Reading Box + Integrated Generate Button */}
@@ -6666,10 +7003,18 @@ function App() {
                         {alertMessage.message}
                       </p>
                     </div>
-                    <div className="bg-black/40 px-6 py-4 border-t border-brand-border/50 flex justify-end">
+                    <div className="bg-black/40 px-6 py-4 border-t border-brand-border/50 flex justify-end gap-2.5">
+                      <button
+                        onClick={restartApp}
+                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg flex items-center gap-1.5 cursor-pointer"
+                        title="Restart ClueAI to reset Windows audio routing"
+                      >
+                        <RefreshCw size={14} />
+                        Restart ClueAI
+                      </button>
                       <button
                         onClick={() => setAlertMessage(null)}
-                        className={`px-6 py-2 ${alertMessage.type === 'error' ? 'bg-rose-500 hover:bg-rose-400' : alertMessage.type === 'success' ? 'bg-green-600 hover:bg-green-500' : 'bg-brand-accent hover:bg-brand-accentSec'} text-white rounded-lg font-bold text-sm transition-colors shadow-lg`}
+                        className={`px-6 py-2 ${alertMessage.type === 'error' ? 'bg-rose-500 hover:bg-rose-400' : alertMessage.type === 'success' ? 'bg-green-600 hover:bg-green-500' : 'bg-brand-accent hover:bg-brand-accentSec'} text-white rounded-lg font-bold text-sm transition-colors shadow-lg cursor-pointer`}
                       >
                         OK
                       </button>
