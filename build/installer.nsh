@@ -2,10 +2,6 @@
 !include "LogicLib.nsh"
 
 !macro customInit
-  ; Forcefully kill any running instances or background processes of ClueAI
-  nsExec::Exec 'cmd /c "taskkill /F /T /IM ClueAI.exe /IM clueai.exe >nul 2>&1"'
-  Sleep 500
-  
   ; Check command line parameters
   ${GetParameters} $R0
   ClearErrors

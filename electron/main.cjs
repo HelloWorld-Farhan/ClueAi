@@ -74,7 +74,16 @@ function createWindow() {
     }
   });
 
-  // Safety fallback: if GPU delays ready-to-show, force show after 1000ms
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      applyStealthProtection(mainWindow, isStealthMode);
+    }
+  });
+
+  // Safety fallback: if GPU delays ready-to-show, force show after 800ms
   setTimeout(() => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
@@ -82,7 +91,7 @@ function createWindow() {
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       applyStealthProtection(mainWindow, isStealthMode);
     }
-  }, 1000);
+  }, 800);
 
   // Force the window to the absolute highest z-level, above all fullscreen apps
   // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
@@ -811,13 +820,7 @@ function terminateOtherInstances() {
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  // A previous or zombie background instance of ClueAI was lingering.
-  // Terminate it so that starting ClueAI always opens a fresh, active, responsive window!
-  terminateOtherInstances();
-  setTimeout(() => {
-    app.relaunch();
-    app.exit(0);
-  }, 250);
+  app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
