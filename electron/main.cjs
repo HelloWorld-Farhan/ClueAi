@@ -182,6 +182,9 @@ function createWindow() {
     isStealthMode = enable;
     if (mainWindow) {
       applyStealthProtection(mainWindow, enable);
+      if (!enable) {
+        mainWindow.setIgnoreMouseEvents(false);
+      }
     }
   });
 

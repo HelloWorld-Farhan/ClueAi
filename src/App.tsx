@@ -79,7 +79,7 @@ const renderReleaseNotes = (notes: any) => {
   );
 };
 
-const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
+const CopyButton = ({ text, className, tooltip: _tooltip, size = 14 }: { text: string, className?: string, tooltip?: string, size?: number }) => {
   const [copied, setCopied] = useState(false);
   const [empty, setEmpty] = useState(false);
 
@@ -102,7 +102,6 @@ const CopyButton = ({ text, className, tooltip, size = 14 }: { text: string, cla
       <button
         onClick={handleCopy}
         className={className}
-        title={tooltip}
       >
         <FileText size={size} />
       </button>
@@ -1334,6 +1333,7 @@ function App() {
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<any>(null);
+  const recordingStartTimeRef = useRef<number | null>(null);
   const aiAbortControllerRef = useRef<AbortController | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1377,7 +1377,16 @@ function App() {
       if (now - lastMouseSendRef.current < 50) return; // 20Hz throttle
       lastMouseSendRef.current = now;
 
-      // If any modal dialog is active (Settings, Info, Updates, Session setup, etc.) or app is on the dashboard, NEVER pass through mouse events!
+      // 1. If Stealth Shield is OFF, NEVER pass through or ignore mouse events: whole app is 100% interactive!
+      if (!stealthMode) {
+        if (currentIgnoreRef.current !== false) {
+          currentIgnoreRef.current = false;
+          ipcRenderer.send('set-ignore-mouse-events', false);
+        }
+        return;
+      }
+
+      // 2. If any modal dialog is active or app is on the dashboard, NEVER pass through mouse events!
       const isAnyModalActive = showSettings || showInfo || showUpdateModal || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions;
       if (isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
@@ -1388,7 +1397,17 @@ function App() {
       }
 
       const target = e.target as HTMLElement;
-      if (target.closest && target.closest('.stealth-exempt')) {
+      // 3. Any button, input, textarea, card, toolbar, panel or drag-area is ALWAYS interactive!
+      if (target.closest && (
+        target.closest('.stealth-exempt') ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('select') ||
+        target.closest('.no-drag') ||
+        target.closest('.drag-area') ||
+        target.closest('.custom-scrollbar')
+      )) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
           ipcRenderer.send('set-ignore-mouse-events', false);
@@ -1406,11 +1425,10 @@ function App() {
     };
 
     const handleMouseLeave = () => {
-      // Only during active interview recording or fullscreen should click-through / hotkeys be gated
-      if (!isAiFullscreen && !isRecording) {
+      // If stealth mode is off, NEVER pass through mouse events!
+      if (!stealthMode || (!isAiFullscreen && !isRecording)) {
         return;
       }
-      // Never disable global hotkeys on mouse leave so user can use hotkeys while working in other apps!
       if (currentIgnoreRef.current !== true) {
         currentIgnoreRef.current = true;
         ipcRenderer.send('set-ignore-mouse-events', true);
@@ -1418,7 +1436,7 @@ function App() {
     };
 
     const handleMouseEnter = () => {
-      if (!isAiFullscreen && !isRecording) {
+      if (!stealthMode || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
           ipcRenderer.send('set-ignore-mouse-events', false);
@@ -1434,7 +1452,15 @@ function App() {
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [isAiFullscreen, isRecording, globalHotkeysEnabled]);
+  }, [isAiFullscreen, isRecording, globalHotkeysEnabled, stealthMode]);
+
+  // When stealth mode is toggled OFF, immediately restore full window mouse interactivity
+  useEffect(() => {
+    if (!stealthMode) {
+      currentIgnoreRef.current = false;
+      ipcRenderer.send('set-ignore-mouse-events', false);
+    }
+  }, [stealthMode]);
 
   // Restore mouse responsiveness and reset passthrough whenever the window is shown/restored
   useEffect(() => {
@@ -2010,12 +2036,17 @@ function App() {
         processAudioRef.current();
       }, 500);
 
-      if (!silent) {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (!silent || !recordingStartTimeRef.current) {
+        recordingStartTimeRef.current = Date.now();
         setRecordingSeconds(0);
       }
       timerIntervalRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
-      }, 1000);
+        if (recordingStartTimeRef.current) {
+          const elapsed = Math.floor((Date.now() - recordingStartTimeRef.current) / 1000);
+          setRecordingSeconds(elapsed);
+        }
+      }, 500);
     } catch (e: any) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
       console.error(e);
@@ -2302,6 +2333,9 @@ function App() {
     if (!silent) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+      recordingStartTimeRef.current = null;
+      setRecordingSeconds(0);
 
       // Reset to default main menu size cleanly
       ipcRenderer.invoke('stop-interview-window');
@@ -3111,7 +3145,6 @@ function App() {
                 <div
                   className="w-full h-full flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-colors"
                   onClick={() => setIsTopBarMinimized(false)}
-                  title="Expand Question Context"
                 >
                   <span className="text-2xl select-none group-hover:scale-110 transition-transform">🧠</span>
                   <div className="absolute inset-0 rounded-full border border-cyan-400/30 group-hover:border-cyan-400/60 animate-[spin_4s_linear_infinite]" />
@@ -3141,7 +3174,6 @@ function App() {
                             localStorage.setItem('clueai_answer_size', next.toString());
                           }}
                           className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs"
-                          title="Decrease Text Size"
                         >
                           A-
                         </button>
@@ -3153,7 +3185,6 @@ function App() {
                             localStorage.setItem('clueai_answer_size', next.toString());
                           }}
                           className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs"
-                          title="Increase Text Size"
                         >
                           A+
                         </button>
@@ -3163,7 +3194,6 @@ function App() {
                       <button
                         onClick={() => setScrollSpeed(prev => (prev === 0 ? 1 : 0))}
                         className={`px-2.5 py-1 rounded-xl transition-colors font-bold text-xs flex items-center gap-1.5 border border-white/10 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/60 hover:text-white'}`}
-                        title="Auto Scroll"
                       >
                         {scrollSpeed > 0 ? <Pause size={12} /> : <ArrowDown size={12} />}
                         <span className="text-[10px]">Scroll</span>
@@ -3178,7 +3208,6 @@ function App() {
                           setTimeout(() => setAiCopied(false), 2000);
                         }}
                         className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5"
-                        title="Copy Answer to Clipboard"
                       >
                         {aiCopied ? (
                           <><CheckCircle2 size={13} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
@@ -3203,7 +3232,6 @@ function App() {
                           setIsPaused(false);
                           isPausedRef.current = false;
                         }}
-                        title="Next Question (Press Z or 1)"
                         className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
                       >
                         <Play size={12} fill="currentColor" /> NEXT Q. <span className="text-[9px] bg-black/20 px-1 rounded ml-0.5">1</span>
@@ -3224,7 +3252,6 @@ function App() {
                           setAiAnswer('');
                           setCurrentSnapshots([]);
                         }}
-                        title="Close Answer (Press C or 3)"
                         className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
                       >
                         <X size={13} /> CLOSE <span className="text-[9px] bg-white/10 px-1 rounded ml-0.5">3</span>
@@ -3328,7 +3355,6 @@ function App() {
                 <div
                   className={`w-full h-full flex flex-col overflow-hidden relative ${altColor ? 'text-black/80' : 'text-white/90'}`}
                   onDoubleClick={() => setIsAnswerMinimized(false)}
-                  title="Double-click anywhere to expand"
                 >
                   <div className="absolute top-1 right-2 z-30 opacity-100 bg-[#0a0b12]/95 border border-white/20 backdrop-blur-xl rounded-xl px-2 py-0.5 flex items-center gap-1.5 shadow-md">
                     <button
@@ -3341,7 +3367,6 @@ function App() {
                         });
                       }}
                       className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Decrease font size"
                     ><Minus size={12} /></button>
                     <span className="text-[10px] font-mono text-cyan-400 font-bold px-0.5 select-none">{stealthFontSize}</span>
                     <button
@@ -3354,10 +3379,9 @@ function App() {
                         });
                       }}
                       className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Increase font size"
                     ><Plus size={12} /></button>
                     <div className="w-[1px] h-3 bg-white/20 mx-0.5" />
-                    <button onClick={() => setIsAnswerMinimized(false)} className="text-cyan-400 hover:text-cyan-300 p-1 hover:bg-cyan-500/10 rounded transition-colors" title="Expand Answer Panel"><Maximize size={12} /></button>
+                    <button onClick={() => setIsAnswerMinimized(false)} className="text-cyan-400 hover:text-cyan-300 p-1 hover:bg-cyan-500/10 rounded transition-colors"><Maximize size={12} /></button>
                   </div>
                   <div
                     ref={aiAnswerScrollRef}
@@ -3418,7 +3442,6 @@ function App() {
                                 localStorage.setItem('clueai_answer_size', next.toString());
                               }}
                               className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
-                              title="Decrease Text Size (A-)"
                             >
                               <Minus size={13} className="text-white" />
                             </button>
@@ -3434,7 +3457,6 @@ function App() {
                                 localStorage.setItem('clueai_answer_size', next.toString());
                               }}
                               className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all font-bold flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
-                              title="Increase Text Size (A+)"
                             >
                               <Plus size={13} className="text-white" />
                             </button>
@@ -3444,7 +3466,6 @@ function App() {
                             <button
                               onClick={() => setIsAnswerMinimized(true)}
                               className="p-1.5 rounded-lg bg-white/10 hover:bg-cyan-500/20 text-white hover:text-cyan-300 transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95"
-                              title="Minimize Answer Panel"
                             >
                               <Minimize2 size={13} className="text-white" />
                             </button>
@@ -3548,7 +3569,7 @@ function App() {
                     <div className="w-full px-5 py-2.5 flex items-center justify-between border-b border-white/5">
                       {/* Left: Move Handle, Logo, App Name, Version & Profile */}
                       <div className="flex items-center gap-3 no-drag">
-                        <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors" title="Drag Window">
+                        <div className="p-1.5 bg-white/5 rounded-lg text-white/40 border border-white/10 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing hover:text-white/80 transition-colors">
                           <Move size={14} />
                         </div>
 
@@ -3565,7 +3586,6 @@ function App() {
                           <button
                             onClick={() => setShowUpdateModal(true)}
                             className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all flex items-center gap-1 cursor-pointer ml-1"
-                            title="Current App Version"
                           >
                             <span>v{appVersion}</span>
                           </button>
@@ -3578,7 +3598,6 @@ function App() {
                             <button
                               onClick={() => { setTempUsername(username); setLocalRenameStealth(stealthMode); setShowUsernamePrompt(true); }}
                               className="p-0.5 hover:bg-white/10 text-white/50 hover:text-cyan-300 rounded-md transition-colors ml-0.5 cursor-pointer"
-                              title="Rename Profile"
                             >
                               <Edit2 size={11} />
                             </button>
@@ -3588,22 +3607,22 @@ function App() {
 
                       {/* Right: Window Controls */}
                       <div className="flex items-center gap-1 no-drag">
-                        <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Shrink Window (Alt -)">
+                        <button onClick={handleShrinkWindow} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer">
                           <ZoomOut size={14} />
                         </button>
-                        <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Enlarge Window (Alt +)">
+                        <button onClick={() => ipcRenderer.invoke('resize-window', 50, 50)} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer">
                           <ZoomIn size={14} />
                         </button>
-                        <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Fullscreen">
+                        <button onClick={() => ipcRenderer.send('toggle-fullscreen')} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer">
                           <Maximize size={14} />
                         </button>
-                        <button onClick={restartApp} className="p-1.5 hover:bg-cyan-500/20 rounded-lg text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer" title="Restart ClueAI (Reset Audio & Windows Routing)">
+                        <button onClick={restartApp} className="p-1.5 hover:bg-cyan-500/20 rounded-lg text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer">
                           <RefreshCw size={14} />
                         </button>
-                        <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer" title="Minimize">
+                        <button onClick={minimizeApp} className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors cursor-pointer">
                           <Minus size={14} />
                         </button>
-                        <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors cursor-pointer" title="Close">
+                        <button onClick={closeApp} className="p-1.5 hover:bg-rose-500/20 rounded-lg text-white/60 hover:text-rose-400 transition-colors cursor-pointer">
                           <X size={14} />
                         </button>
                       </div>
@@ -3630,7 +3649,6 @@ function App() {
                               ? 'shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
                               : 'shadow-[0_0_20px_rgba(6,182,212,0.4)]'
                           }`}
-                          title="ClueAI Live Update Center"
                         >
                           {updateStatus === 'downloading' ? (
                             <>
@@ -3674,7 +3692,6 @@ function App() {
                               ipcRenderer.invoke('set-stealth', true);
                             }
                           }}
-                          title={stealthMode ? "Stealth Shield Active (Green: Protected from screen-shares). Click to disable." : "Stealth Shield OFF (Red: Visible). Click to activate."}
                           className={`p-2 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm border cursor-pointer ${stealthMode
                             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
                             : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse'
@@ -3689,7 +3706,6 @@ function App() {
                         <button
                           onClick={() => setShowInfo(!showInfo)}
                           className={`p-2 rounded-xl transition-all border cursor-pointer ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
-                          title="Information Guide"
                         >
                           <Info size={15} />
                         </button>
@@ -3697,7 +3713,6 @@ function App() {
                         <button
                           onClick={() => { if (!showSettings) setLocalSettingsStealth(stealthMode); setShowSettings(!showSettings); }}
                           className={`p-2 rounded-xl transition-all border cursor-pointer ${showSettings ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
-                          title="Settings & Models"
                         >
                           <Settings size={15} />
                         </button>
@@ -4169,7 +4184,7 @@ function App() {
                           <div>
                             <div className="flex items-center gap-3">
                               <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
-                              <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localSettingsStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                              <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`}>
                                 {localSettingsStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                               </button>
                             </div>
@@ -4403,7 +4418,7 @@ function App() {
                                               if (groqKeys[i]) {
                                                 clipboard.writeText(groqKeys[i]);
                                               }
-                                            }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
+                                            }} className="text-brand-subtext hover:text-green-400 transition-colors">
                                               <Copy size={14} />
                                             </button>
                                             <button onClick={async () => {
@@ -4415,7 +4430,7 @@ function App() {
                                                   setGroqKeys(newKeys);
                                                 }
                                               } catch (e) { }
-                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors">
                                               <ClipboardPaste size={14} />
                                             </button>
                                             <button onClick={() => {
@@ -4481,7 +4496,7 @@ function App() {
                                               if (geminiKeys[i]) {
                                                 clipboard.writeText(geminiKeys[i]);
                                               }
-                                            }} className="text-brand-subtext hover:text-green-400 transition-colors" title="Copy API Key">
+                                            }} className="text-brand-subtext hover:text-green-400 transition-colors">
                                               <Copy size={14} />
                                             </button>
                                             <button onClick={async () => {
@@ -4493,7 +4508,7 @@ function App() {
                                                   setGeminiKeys(newKeys);
                                                 }
                                               } catch (e) { }
-                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors">
                                               <ClipboardPaste size={14} />
                                             </button>
                                             <button onClick={() => {
@@ -4565,7 +4580,7 @@ function App() {
                                                     setClaudeKeys(newKeys);
                                                   }
                                                 } catch (e) { }
-                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors">
                                                 <ClipboardPaste size={14} />
                                               </button>
                                               <button onClick={() => {
@@ -4637,7 +4652,7 @@ function App() {
                                                   setGlmKeys(newKeys);
                                                 }
                                               } catch (e) { }
-                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                            }} className="text-brand-subtext hover:text-blue-400 transition-colors">
                                               <ClipboardPaste size={14} />
                                             </button>
                                             <button onClick={() => {
@@ -4710,7 +4725,7 @@ function App() {
                                                     setChatgptKeys(newKeys);
                                                   }
                                                 } catch (e) { }
-                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors">
                                                 <ClipboardPaste size={14} />
                                               </button>
                                               <button onClick={() => {
@@ -4783,7 +4798,7 @@ function App() {
                                                     setDeepseekKeys(newKeys);
                                                   }
                                                 } catch (e) { }
-                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors" title="Paste API Key">
+                                              }} className="text-brand-subtext hover:text-blue-400 transition-colors">
                                                 <ClipboardPaste size={14} />
                                               </button>
                                               <button onClick={() => {
@@ -4956,7 +4971,6 @@ function App() {
                               <button
                                 onClick={fetchAudioDevices}
                                 className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-white/5"
-                                title="Refresh Audio Devices"
                               >
                                 <RefreshCw size={12} /> Re-scan Devices
                               </button>
@@ -5675,7 +5689,6 @@ function App() {
                           transition={{ type: "spring", stiffness: 450, damping: 30 }}
                           onClick={() => setIsTranscriptMinimized(false)}
                           className="drag-area cursor-pointer group bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 rounded-full px-5 py-2.5 shadow-[0_12px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.25)] flex items-center gap-3.5 hover:border-cyan-400 hover:scale-105 transition-all select-none"
-                          title="Click to expand transcription dock"
                         >
                           <div className="flex items-center gap-1.5 text-cyan-400">
                             <span className="relative flex h-2.5 w-2.5">
@@ -5710,7 +5723,7 @@ function App() {
                           <div className="flex items-center justify-between w-full no-drag px-1 pb-1 border-b border-white/5">
                             {/* Left: Drag Handle, Brand, Timer, Stealth, Hotkeys, Model Selector */}
                             <div className="flex items-center gap-2">
-                              <div className="p-1 bg-white/5 hover:bg-white/10 rounded text-white/40 hover:text-white/80 cursor-grab active:cursor-grabbing shrink-0" title="Drag Dock">
+                              <div className="p-1 bg-white/5 hover:bg-white/10 rounded text-white/40 hover:text-white/80 cursor-grab active:cursor-grabbing shrink-0">
                                 <Move size={13} />
                               </div>
 
@@ -5725,7 +5738,6 @@ function App() {
                                 <button
                                   onClick={() => setShowUpdateModal(true)}
                                   className="px-2 py-0.5 rounded-lg font-black text-[9px] flex items-center gap-1 uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse shrink-0 cursor-pointer"
-                                  title="New version available! Click to update"
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
                                   <Sparkles size={10} />
@@ -5747,13 +5759,12 @@ function App() {
                                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                                   : 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse'
                                   }`}
-                                title={stealthMode ? "Stealth Shield Active (Green). Click to disable" : "Stealth Shield OFF (Red). Click to activate"}
                               >
                                 {stealthMode ? <ShieldCheck size={13} className="text-emerald-400" /> : <ShieldAlert size={13} className="text-rose-400" />}
                               </button>
 
                               {/* Global Hotkeys Toggle */}
-                              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-0.5 rounded-lg shrink-0" title="Toggle Global Hotkeys">
+                              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-0.5 rounded-lg shrink-0">
                                 <button
                                   onClick={() => {
                                     const newState = !globalHotkeysEnabled;
@@ -5798,7 +5809,6 @@ function App() {
                               <button
                                 onClick={() => { setLocalSettingsStealth(stealthMode); setShowSettings(true); }}
                                 className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
-                                title="Settings"
                               >
                                 <Settings size={12} />
                               </button>
@@ -5807,7 +5817,6 @@ function App() {
                               <button
                                 onClick={() => setIsTranscriptMinimized(true)}
                                 className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-md border border-white/10 transition-colors"
-                                title="Minimize Dock"
                               >
                                 <Minus size={12} />
                               </button>
@@ -5816,7 +5825,6 @@ function App() {
                               <button
                                 onClick={closeApp}
                                 className="p-1 bg-white/5 hover:bg-rose-500/20 text-white/50 hover:text-rose-400 rounded-md border border-white/10 transition-colors"
-                                title="Close App"
                               >
                                 <X size={12} />
                               </button>
@@ -5838,7 +5846,6 @@ function App() {
                               <button
                                 onClick={handlePauseToggle}
                                 className={`px-2.5 py-1 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all ${isPaused ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10'}`}
-                                title={isPaused ? "Resume Mic (1 / Z)" : "Pause Mic (1 / Z)"}
                               >
                                 {isPaused ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
                                 <span>{isPaused ? 'Resume' : 'Pause'}</span>
@@ -5848,7 +5855,6 @@ function App() {
                               <button
                                 onClick={handleSnipClick}
                                 className="px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all"
-                                title="Snip Screen Question (4 / A)"
                               >
                                 <Crop size={10} />
                                 <span>Snip</span>
@@ -5858,7 +5864,6 @@ function App() {
                               <button
                                 onClick={handleClearAll}
                                 className="px-2.5 py-1 bg-white/5 hover:bg-rose-500/20 text-white/60 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all"
-                                title="Clear Transcript (3 / C)"
                               >
                                 <Trash2 size={10} />
                                 <span>Clear</span>
@@ -5868,7 +5873,6 @@ function App() {
                               <button
                                 onClick={() => setShowVirtualKeyboard(true)}
                                 className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1.5 transition-colors"
-                                title="Edit Transcript (7 / Q)"
                               >
                                 <Edit2 size={10} /> Edit <span className="text-[8px] opacity-60 font-mono">7</span>
                               </button>
@@ -5877,7 +5881,6 @@ function App() {
                                 <button
                                   onClick={() => setShowPreviousQuestions(true)}
                                   className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-md text-[10px] font-semibold flex items-center gap-1.5 transition-colors"
-                                  title="Session History (8 / H)"
                                 >
                                   <Clock size={10} /> {currentSessionHistory.length} Qs <span className="text-[8px] opacity-60 font-mono">8</span>
                                 </button>
@@ -5889,14 +5892,12 @@ function App() {
                               <button
                                 onClick={restartApp}
                                 className="px-2.5 py-1 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                                title="Restart App & Reset Audio (Ctrl+Shift+R)"
                               >
                                 <RefreshCw size={9} /> RESTART <span className="text-[8.5px] opacity-75 font-mono">^R</span>
                               </button>
                               <button
                                 onClick={stopRecording}
                                 className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 hover:border-rose-400 rounded-md font-black text-[10px] flex items-center gap-1.5 transition-all shadow-sm"
-                                title="Stop Recording Session (6 / D)"
                               >
                                 <Square size={9} fill="currentColor" /> STOP SESSION <span className="text-[8.5px] opacity-75 font-mono">6</span>
                               </button>
@@ -5953,10 +5954,10 @@ function App() {
                                 <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
                                   <img src={snap} alt={`Snapshot ${idx + 1}`} className="w-full h-full object-cover" />
                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                                    <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
+                                    <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors">
                                       <Eye size={9} />
                                     </button>
-                                    <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Remove">
+                                    <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors">
                                       <Trash2 size={9} />
                                     </button>
                                   </div>
@@ -6300,7 +6301,7 @@ function App() {
                     <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
                       <div className="flex items-center gap-4">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={18} className="text-blue-400" /> Reminder Profile Setup</h2>
-                        <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localReminderStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                        <button onClick={() => setLocalReminderStealth(!localReminderStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localReminderStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`}>
                           {localReminderStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                         </button>
                       </div>
@@ -6542,7 +6543,7 @@ function App() {
                     <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
                       <div className="flex items-center gap-4">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2"><FileText size={18} className="text-teal-400" /> Note Profile Setup</h2>
-                        <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localNotesStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                        <button onClick={() => setLocalNotesStealth(!localNotesStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localNotesStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`}>
                           {localNotesStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                         </button>
                       </div>
@@ -7007,7 +7008,6 @@ function App() {
                       <button
                         onClick={restartApp}
                         className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg flex items-center gap-1.5 cursor-pointer"
-                        title="Restart ClueAI to reset Windows audio routing"
                       >
                         <RefreshCw size={14} />
                         Restart ClueAI
@@ -7031,7 +7031,7 @@ function App() {
                         <div>
                           <div className="flex items-center gap-3 mb-1">
                             <h2 className="text-lg font-bold tracking-tight text-white m-0">Your Name</h2>
-                            <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`} title={localRenameStealth ? 'Stealth ON' : 'Stealth OFF'}>
+                            <button onClick={() => setLocalRenameStealth(!localRenameStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localRenameStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`}>
                               {localRenameStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                             </button>
                           </div>
