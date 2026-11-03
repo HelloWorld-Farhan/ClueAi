@@ -57,7 +57,8 @@ function createWindow() {
     backgroundColor: '#00000000',
     alwaysOnTop: true,
     focusable: true,
-    skipTaskbar: false,
+    skipTaskbar: true,
+    type: 'toolbar',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

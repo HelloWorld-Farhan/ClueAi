@@ -373,7 +373,7 @@ function App() {
   const finalizedTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
   const [aiAnswer, setAiAnswer] = useState('');
-  const [sources, setSources] = useState<any[]>([]);
+  const [, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
 
@@ -3775,54 +3775,89 @@ function App() {
                               <p className="text-brand-subtext text-sm leading-relaxed">ClueAI is an advanced, ultra-stealthy AI copilot designed to help you ace your interviews and tests. It secretly records system audio and captures screen snapshots, feeding them to state-of-the-art AI models (Groq and Gemini) to provide you with instant, perfectly accurate answers and hints on your screen—all completely invisible to screen sharing software.</p>
                             </div>
 
-                            {/* Keyboard Shortcuts */}
-                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-4 group hover:border-white/10 transition-colors">
-                              <div className="flex items-center gap-3 border-b border-white/10 pb-3 mb-2">
-                                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center">
-                                  <Settings size={20} />
+                            {/* Keyboard Shortcuts - Full Width with Proper Alignment & No All-Caps */}
+                            <div className="bg-gradient-to-br from-brand-secondary to-brand-card p-6 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-5 md:col-span-2 group hover:border-white/10 transition-colors">
+                              <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+                                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                                  <Keyboard size={20} />
                                 </div>
                                 <div>
-                                  <h3 className="text-lg font-bold text-white">Keyboard Shortcuts</h3>
-                                  <p className="text-brand-subtext text-xs">Control ClueAI instantly without clicking.</p>
+                                  <h3 className="text-lg font-bold text-white">Keyboard Shortcuts Guide</h3>
+                                  <p className="text-brand-subtext text-xs">Control ClueAI seamlessly during interviews without touching your mouse.</p>
                                 </div>
                               </div>
 
-                              <div className="space-y-4">
-                                {/* General Hotkeys */}
+                              <div className="space-y-5">
+                                {/* Interview Controls */}
                                 <div>
-                                  <h4 className="text-sm font-bold text-brand-accentSec uppercase tracking-wider mb-2">Interview Controls (Toggleable)</h4>
-                                  <p className="text-brand-subtext text-xs leading-relaxed mb-2">
-                                    <strong>When active, these block you from typing those specific keys elsewhere.</strong> Toggle them ON/OFF in the Interview Screen.
+                                  <h4 className="text-sm font-bold text-cyan-400 tracking-wide mb-1.5 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                                    Interview Controls (Toggleable)
+                                  </h4>
+                                  <p className="text-brand-subtext text-xs leading-relaxed mb-3">
+                                    These shortcuts work during active interview recording. You can toggle them on or off using the Hotkeys switch.
                                   </p>
-                                  <div className="grid grid-cols-2 gap-3 text-[10px]">
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>0 / Num0</strong>: Text color</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>1, Z / Num1</strong>: Pause / Resume</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>2, X / Num2</strong>: Ask AI</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>3, C / Num3</strong>: Clear Transcript</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>4, A / Num4</strong>: Snipping Tool</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>5, S / Num5</strong>: Switch Model</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>6, D / Num6</strong>: Stop Gen</div>
-                                    <div className="bg-black/30 p-2 rounded-lg border border-white/5"><strong>7, Q / Num7</strong>: Edit Text</div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Pause / Resume</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">1 / Z</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Ask AI (Trigger)</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">2 / X</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Clear Transcript</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">3 / C</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Snipping Tool</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">4 / A</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Switch AI Model</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">5 / S</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Stop Generation</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">6 / D</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Edit Transcript</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">7 / Q</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Toggle Color</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">0</span>
+                                    </div>
                                   </div>
                                 </div>
 
-                                {/* Scrolling Shortcuts */}
-                                <div>
-                                  <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2">Stealth Scrolling (Always Active)</h4>
-                                  <div className="bg-black/30 p-3 rounded-lg border border-white/5">
-                                    <p className="text-xs text-brand-subtext leading-relaxed">
-                                      Hold <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Alt</kbd> + <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">↑/↓</kbd> or <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">PgUp/PgDn</kbd> to scroll the text boxes during an interview without using your mouse.
-                                    </p>
+                                {/* Stealth Scrolling & Window Navigation */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 border-t border-white/5">
+                                  <div>
+                                    <h4 className="text-sm font-bold text-emerald-400 tracking-wide mb-1.5">
+                                      Stealth Scrolling (Always Active)
+                                    </h4>
+                                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 text-xs text-brand-subtext leading-relaxed">
+                                      Hold <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-white">Alt</kbd> + <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-white">↑ / ↓</kbd> or <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-white">PgUp / PgDn</kbd> to quietly scroll text during meetings without touching your mouse.
+                                    </div>
                                   </div>
-                                </div>
 
-                                {/* Global Launch Shortcut */}
-                                <div>
-                                  <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-2">Global Launch (Always Active)</h4>
-                                  <div className="bg-black/30 p-3 rounded-lg border border-white/5">
-                                    <p className="text-xs text-brand-subtext leading-relaxed">
-                                      Press <kbd className="bg-black/40 border border-white/10 px-1 py-0.5 rounded font-mono text-white shadow-sm">Ctrl + Shift + K</kbd> anywhere on your computer to instantly hide/minimize or show ClueAI.
-                                    </p>
+                                  <div>
+                                    <h4 className="text-sm font-bold text-purple-400 tracking-wide mb-1.5">
+                                      Global Launch & App Control
+                                    </h4>
+                                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 text-xs text-brand-subtext leading-relaxed space-y-1.5">
+                                      <div className="flex items-center justify-between">
+                                        <span>Show / Hide ClueAI</span>
+                                        <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-purple-300">Ctrl + Shift + K</kbd>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span>Restart App & Reset Audio</span>
+                                        <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-cyan-300">Ctrl + Shift + R</kbd>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -4183,12 +4218,12 @@ function App() {
                         <div className="flex items-center gap-4">
                           <div>
                             <div className="flex items-center gap-3">
-                              <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Info size={24} className="text-cyan-400" /> Info & Settings</h2>
+                              <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2"><Settings size={24} className="text-cyan-400" /> Settings</h2>
                               <button onClick={() => setLocalSettingsStealth(!localSettingsStealth)} className={`shield-toggle-btn p-1.5 rounded-lg transition-all hover:scale-105 active:scale-95 ${localSettingsStealth ? 'bg-green-500/20 text-green-400' : 'bg-rose-500/20 text-rose-400'}`}>
                                 {localSettingsStealth ? <Shield size={16} /> : <ShieldAlert size={16} />}
                               </button>
                             </div>
-                            <p className="text-white/50 text-xs mt-1">Configure your shortcuts, AI models, and stealth mode.</p>
+                            <p className="text-white/50 text-xs mt-1">Configure your AI models, audio devices, and application preferences.</p>
                           </div>
                           <span className="hidden md:flex px-2.5 py-1 rounded-md border border-white/10 bg-black/30 text-[10px] font-bold text-white/50 tracking-wider uppercase items-center gap-1.5 pointer-events-none select-none">
                             <Keyboard size={12} /> Ctrl+Shift+K to minimize/restore
@@ -4255,18 +4290,11 @@ function App() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Capture Screen</label>
-                                <CustomSelect
-                                  value={selectedSource}
-                                  onChange={(val: any) => setSelectedSource(val)}
-                                  options={sources.map(s => ({ value: s.id, label: s.name }))}
-                                  className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
-                                />
-                              </div>
-                              <div>
                                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5 flex items-center justify-between">
                                   <span>Default Code Language</span>
-                                  <span className="text-[10px] text-cyan-400 font-mono">Default: Java</span>
+                                  <span className="text-[10px] text-cyan-400 font-mono">
+                                    {preferredCodeLanguage === 'Java' ? 'Default: Java' : `Current: ${preferredCodeLanguage}`}
+                                  </span>
                                 </label>
                                 <CustomSelect
                                   value={preferredCodeLanguage}
@@ -4275,7 +4303,7 @@ function App() {
                                     localStorage.setItem('clueai_code_language', val);
                                   }}
                                   options={[
-                                    { value: 'Java', label: 'Java (System Default)' },
+                                    { value: 'Java', label: 'Java (Default)' },
                                     { value: 'Python', label: 'Python' },
                                     { value: 'C++', label: 'C++' },
                                     { value: 'JavaScript', label: 'JavaScript' },
@@ -4288,7 +4316,7 @@ function App() {
                                   className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white transition-all"
                                 />
                               </div>
-                              <div>
+                              <div className="col-span-2 pt-2 border-t border-white/5">
                                 <label className="block text-sm font-medium text-brand-subtext mb-2">Stealth Mode (Hide from Screen Share)</label>
                                 <label className="flex items-center gap-3 cursor-pointer">
                                   <div className="relative">
@@ -5140,7 +5168,7 @@ function App() {
                           </section>
 
                           {/* Display */}
-                          <section>
+                          <section className="pb-10">
                             <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><LayoutPanelTop size={16} /> Display Settings</h3>
                             <div className="grid grid-cols-2 gap-6 bg-brand-card p-5 rounded-2xl border border-brand-border">
                               <div>
@@ -5150,112 +5178,6 @@ function App() {
                               <div>
                                 <label className="block text-xs font-bold text-brand-subtext uppercase mb-3">Layout Style</label>
                                 <button onClick={() => setLayout(layout === 'vertical' ? 'horizontal' : 'vertical')} className="w-full bg-brand-secondary border border-brand-border hover:bg-white/10 py-2.5 rounded-lg text-xs font-bold text-brand-text transition-all">Toggle Vertical / Horizontal</button>
-                              </div>
-                            </div>
-                          </section>
-
-                          {/* Keyboard Shortcuts */}
-                          <section className="pb-10">
-                            <h3 className="text-sm font-bold text-brand-subtext uppercase tracking-wider mb-4 flex items-center gap-2"><Cpu size={16} /> All Shortcut Keys</h3>
-                            <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-3">
-
-                              {/* Interview Controls */}
-                              <div className="space-y-2 mb-6">
-                                <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3">Interview Controls</h4>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Pause / Resume <span className="text-xs text-white/40 font-normal">(Use 1 or Z)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg text-xs font-bold border border-yellow-500/30">Z</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">1</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Ask AI (Trigger) <span className="text-xs text-white/40 font-normal">(Use 2 or X)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg text-xs font-bold border border-purple-500/30">X</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">2</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Clear Transcript <span className="text-xs text-white/40 font-normal">(Use 3 or C)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-lg text-xs font-bold border border-orange-500/30">C</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">3</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Snipping Tool <span className="text-xs text-white/40 font-normal">(Use 4 or A)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-lg text-xs font-bold border border-cyan-500/30">A</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">4</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Edit Transcript <span className="text-xs text-white/40 font-normal">(Use 7 or Q)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/30">Q</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">7</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Toggle Text Color <span className="text-xs text-white/40 font-normal">(Use 0)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30">0</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Switch Model <span className="text-xs text-white/40 font-normal">(Use 5 or S)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-brand-accent/20 text-brand-accent px-3 py-1 rounded-lg text-xs font-bold border border-brand-accent/30">S</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">5</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Stop Generation <span className="text-xs text-white/40 font-normal">(Use 6 or D)</span></span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-lg text-xs font-bold border border-red-500/30">D</span>
-                                    <span className="bg-white/10 text-white/70 px-3 py-1 rounded-lg text-xs font-bold border border-white/20">6</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Window Controls */}
-                              <div className="space-y-2 mb-6">
-                                <h4 className="text-xs font-black text-brand-subtext uppercase tracking-wider mb-3 mt-6">Window Controls</h4>
-                                <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Increase Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                                  <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + +</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5 hover:bg-black/30 transition-colors">
-                                  <span className="text-sm text-white/90 font-medium flex items-center gap-2">Decrease Size <span className="text-xs text-white/40 font-normal">(Hold Alt)</span></span>
-                                  <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">Alt + -</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-brand-secondary/30 p-3 rounded-xl border border-brand-border/40">
-                                  <span className="text-sm text-white/90 font-medium">Move Window</span>
-                                  <div className="flex gap-2">
-                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↑</span>
-                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">↓</span>
-                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">←</span>
-                                    <span className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/20">→</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Global Launch Shortcut */}
-                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mt-6">
-                                <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
-                                  <Cpu size={16} /> Global Launch Shortcut
-                                </h4>
-                                <p className="text-xs text-blue-200/70 leading-relaxed mb-3">
-                                  You can open ClueAI instantly from anywhere using a custom Windows Shortcut Key!
-                                </p>
-                                <ol className="text-xs text-blue-200/60 list-decimal pl-4 space-y-1.5">
-                                  <li>Search for <strong>ClueAI</strong> in your Windows Start Menu.</li>
-                                  <li>Right-click the app and select <strong>Open file location</strong>.</li>
-                                  <li>Right-click the ClueAI Shortcut file and select <strong>Properties</strong>.</li>
-                                  <li>In the <strong>Shortcut</strong> tab, click inside the <strong>Shortcut key</strong> box.</li>
-                                  <li>Press your desired keys (e.g. <code>Ctrl + Alt + L</code>) and click OK.</li>
-                                </ol>
                               </div>
                             </div>
                           </section>
