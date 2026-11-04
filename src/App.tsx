@@ -3275,16 +3275,32 @@ function App() {
           </div>
         </div>
       ) : (
-        <code {...rest} className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg font-bold" style={{ fontSize: '0.9em' }}>
+        <code {...rest} className="bg-white/10 text-cyan-300 px-1.5 py-0.5 rounded font-mono font-semibold" style={{ fontSize: '0.9em' }}>
           {children}
         </code>
+      );
+    },
+    strong({ children, ...props }: any) {
+      return (
+        <strong
+          className={`font-extrabold px-1.5 py-0.5 mx-0.5 rounded-md inline-block tracking-tight shadow-sm ${
+            altColor 
+              ? 'text-amber-800 bg-amber-500/20 border border-amber-600/30' 
+              : 'text-amber-300 bg-amber-400/15 border border-amber-400/30 drop-shadow-[0_0_8px_rgba(251,191,36,0.2)]'
+          }`}
+          {...props}
+        >
+          {children}
+        </strong>
       );
     },
     p({ children, ...props }: any) {
       const textContent = Array.isArray(children) 
         ? children.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children) : '')).join('') 
         : (typeof children === 'string' ? children : '');
-      const isMcqHeader = (/^(?:\*\*)?Option\s+[A-D][: -]/i.test(textContent.trim()) || /^(?:\*\*)?Correct\s+(?:Option|Answer)[: -]/i.test(textContent.trim())) && !textContent.includes('<Text of Option');
+
+      const trimmed = textContent.trim();
+      const isMcqHeader = (/^(?:\*\*)?Option\s+[A-D][: -]/i.test(trimmed) || /^(?:\*\*)?Correct\s+(?:Option|Answer)[: -]/i.test(trimmed)) && !textContent.includes('<Text of Option');
       if (isMcqHeader) {
         return (
           <div className="w-full my-3 p-4 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-cyan-500/25 border-2 border-emerald-400/70 rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.3)] flex items-center gap-3">
@@ -3299,24 +3315,177 @@ function App() {
         );
       }
       if (textContent.includes('<Text of Option')) return null;
-      return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>;
+
+      // Advantage / Benefit / Pros Callout Box
+      const isAdvantage = /^(?:\*\*)?(?:Advantage|Benefit|Pros?|Strength)s?[: -]/i.test(trimmed);
+      if (isAdvantage) {
+        return (
+          <div className="w-full my-3 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-400/40 shadow-md flex items-start gap-3">
+            <div className="w-7 h-7 rounded-xl bg-emerald-500/25 border border-emerald-400/50 flex items-center justify-center text-emerald-300 font-black text-sm shrink-0 mt-0.5 shadow-sm">
+              <CheckCircle2 size={15} className="text-emerald-300" />
+            </div>
+            <div className="flex-1 text-emerald-100 font-medium leading-relaxed">
+              {children}
+            </div>
+          </div>
+        );
+      }
+
+      // Disadvantage / Trade-off / Limitation Callout Box
+      const isDisadvantage = /^(?:\*\*)?(?:Disadvantage|Drawback|Cons?|Weakness|Limitation|Trade-off)s?[: -]/i.test(trimmed);
+      if (isDisadvantage) {
+        return (
+          <div className="w-full my-3 p-3.5 rounded-2xl bg-gradient-to-r from-rose-500/15 to-amber-500/10 border border-rose-400/40 shadow-md flex items-start gap-3">
+            <div className="w-7 h-7 rounded-xl bg-rose-500/25 border border-rose-400/50 flex items-center justify-center text-rose-300 font-black text-sm shrink-0 mt-0.5 shadow-sm">
+              <AlertTriangle size={15} className="text-rose-300" />
+            </div>
+            <div className="flex-1 text-rose-100 font-medium leading-relaxed">
+              {children}
+            </div>
+          </div>
+        );
+      }
+
+      // Differentiation / Comparison Box
+      const isComparison = /^(?:\*\*)?(?:Difference|Comparison|Versus|vs)s?[: -]/i.test(trimmed);
+      if (isComparison) {
+        return (
+          <div className="w-full my-3 p-3.5 rounded-2xl bg-gradient-to-r from-cyan-500/15 to-blue-500/10 border border-cyan-400/40 shadow-md flex items-start gap-3">
+            <div className="w-7 h-7 rounded-xl bg-cyan-500/25 border border-cyan-400/50 flex items-center justify-center text-cyan-300 font-black text-sm shrink-0 mt-0.5 shadow-sm">
+              <Columns size={15} className="text-cyan-300" />
+            </div>
+            <div className="flex-1 text-cyan-100 font-medium leading-relaxed">
+              {children}
+            </div>
+          </div>
+        );
+      }
+
+      // Standard Paragraph with Paragraph Start Indicator Accent Bar
+      return (
+        <p className="my-2.5 leading-relaxed flex items-start gap-2.5 font-medium pl-3 border-l-2 border-cyan-400/50 hover:border-cyan-400 transition-colors" {...props}>
+          <span className="flex-1">{children}</span>
+        </p>
+      );
     },
     h1({ children, ...props }: any) {
-      return <h1 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.2em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
+      return (
+        <div className="w-full mt-4 mb-2 pb-2 border-b border-cyan-500/30">
+          <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-cyan-300 via-teal-200 to-white bg-clip-text text-transparent flex items-center gap-2.5 tracking-tight" {...props}>
+            <span className="w-2.5 h-6 rounded-full bg-gradient-to-b from-cyan-400 to-teal-500 shrink-0 inline-block shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+            <span>{children}</span>
+          </h1>
+        </div>
+      );
     },
     h2({ children, ...props }: any) {
-      return <h2 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1.1em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
+      return (
+        <div className="w-full mt-3.5 mb-2">
+          <h2 className="text-lg md:text-xl font-extrabold text-cyan-300 flex items-center gap-2 tracking-tight" {...props}>
+            <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
+            <span>{children}</span>
+          </h2>
+        </div>
+      );
     },
     h3({ children, ...props }: any) {
-      return <h3 className="m-0 mb-0 font-bold flex items-start gap-2" style={{ fontSize: '1em' }} {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
+      return (
+        <div className="w-full mt-3 mb-1.5">
+          <h3 className="text-base font-bold text-teal-300 flex items-center gap-2 tracking-tight" {...props}>
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0 shadow-[0_0_6px_rgba(45,212,191,0.6)]" />
+            <span>{children}</span>
+          </h3>
+        </div>
+      );
+    },
+    h4({ children, ...props }: any) {
+      return (
+        <h4 className="text-sm font-bold text-sky-300/90 mt-2 mb-1 uppercase tracking-wider flex items-center gap-1.5" {...props}>
+          <span>{children}</span>
+        </h4>
+      );
     },
     ul({ children, ...props }: any) {
-      return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
+      return <ul className="flex flex-col gap-2 my-2.5 pl-1" {...props}>{children}</ul>;
+    },
+    ol({ children, ...props }: any) {
+      return (
+        <ol className="flex flex-col gap-2 my-2.5 pl-1 list-decimal list-inside text-cyan-300 font-bold" {...props}>
+          <div className="text-white/90 font-medium inline">{children}</div>
+        </ol>
+      );
     },
     li({ node, children, ...props }: any) {
-      return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
+      const textContent = Array.isArray(children) 
+        ? children.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children) : '')).join('') 
+        : (typeof children === 'string' ? children : '');
+
+      const trimmed = textContent.trim();
+      const isAdvantage = /^(?:\*\*)?(?:Advantage|Benefit|Pros?|Strength)s?[: -]/i.test(trimmed);
+      const isDisadvantage = /^(?:\*\*)?(?:Disadvantage|Drawback|Cons?|Weakness|Limitation|Trade-off)s?[: -]/i.test(trimmed);
+      const isDifference = /^(?:\*\*)?(?:Difference|Comparison|Versus|vs)s?[: -]/i.test(trimmed);
+
+      if (isAdvantage) {
+        return (
+          <li className="flex items-start gap-2.5 my-1.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-white/95 leading-relaxed shadow-sm" {...props}>
+            <div className="w-5 h-5 rounded-lg bg-emerald-500/25 border border-emerald-400/50 flex items-center justify-center text-emerald-300 text-xs shrink-0 mt-0.5 shadow-sm">
+              <CheckCircle2 size={13} className="text-emerald-300" />
+            </div>
+            <div className="flex-1 font-medium">{children}</div>
+          </li>
+        );
+      }
+
+      if (isDisadvantage) {
+        return (
+          <li className="flex items-start gap-2.5 my-1.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-white/95 leading-relaxed shadow-sm" {...props}>
+            <div className="w-5 h-5 rounded-lg bg-rose-500/25 border border-rose-400/50 flex items-center justify-center text-rose-300 text-xs shrink-0 mt-0.5 shadow-sm">
+              <AlertTriangle size={13} className="text-rose-300" />
+            </div>
+            <div className="flex-1 font-medium">{children}</div>
+          </li>
+        );
+      }
+
+      if (isDifference) {
+        return (
+          <li className="flex items-start gap-2.5 my-1.5 p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-white/95 leading-relaxed shadow-sm" {...props}>
+            <div className="w-5 h-5 rounded-lg bg-cyan-500/25 border border-cyan-400/50 flex items-center justify-center text-cyan-300 text-xs shrink-0 mt-0.5 shadow-sm">
+              <Columns size={13} className="text-cyan-300" />
+            </div>
+            <div className="flex-1 font-medium">{children}</div>
+          </li>
+        );
+      }
+
+      return (
+        <li className="flex items-start gap-2.5 leading-relaxed text-white/95 my-0.5" {...props}>
+          <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-cyan-400 to-teal-400 shrink-0 mt-2 shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
+          <div className="flex-1 font-medium">{children}</div>
+        </li>
+      );
+    },
+    blockquote({ children, ...props }: any) {
+      return (
+        <blockquote className="my-3 pl-3.5 py-2 border-l-4 border-cyan-400/80 bg-white/[0.04] rounded-r-xl italic text-white/95" {...props}>
+          {children}
+        </blockquote>
+      );
+    },
+    table({ children, ...props }: any) {
+      return (
+        <div className="w-full my-3 overflow-x-auto rounded-xl border border-white/10 shadow-lg">
+          <table className="w-full text-left text-xs border-collapse" {...props}>{children}</table>
+        </div>
+      );
+    },
+    th({ children, ...props }: any) {
+      return <th className="bg-white/10 p-2.5 font-bold text-cyan-300 border-b border-white/10" {...props}>{children}</th>;
+    },
+    td({ children, ...props }: any) {
+      return <td className="p-2.5 border-b border-white/5 font-medium text-white/90" {...props}>{children}</td>;
     }
-  }), [groqKeys, preferredCodeLanguage, transcript, currentSnapshots]);
+  }), [groqKeys, preferredCodeLanguage, transcript, currentSnapshots, altColor]);
 
   return (
     <>
@@ -3624,7 +3793,7 @@ function App() {
                   >
                     {aiAnswer ? (
                       <ReactMarkdown components={markdownComponents}>
-                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
                       </ReactMarkdown>
                     ) : (
                       "Generating..."
@@ -3747,7 +3916,7 @@ function App() {
                             })()
                           ) : (
                             <ReactMarkdown components={markdownComponents}>
-                              {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                              {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
                             </ReactMarkdown>
                           )}
                         </>
@@ -5813,7 +5982,7 @@ function App() {
                                             }
                                           }}
                                         >
-                                          {item.answer ? item.answer.replace(/(?:\r?\n)+/g, '\n').trim() : "No answer generated"}
+                                          {item.answer ? item.answer.replace(/(?:\r?\n){3,}/g, '\n\n').trim() : "No answer generated"}
                                         </ReactMarkdown>
                                       </div>
                                     )}
@@ -7392,39 +7561,11 @@ function App() {
                               <div className="pt-6 border-t border-white/5 animate-in slide-in-from-top-2 fade-in duration-200">
                                 <div className="flex justify-between items-center mb-4">
                                   <h3 className="text-[11px] font-black text-fuchsia-400 uppercase tracking-wider flex items-center gap-1.5"><Cpu size={14} /> AI Answer</h3>
-                                  <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
+                                  <CopyButton text={item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()} className="text-white/40 hover:text-white transition-colors" tooltip="Copy Answer" />
                                 </div>
-                                <div className="text-white/90 font-bold text-sm whitespace-pre-wrap leading-relaxed">
-                                  <ReactMarkdown
-                                    components={{
-                                      code({ inline, children }: any) {
-                                        return !inline ? (
-                                          <div className="bg-[#000000] rounded-xl p-4 my-3 border border-white/5 font-mono text-xs overflow-x-auto text-white/80">{children}</div>
-                                        ) : (
-                                          <code className="bg-white/10 text-fuchsia-300 px-1.5 py-0.5 rounded-lg text-[12px] font-bold">{children}</code>
-                                        )
-                                      },
-                                      p({ children, ...props }: any) {
-                                        return <p className="m-0 mb-0 leading-tight flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></p>
-                                      },
-                                      h1({ children, ...props }: any) {
-                                        return <h1 className="m-0 mb-0 text-lg font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h1>
-                                      },
-                                      h2({ children, ...props }: any) {
-                                        return <h2 className="m-0 mb-0 text-base font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h2>
-                                      },
-                                      h3({ children, ...props }: any) {
-                                        return <h3 className="m-0 mb-0 text-sm font-bold flex items-start gap-2" {...props}><span className="text-cyan-400 font-bold mt-0.5">{'>'}</span> <span className="flex-1">{children}</span></h3>
-                                      },
-                                      ul({ children, ...props }: any) {
-                                        return <ul className="flex flex-col gap-0 my-0" {...props}>{children}</ul>
-                                      },
-                                      li({ node, children, ...props }: any) {
-                                        return <li className="flex items-start gap-2 mb-0 leading-tight" {...props}><span className="text-emerald-400 font-black mt-0.5">{'>'}</span> <div className="flex-1">{children}</div></li>
-                                      }
-                                    }}
-                                  >
-                                    {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n)+/g, '\n').trim()}
+                                <div className="text-white/90 font-bold text-sm leading-relaxed">
+                                  <ReactMarkdown components={markdownComponents}>
+                                    {item.answer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
                                   </ReactMarkdown>
                                 </div>
                               </div>
