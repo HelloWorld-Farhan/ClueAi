@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
@@ -126,6 +126,21 @@ const logEvent = (msg: string) => {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
   window.debugLogs += line;
   console.log(`[DEBUG] ${msg}`);
+};
+
+// Cross-device safety helper: wrap any async call with a timeout to prevent hanging or freezing
+const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
+  let timer: any;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).then((res) => {
+    clearTimeout(timer);
+    return res;
+  }).catch((err) => {
+    clearTimeout(timer);
+    throw err;
+  });
 };
 
 const validateGroqKey = async (key: string): Promise<boolean> => {
@@ -657,6 +672,45 @@ function App() {
   const [activeAIInfo, setActiveAIInfo] = useState<{ provider: string, index: number } | null>(null);
   const [modelChangeMsg, setModelChangeMsg] = useState('');
   const [globalHotkeysEnabled, setGlobalHotkeysEnabled] = useState(true);
+
+  // Dynamically compute AI models that actually have at least one valid configured API key
+  const availableModelOptions = useMemo(() => {
+    const opts: { value: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek'; label: string }[] = [];
+    if (groqKeys.some((k: any) => k.trim())) opts.push({ value: 'groq', label: 'Groq (GPT-OSS 20B)' });
+    if (geminiKeys.some((k: any) => k.trim())) opts.push({ value: 'gemini-flash', label: 'Gemini 2.5 Flash' });
+    if (claudeKeys.some((k: any) => k.key.trim())) opts.push({ value: 'claude', label: 'Claude 3.5 Sonnet' });
+    if (chatgptKeys.some((k: any) => k.key.trim())) opts.push({ value: 'chatgpt', label: 'ChatGPT (GPT-4o)' });
+    if (deepseekKeys.some((k: any) => k.key.trim())) opts.push({ value: 'deepseek', label: 'DeepSeek Coder' });
+    return opts;
+  }, [groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys]);
+
+  // Unified model cycling function for hotkey '5' / 's' and UI button
+  const cycleNextModel = useCallback(() => {
+    if (availableModelOptions.length === 0) {
+      setModelChangeMsg('No API keys configured (Open Settings ⚙)');
+      setTimeout(() => setModelChangeMsg(''), 3000);
+      return;
+    }
+    const currentIndex = availableModelOptions.findIndex(o => o.value === provider);
+    const nextIndex = currentIndex !== -1 ? (currentIndex + 1) % availableModelOptions.length : 0;
+    const nextProv = availableModelOptions[nextIndex].value;
+    setProvider(nextProv);
+    switchProvider(nextProv);
+    localStorage.setItem('selected_provider', nextProv);
+    const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek' };
+    setModelChangeMsg(`Switched to ${nameMap[nextProv] || nextProv}`);
+    setTimeout(() => setModelChangeMsg(''), 3000);
+  }, [availableModelOptions, provider]);
+
+  // Auto-synchronize provider: if current provider is not among configured keys, auto-select first available
+  useEffect(() => {
+    if (availableModelOptions.length > 0 && !availableModelOptions.some(o => o.value === provider)) {
+      const nextProv = availableModelOptions[0].value;
+      setProvider(nextProv);
+      switchProvider(nextProv);
+      localStorage.setItem('selected_provider', nextProv);
+    }
+  }, [availableModelOptions, provider]);
 
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
@@ -1326,6 +1380,9 @@ function App() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAiFullscreen, setIsAiFullscreen] = useState(false);
+  const isAiFullscreenRef = useRef(false);
+  isAiFullscreenRef.current = isAiFullscreen;
+  const [frozenQuestionTranscript, setFrozenQuestionTranscript] = useState('');
 
   useEffect(() => {
     ipcRenderer.send('set-window-maximized', isAiFullscreen);
@@ -1826,13 +1883,18 @@ function App() {
 
   const startRecording = async (isSilentRestart: boolean | any = false, isStealthBypass: boolean = false) => {
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
-    if (!selectedSource) {
-      setAlertMessage({ title: 'Source Missing', message: 'Screen capture source is missing. Trying to fetch it again... Please wait a moment and try again.', type: 'warning' });
-      ipcRenderer.invoke('get-desktop-sources').then((s: any) => {
-        setSources(s);
-        if (s.length > 0) setSelectedSource(s[0].id);
-      });
-      return;
+
+    // Auto-resolve desktop screen source if empty, without blocking or hanging
+    let activeSourceId = selectedSource;
+    if (!activeSourceId) {
+      try {
+        const freshSources: any = await withTimeout<any>(ipcRenderer.invoke('get-desktop-sources'), 1500, []);
+        if (freshSources && freshSources.length > 0) {
+          setSources(freshSources);
+          setSelectedSource(freshSources[0].id);
+          activeSourceId = freshSources[0].id;
+        }
+      } catch (_) {}
     }
 
     if (!silent) {
@@ -1896,10 +1958,6 @@ function App() {
       setInterimText('');
       finalizedTranscriptRef.current = '';
       interimTranscriptRef.current = '';
-      // Reset to current interview layout dimensions and position exactly when recording starts
-      ipcRenderer.invoke('start-interview-window', layout);
-      setIsRecording(true);
-      setIsPaused(false);
     }
 
     setSessionError('');
@@ -1911,45 +1969,45 @@ function App() {
     initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
     setSTTApiKey(validGroqKeys, validGeminiKeys);
 
-    await initSTT(() => { });
+    await withTimeout(initSTT(() => { }), 2500, null);
     clearAudioBuffer();
 
     try {
       let desktopStream: MediaStream | null = null;
       let micStream: MediaStream | null = null;
 
-      // 1. Attempt Desktop Audio Capture (Interviewer / Meeting Voice from laptop or earpods)
+      // 1. Attempt Desktop Audio Capture with 2500ms safety timeout
       try {
-        const freshSources = await ipcRenderer.invoke('get-desktop-sources');
-        let activeSourceId = selectedSource;
-        if (freshSources && freshSources.length > 0) {
-          const found = freshSources.find((s: any) => s.id === selectedSource);
-          activeSourceId = found ? found.id : freshSources[0].id;
+        if (activeSourceId) {
+          desktopStream = await withTimeout(
+            navigator.mediaDevices.getUserMedia({
+              audio: {
+                mandatory: {
+                  chromeMediaSource: 'desktop',
+                  chromeMediaSourceId: activeSourceId,
+                }
+              } as any,
+              video: {
+                mandatory: {
+                  chromeMediaSource: 'desktop',
+                  chromeMediaSourceId: activeSourceId,
+                }
+              } as any
+            }),
+            2500,
+            null
+          );
+
+          if (desktopStream) {
+            desktopStream.getVideoTracks().forEach(t => t.stop());
+          }
         }
-
-        desktopStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: activeSourceId,
-            }
-          } as any,
-          video: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: activeSourceId,
-            }
-          } as any
-        });
-
-        // Immediately stop unused video track so screen capture video doesn't run in background
-        desktopStream.getVideoTracks().forEach(t => t.stop());
       } catch (errDesktop) {
         console.warn('Meeting desktop loopback audio notice (non-fatal, continuing):', errDesktop);
         desktopStream = null;
       }
 
-      // 2. Attempt Microphone Capture (User Voice / Earpods Mic / Laptop Mic)
+      // 2. Attempt Microphone Capture with safety timeout
       try {
         const micConstraints: MediaTrackConstraints = {
           echoCancellation: false,
@@ -1959,32 +2017,47 @@ function App() {
         if (selectedMicId && selectedMicId !== 'default') {
           micConstraints.deviceId = { exact: selectedMicId };
         }
-        micStream = await navigator.mediaDevices.getUserMedia({
-          audio: micConstraints,
-          video: false,
-        });
+        micStream = await withTimeout(
+          navigator.mediaDevices.getUserMedia({
+            audio: micConstraints,
+            video: false,
+          }),
+          2000,
+          null
+        );
       } catch (errMic1) {
         console.warn('Direct mic with constraints notice, trying basic audio...', errMic1);
+      }
+
+      if (!micStream || micStream.getAudioTracks().length === 0) {
         try {
           const fallbackConstraints: MediaTrackConstraints = {};
           if (selectedMicId && selectedMicId !== 'default') {
             fallbackConstraints.deviceId = { exact: selectedMicId };
           }
-          micStream = await navigator.mediaDevices.getUserMedia({
-            audio: Object.keys(fallbackConstraints).length > 0 ? fallbackConstraints : true,
-            video: false,
-          });
+          micStream = await withTimeout(
+            navigator.mediaDevices.getUserMedia({
+              audio: Object.keys(fallbackConstraints).length > 0 ? fallbackConstraints : true,
+              video: false,
+            }),
+            2000,
+            null
+          );
         } catch (errMic2) {
           console.warn('Basic mic failed, enumerating connected audio devices (earpods / external mic)...', errMic2);
           try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
+            const devices = await withTimeout(navigator.mediaDevices.enumerateDevices(), 1500, []);
             const audioInputs = devices.filter(d => d.kind === 'audioinput');
             for (const dev of audioInputs) {
               try {
-                micStream = await navigator.mediaDevices.getUserMedia({
-                  audio: { deviceId: { exact: dev.deviceId } },
-                  video: false,
-                });
+                micStream = await withTimeout(
+                  navigator.mediaDevices.getUserMedia({
+                    audio: { deviceId: { exact: dev.deviceId } },
+                    video: false,
+                  }),
+                  1500,
+                  null
+                );
                 if (micStream && micStream.getAudioTracks().length > 0) break;
               } catch (_) {}
             }
@@ -2072,7 +2145,7 @@ function App() {
       const inputSampleRate = audioCtx.sampleRate || 16000;
 
       processor.onaudioprocess = (e) => {
-        if (isPausedRef.current) return;
+        if (isPausedRef.current || isAiFullscreenRef.current) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
         let resampled: Float32Array;
@@ -2103,6 +2176,11 @@ function App() {
       processor.connect(silencer);
       silencer.connect(audioCtx.destination);
 
+      // Successfully initialized audio! Transition window to interview dock layout now:
+      await ipcRenderer.invoke('start-interview-window', layout);
+      setIsRecording(true);
+      setIsPaused(false);
+
       intervalRef.current = setInterval(() => {
         processAudioRef.current();
       }, 500);
@@ -2120,7 +2198,7 @@ function App() {
       }, 500);
     } catch (e: any) {
       if (stealthMode) ipcRenderer.invoke('set-stealth', true);
-      console.error(e);
+      console.error('startRecording error:', e);
       if (silent) {
         setTimeout(() => startRecording(true).finally(() => { isRecoveringRef.current = false; }), 2000);
         return;
@@ -2131,7 +2209,11 @@ function App() {
         type: 'error'
       });
       setIsRecording(false);
+      setIsPaused(false);
       setShowSessionPrompt(false);
+      clearAudioBuffer();
+      // Ensure window is always restored to full dashboard size if audio init fails
+      ipcRenderer.invoke('stop-interview-window');
     }
   };
 
@@ -2144,7 +2226,7 @@ function App() {
 
   const processAudio = async () => {
     if (!streamRef.current) return;
-    if (isPausedRef.current) {
+    if (isPausedRef.current || isAiFullscreenRef.current) {
       console.log('Paused');
       return;
     }
@@ -2297,8 +2379,13 @@ function App() {
       return;
     }
 
+    setFrozenQuestionTranscript(currentTranscript);
+    listeningSessionIdRef.current++; // Invalidate any in-flight STT so no late audio chunks mutate anything
+    clearAudioBuffer(); // Flush all lingering audio chunks
+
     setIsPaused(true);
     isPausedRef.current = true;
+    isAiFullscreenRef.current = true;
     setIsGenerating(true);
     setIsAiFullscreen(true);
 
@@ -2377,6 +2464,32 @@ function App() {
   // Keep the ref always pointing to the latest version
   manualTriggerAIRef.current = manualTriggerAI;
 
+  const cycleNextCodeLanguage = useCallback(async () => {
+    const langs = ['Java', 'Python', 'C++', 'JavaScript', 'TypeScript', 'C#', 'Go', 'Rust'];
+    const currentNorm = (preferredCodeLanguage || 'Java').toLowerCase();
+    const currentIndex = langs.findIndex(l => l.toLowerCase() === currentNorm);
+    const nextIndex = currentIndex !== -1 ? (currentIndex + 1) % langs.length : 0;
+    const nextLang = langs[nextIndex];
+
+    setPreferredCodeLanguage(nextLang);
+    localStorage.setItem('clueai_code_language', nextLang);
+    setModelChangeMsg(`Language: ${nextLang}`);
+    setTimeout(() => setModelChangeMsg(''), 3000);
+
+    if (isAiFullscreen) {
+      let currentTranscript = finalizedTranscriptRef.current || transcript || '';
+      const langNote = `\n[User requested code in ${nextLang}]`;
+      currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
+      currentTranscript += langNote;
+
+      await manualTriggerAIRef.current(
+        currentSnapshots.length > 0 ? currentSnapshots : undefined,
+        currentTranscript,
+        nextLang
+      );
+    }
+  }, [preferredCodeLanguage, isAiFullscreen, transcript, currentSnapshots]);
+
   const handleSnipClick = async () => {
     const wasPaused = isPausedRef.current;
     setIsPaused(true);
@@ -2421,7 +2534,10 @@ function App() {
       switchProvider('groq');
       setIsRecording(false);
       setIsPaused(false);
+      isPausedRef.current = false;
+      isAiFullscreenRef.current = false;
       setIsAiFullscreen(false);
+      setFrozenQuestionTranscript('');
 
       setCurrentSnapshots([]);
       setCurrentSessionHistory([]);
@@ -2852,10 +2968,12 @@ function App() {
           // Abort any in-progress generation immediately
           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
           setIsGenerating(false);
+          isAiFullscreenRef.current = false;
           setIsAiFullscreen(false);
           setTranscript('');
           setFinalizedText('');
           setInterimText('');
+          setFrozenQuestionTranscript('');
           finalizedTranscriptRef.current = '';
           interimTranscriptRef.current = '';
           setAiAnswer('');
@@ -2872,43 +2990,29 @@ function App() {
         if (isAiFullscreen) {
           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
           setIsGenerating(false);
+          isAiFullscreenRef.current = false;
           setIsAiFullscreen(false);
           setIsPaused(false);
           isPausedRef.current = false;
           setTranscript('');
           setFinalizedText('');
           setInterimText('');
+          setFrozenQuestionTranscript('');
           finalizedTranscriptRef.current = '';
           interimTranscriptRef.current = '';
           setAiAnswer('');
           setCurrentSnapshots([]);
           clearAudioBuffer();
+          listeningSessionIdRef.current++;
         } else {
           handleClearAll();
         }
       } else if (key === 's' || key === '5') {
         e.preventDefault();
-        const availableProviders = [];
-        if (groqKeys.some((k: any) => k.trim())) availableProviders.push('groq');
-        if (geminiKeys.some((k: any) => k.trim())) availableProviders.push('gemini-flash');
-        if (claudeKeys.some((k: any) => k.key.trim())) availableProviders.push('claude');
-        if (chatgptKeys.some((k: any) => k.key.trim())) availableProviders.push('chatgpt');
-        if (deepseekKeys.some((k: any) => k.key.trim())) availableProviders.push('deepseek');
-        if (glmKeys.some((k: any) => k.key.trim())) availableProviders.push('glm');
-
-        if (availableProviders.length === 0) {
-          setModelChangeMsg('No API keys configured');
-          setTimeout(() => setModelChangeMsg(''), 3000);
-        } else {
-          const currentIndex = availableProviders.indexOf(provider);
-          const nextIndex = currentIndex !== -1 ? (currentIndex + 1) % availableProviders.length : 0;
-          const newProvider = availableProviders[nextIndex] as any;
-          setProvider(newProvider);
-          switchProvider(newProvider);
-          const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
-          setModelChangeMsg(`Switched to ${nameMap[newProvider]}`);
-          setTimeout(() => setModelChangeMsg(''), 3000);
-        }
+        cycleNextModel();
+      } else if (key === '9' || (e.altKey && key === '9')) {
+        e.preventDefault();
+        cycleNextCodeLanguage();
       } else if (key === 'd' || key === '6') {
         e.preventDefault();
         stopRecording();
@@ -2922,15 +3026,19 @@ function App() {
       if (!isRecording && !isAiFullscreen) return;
       if (action === 'toggle-color') {
         setAltColor(prev => !prev);
+      } else if (action === 'cycle-language') {
+        cycleNextCodeLanguage();
       } else if (action === 'toggle-pause') {
         if (isAiFullscreen) {
           // Abort any in-progress generation immediately
           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
           setIsGenerating(false);
+          isAiFullscreenRef.current = false;
           setIsAiFullscreen(false);
           setTranscript('');
           setFinalizedText('');
           setInterimText('');
+          setFrozenQuestionTranscript('');
           finalizedTranscriptRef.current = '';
           interimTranscriptRef.current = '';
           setAiAnswer('');
@@ -2950,9 +3058,20 @@ function App() {
         if (isAiFullscreen) {
           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
           setIsGenerating(false);
+          isAiFullscreenRef.current = false;
           setIsAiFullscreen(false);
           setIsPaused(false);
           isPausedRef.current = false;
+          setTranscript('');
+          setFinalizedText('');
+          setInterimText('');
+          setFrozenQuestionTranscript('');
+          finalizedTranscriptRef.current = '';
+          interimTranscriptRef.current = '';
+          setAiAnswer('');
+          setCurrentSnapshots([]);
+          clearAudioBuffer();
+          listeningSessionIdRef.current++;
         } else {
           handleClearAll();
         }
@@ -2961,24 +3080,7 @@ function App() {
       } else if (action === 'snapshot') {
         handleSnipClick();
       } else if (action === 'switch-model') {
-        // Cycle through ALL providers that have at least one configured API key
-        const availableProviders: string[] = [];
-        if (groqKeys.some((k: any) => k.trim())) availableProviders.push('groq');
-        if (geminiKeys.some((k: any) => k.trim())) availableProviders.push('gemini-flash');
-        if (claudeKeys.some((k: any) => k.key.trim())) availableProviders.push('claude');
-        if (chatgptKeys.some((k: any) => k.key.trim())) availableProviders.push('chatgpt');
-        if (deepseekKeys.some((k: any) => k.key.trim())) availableProviders.push('deepseek');
-        if (glmKeys.some((k: any) => k.key.trim())) availableProviders.push('glm');
-        if (availableProviders.length > 0) {
-          const currentIndex = availableProviders.indexOf(provider);
-          const nextIndex = currentIndex !== -1 ? (currentIndex + 1) % availableProviders.length : 0;
-          const newProvider = availableProviders[nextIndex] as any;
-          setProvider(newProvider);
-          switchProvider(newProvider);
-          const nameMap: any = { groq: 'Groq', 'gemini-flash': 'Gemini Flash', claude: 'Claude', chatgpt: 'ChatGPT', deepseek: 'DeepSeek', glm: 'GLM / NVIDIA' };
-          setModelChangeMsg(`Switched to ${nameMap[newProvider]}`);
-          setTimeout(() => setModelChangeMsg(''), 3000);
-        }
+        cycleNextModel();
       } else if (action === 'stop-generation') {
         stopRecording();
       } else if (action === 'edit-transcript') {
@@ -3096,49 +3198,69 @@ function App() {
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70 inline-block" />
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70 inline-block" />
                 </div>
-                <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-cyan-400">
+                <motion.span
+                  key={displayLang || preferredCodeLanguage}
+                  initial={{ opacity: 0, scale: 0.9, y: -2 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[11px] font-mono font-bold tracking-wider uppercase text-cyan-400 bg-cyan-500/10 border border-cyan-500/25 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm"
+                >
+                  <Code2 size={11} className="text-cyan-400" />
                   {displayLang || preferredCodeLanguage.toLowerCase()}
-                </span>
+                </motion.span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-36">
-                  <CustomSelect
-                    value={displayLang || preferredCodeLanguage.toLowerCase()}
-                    onChange={async (targetLang: string) => {
-                      if (!targetLang || targetLang === displayLang) return;
-                      const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
-                      setPreferredCodeLanguage(langLabel);
-                      localStorage.setItem('clueai_code_language', langLabel);
-                      let currentTranscript = finalizedTranscriptRef.current || transcript || '';
-                      const langNote = `\n[User requested code in ${langLabel}]`;
-                      currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
-                      currentTranscript += langNote;
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-36">
+                    <CustomSelect
+                      value={displayLang || preferredCodeLanguage.toLowerCase()}
+                      onChange={async (targetLang: string) => {
+                        if (!targetLang || targetLang === displayLang) return;
+                        const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
+                        setPreferredCodeLanguage(langLabel);
+                        localStorage.setItem('clueai_code_language', langLabel);
+                        let currentTranscript = finalizedTranscriptRef.current || transcript || '';
+                        const langNote = `\n[User requested code in ${langLabel}]`;
+                        currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
+                        currentTranscript += langNote;
 
-                      await manualTriggerAI(
-                        currentSnapshots.length > 0 ? currentSnapshots : undefined,
-                        currentTranscript,
-                        langLabel
-                      );
-                    }}
-                    options={[
-                      { value: 'java', label: 'Java (Default)' },
-                      { value: 'python', label: 'Python' },
-                      { value: 'c++', label: 'C++' },
-                      { value: 'javascript', label: 'JavaScript' },
-                      { value: 'typescript', label: 'TypeScript' },
-                      { value: 'c#', label: 'C#' },
-                      { value: 'go', label: 'Go' },
-                      { value: 'rust', label: 'Rust' },
-                    ]}
-                    className="bg-[#18181b] hover:bg-[#27272a] text-white border border-white/20 text-xs rounded-lg px-2.5 py-1 outline-none cursor-pointer backdrop-blur-md font-medium"
-                    listClassName="text-xs bg-[#18181b] !max-h-48 overflow-y-auto custom-scrollbar"
+                        await manualTriggerAI(
+                          currentSnapshots.length > 0 ? currentSnapshots : undefined,
+                          currentTranscript,
+                          langLabel
+                        );
+                      }}
+                      options={[
+                        { value: 'java', label: 'Java (Default)' },
+                        { value: 'python', label: 'Python' },
+                        { value: 'c++', label: 'C++' },
+                        { value: 'javascript', label: 'JavaScript' },
+                        { value: 'typescript', label: 'TypeScript' },
+                        { value: 'c#', label: 'C#' },
+                        { value: 'go', label: 'Go' },
+                        { value: 'rust', label: 'Rust' },
+                      ]}
+                      className="bg-[#18181b] hover:bg-[#27272a] text-white border border-white/20 text-xs rounded-lg px-2.5 py-1 outline-none cursor-pointer backdrop-blur-md font-medium transition-all"
+                      listClassName="text-xs bg-[#18181b] !max-h-48 overflow-y-auto custom-scrollbar"
+                    />
+                  </div>
+                  <CopyButton
+                    text={codeText}
+                    className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                    tooltip="Copy code"
                   />
                 </div>
-                <CopyButton
-                  text={codeText}
-                  className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
-                  tooltip="Copy code"
-                />
+                {/* Shortcut Key 9 marked below the dropdown */}
+                <div className="flex items-center gap-1.5 pr-0.5">
+                  <span className="text-[9px] text-white/40 uppercase font-semibold tracking-wider">Change Lang:</span>
+                  <button
+                    onClick={() => cycleNextCodeLanguage()}
+                    className="bg-white/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-white/15 hover:border-cyan-500/40 flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                    title="Press 9 to cycle programming language"
+                  >
+                    <span>Press 9</span>
+                  </button>
+                </div>
               </div>
             </div>
             <SyntaxHighlighter
@@ -3324,10 +3446,12 @@ function App() {
                         onClick={() => {
                           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
                           setIsGenerating(false);
+                          isAiFullscreenRef.current = false;
                           setIsAiFullscreen(false);
                           setTranscript('');
                           setFinalizedText('');
                           setInterimText('');
+                          setFrozenQuestionTranscript('');
                           finalizedTranscriptRef.current = '';
                           interimTranscriptRef.current = '';
                           setAiAnswer('');
@@ -3347,17 +3471,20 @@ function App() {
                         onClick={() => {
                           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
                           setIsGenerating(false);
+                          isAiFullscreenRef.current = false;
                           setIsAiFullscreen(false);
                           setIsPaused(false);
                           isPausedRef.current = false;
                           setTranscript('');
                           setFinalizedText('');
                           setInterimText('');
+                          setFrozenQuestionTranscript('');
                           finalizedTranscriptRef.current = '';
                           interimTranscriptRef.current = '';
                           clearAudioBuffer();
                           setAiAnswer('');
                           setCurrentSnapshots([]);
+                          listeningSessionIdRef.current++;
                         }}
                         className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
                       >
@@ -3377,7 +3504,7 @@ function App() {
                       </span>
                     </div>
                     <div className="text-white text-[13px] leading-snug max-h-[52px] overflow-y-auto custom-scrollbar select-text pr-2">
-                      {transcript || "Screenshot / Vision analysis provided."}
+                      {(frozenQuestionTranscript || transcript || "").trim() || "Screenshot / Vision analysis provided."}
                     </div>
 
                     {/* Inline Snapshots */}
@@ -3932,6 +4059,14 @@ function App() {
                                     <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
                                       <span className="text-white/80">Edit Transcript</span>
                                       <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">7 / Q</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Session History</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">8 / H</span>
+                                    </div>
+                                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
+                                      <span className="text-white/80">Change Code Language</span>
+                                      <span className="bg-white/10 text-cyan-300 font-mono font-bold px-2 py-0.5 rounded border border-white/10">9</span>
                                     </div>
                                     <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
                                       <span className="text-white/80">Toggle Color</span>
@@ -5807,28 +5942,35 @@ function App() {
                                 <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/60">Hotkeys</span>
                               </div>
 
-                              {/* Model Selector Dropdown */}
-                              <div className="shrink-0">
-                                <CustomSelect
-                                  value={provider}
-                                  onChange={(val: 'groq' | 'gemini-flash' | 'claude' | 'chatgpt' | 'deepseek') => {
-                                    setProvider(val);
-                                    switchProvider(val);
-                                    const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek', 'glm': 'GLM / NVIDIA' };
-                                    setModelChangeMsg(`Switched to ${nameMap[val] || val}`);
-                                    setTimeout(() => setModelChangeMsg(''), 3000);
-                                  }}
-                                  options={[
-                                    { value: 'groq', label: 'Groq (GPT-OSS 20B)' },
-                                    { value: 'gemini-flash', label: 'Gemini 2.5 Flash' },
-                                    { value: 'claude', label: 'Claude 3.5 Sonnet' },
-                                    { value: 'chatgpt', label: 'ChatGPT (GPT-4o)' },
-                                    { value: 'deepseek', label: 'DeepSeek Coder' },
-                                    { value: 'glm', label: 'GLM / NVIDIA' }
-                                  ]}
-                                  className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[130px]"
-                                  icon={<Cpu size={10} className="text-brand-accent pointer-events-none" />}
-                                />
+                              {/* Model Selector Dropdown & Hotkey 5 Indicator */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <div className="shrink-0">
+                                  <CustomSelect
+                                    value={provider}
+                                    onChange={(val: any) => {
+                                      if (val === 'none') return;
+                                      setProvider(val);
+                                      switchProvider(val);
+                                      localStorage.setItem('selected_provider', val);
+                                      const nameMap: any = { 'groq': 'Groq', 'gemini-flash': 'Gemini Flash', 'claude': 'Claude', 'chatgpt': 'ChatGPT', 'deepseek': 'DeepSeek' };
+                                      setModelChangeMsg(`Switched to ${nameMap[val] || val}`);
+                                      setTimeout(() => setModelChangeMsg(''), 3000);
+                                    }}
+                                    options={availableModelOptions.length > 0 ? availableModelOptions : [
+                                      { value: 'none', label: 'No API Key (Set in ⚙)' }
+                                    ]}
+                                    className="bg-brand-secondary/50 hover:bg-brand-secondary border border-brand-border/50 rounded-full pl-6 pr-2 py-0.5 text-[10px] font-semibold text-white min-w-[130px]"
+                                    icon={<Cpu size={10} className="text-brand-accent pointer-events-none" />}
+                                  />
+                                </div>
+                                <button
+                                  onClick={cycleNextModel}
+                                  className="h-[22px] px-1.5 bg-white/[0.04] hover:bg-cyan-500/20 text-white/70 hover:text-cyan-300 border border-white/10 hover:border-cyan-500/40 rounded-md font-mono text-[9px] font-bold flex items-center gap-0.5 transition-all cursor-pointer shadow-sm"
+                                  title="Switch Model (Press 5 or S)"
+                                >
+                                  <RefreshCw size={8} />
+                                  <span>5</span>
+                                </button>
                               </div>
                             </div>
 

@@ -444,14 +444,19 @@ function createWindow() {
     }
   });
 
-  // Handle get-desktop-sources IPC
+  // Handle get-desktop-sources IPC: thumbnailSize 0x0 eliminates multi-second screenshot freeze on laptops
   ipcMain.handle('get-desktop-sources', async () => {
-    const sources = await desktopCapturer.getSources({ types: ['screen'] });
-    return sources.map(source => ({
-      id: source.id,
-      name: source.name,
-      display_id: source.display_id,
-    }));
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } });
+      return sources.map(source => ({
+        id: source.id,
+        name: source.name,
+        display_id: source.display_id,
+      }));
+    } catch (err) {
+      console.warn('Error fetching desktop sources:', err);
+      return [];
+    }
   });
 
   const fs = require('fs');
@@ -516,7 +521,10 @@ function createWindow() {
   ipcMain.handle('start-interview-window', (event, layout) => {
     if (mainWindow) {
       // Save pre-interview dashboard bounds so stop-interview-window returns to exact size
-      preInterviewBounds = mainWindow.getBounds();
+      const currentB = mainWindow.getBounds();
+      if (currentB && currentB.height > 350) {
+        preInterviewBounds = currentB;
+      }
 
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
