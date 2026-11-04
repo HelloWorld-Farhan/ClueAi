@@ -390,6 +390,8 @@ function App() {
   const finalizedTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
   const [aiAnswer, setAiAnswer] = useState('');
+  const aiAnswerRef = useRef('');
+  aiAnswerRef.current = aiAnswer;
   const [, setSources] = useState<any[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
   const [altColor, setAltColor] = useState(false);
@@ -433,6 +435,13 @@ function App() {
   const [isTranscriptMinimized, setIsTranscriptMinimized] = useState(false);
   const [isTopBarMinimized, setIsTopBarMinimized] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(0); // 0 = stopped, 1-5 = speed level
+  const [isVoiceScroll, setIsVoiceScroll] = useState(false);
+  const isVoiceScrollRef = useRef(false);
+  isVoiceScrollRef.current = isVoiceScroll;
+  const [activeReadIndex, setActiveReadIndex] = useState(0);
+  const activeReadIndexRef = useRef(0);
+  activeReadIndexRef.current = activeReadIndex;
+  const paragraphRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
 
@@ -1386,6 +1395,11 @@ function App() {
 
   useEffect(() => {
     ipcRenderer.send('set-window-maximized', isAiFullscreen);
+    if (!isAiFullscreen) {
+      setIsVoiceScroll(false);
+      setScrollSpeed(0);
+      setActiveReadIndex(0);
+    }
   }, [isAiFullscreen]);
 
   const [aiCopied, setAiCopied] = useState(false);
@@ -2145,7 +2159,7 @@ function App() {
       const inputSampleRate = audioCtx.sampleRate || 16000;
 
       processor.onaudioprocess = (e) => {
-        if (isPausedRef.current || isAiFullscreenRef.current) return;
+        if (isPausedRef.current || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
         let resampled: Float32Array;
@@ -2226,8 +2240,7 @@ function App() {
 
   const processAudio = async () => {
     if (!streamRef.current) return;
-    if (isPausedRef.current || isAiFullscreenRef.current) {
-      console.log('Paused');
+    if (isPausedRef.current || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) {
       return;
     }
     if (isProcessingRef.current) return;
@@ -2289,6 +2302,61 @@ function App() {
       logEvent(`Triggering STT. Buffer size: ${(currentAudio.length / 16000).toFixed(2)}s, Max Volume: ${maxVal.toFixed(4)}`);
 
       silenceFramesRef.current = 0; // Reset silence counter since they are speaking
+
+      // Special handling for Voice Scroll (Teleprompter Speech Tracking)
+      if (isAiFullscreenRef.current && isVoiceScrollRef.current) {
+        const voiceText = await transcribeAudioChunk(currentAudio);
+        clearAudioBuffer(); // Keep buffer responsive and short for real-time word tracking
+        
+        if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 1) {
+          const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+          if (spokenWords.length > 0 && aiAnswerRef.current) {
+            const cleanAnswer = aiAnswerRef.current.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
+            const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+            
+            const currentIdx = activeReadIndexRef.current;
+            let bestMatchIdx = -1;
+            let maxMatches = 0;
+
+            // Search in forward window from currentIdx to currentIdx + 3
+            for (let i = currentIdx; i < Math.min(paragraphs.length, currentIdx + 4); i++) {
+              const paraWords = paragraphs[i].toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+              const paraWordSet = new Set(paraWords);
+              let matches = 0;
+              for (const sw of spokenWords) {
+                if (paraWordSet.has(sw)) matches++;
+              }
+              if (matches >= 2 && matches > maxMatches) {
+                maxMatches = matches;
+                bestMatchIdx = i;
+              }
+            }
+
+            // If not found in forward window, search across all paragraphs
+            if (bestMatchIdx === -1 && spokenWords.length >= 3) {
+              for (let i = 0; i < paragraphs.length; i++) {
+                const paraWords = paragraphs[i].toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+                const paraWordSet = new Set(paraWords);
+                let matches = 0;
+                for (const sw of spokenWords) {
+                  if (paraWordSet.has(sw)) matches++;
+                }
+                if (matches >= 3 && matches > maxMatches) {
+                  maxMatches = matches;
+                  bestMatchIdx = i;
+                }
+              }
+            }
+
+            if (bestMatchIdx !== -1 && bestMatchIdx >= currentIdx) {
+              setActiveReadIndex(bestMatchIdx);
+              paragraphRefs.current[bestMatchIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        }
+        isProcessingRef.current = false;
+        return;
+      }
 
       // FORCE COMMIT: If the buffer exceeds 12 seconds, Whisper large-v3-turbo might start dropping earlier sentences.
       // We force a commit here to start a fresh sentence chunk.
@@ -3584,13 +3652,69 @@ function App() {
                         </button>
                       </div>
 
-                      {/* Auto Scroll */}
+                      {/* Auto Scroll with User-Managed Speed Controls */}
+                      <div className={`flex items-center rounded-xl p-0.5 border transition-all ${scrollSpeed > 0 ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400 shadow-sm' : 'bg-white/5 border-white/10 text-white/70'}`}>
+                        <button
+                          onClick={() => {
+                            setIsVoiceScroll(false); // Mutual exclusion: turn off Voice Scroll
+                            setScrollSpeed(prev => (prev === 0 ? 1 : 0));
+                          }}
+                          className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors ${scrollSpeed > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'hover:text-white'}`}
+                          title={scrollSpeed > 0 ? "Pause Auto Scroll" : "Start Auto Scroll"}
+                        >
+                          {scrollSpeed > 0 ? <Pause size={12} /> : <ArrowDown size={12} />}
+                          <span className="text-[10px]">{scrollSpeed > 0 ? 'Scrolling' : 'Scroll'}</span>
+                        </button>
+
+                        {scrollSpeed > 0 && (
+                          <div className="flex items-center gap-0.5 pl-1 pr-1 border-l border-white/10">
+                            <button
+                              onClick={() => setScrollSpeed(prev => Math.max(1, prev - 1))}
+                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-white/60 hover:text-white"
+                              title="Decrease speed"
+                            >
+                              -
+                            </button>
+                            <button
+                              onClick={() => setScrollSpeed(prev => (prev >= 5 ? 1 : prev + 1))}
+                              className="px-1 text-[10px] font-mono font-black text-emerald-300 hover:text-emerald-200"
+                              title="Click to cycle speed (1x - 5x)"
+                            >
+                              {scrollSpeed}x
+                            </button>
+                            <button
+                              onClick={() => setScrollSpeed(prev => Math.min(5, prev + 1))}
+                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-white/60 hover:text-white"
+                              title="Increase speed"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Voice Scroll (Teleprompter Speech-Follow Mode) */}
                       <button
-                        onClick={() => setScrollSpeed(prev => (prev === 0 ? 1 : 0))}
-                        className={`px-2.5 py-1 rounded-xl transition-colors font-bold text-xs flex items-center gap-1.5 border border-white/10 ${scrollSpeed > 0 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                        onClick={() => {
+                          setIsVoiceScroll(prev => {
+                            const next = !prev;
+                            if (next) {
+                              setScrollSpeed(0); // Mutual exclusion: turn off normal scroll
+                              setActiveReadIndex(0);
+                              aiAnswerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                            return next;
+                          });
+                        }}
+                        className={`px-2.5 py-1 rounded-xl transition-all font-bold text-xs flex items-center gap-1.5 border shadow-sm ${
+                          isVoiceScroll 
+                            ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.25)]' 
+                            : 'bg-white/5 text-white/70 hover:text-white border-white/10 hover:border-white/20'
+                        }`}
+                        title="Voice Scroll: Syncs scrolling with your spoken words in real-time as you read aloud"
                       >
-                        {scrollSpeed > 0 ? <Pause size={12} /> : <ArrowDown size={12} />}
-                        <span className="text-[10px]">Scroll</span>
+                        <Mic size={12} className={isVoiceScroll ? 'text-cyan-400 animate-pulse' : 'text-white/60'} />
+                        <span className="text-[10px] tracking-tight">{isVoiceScroll ? 'Voice Sync ON' : 'Voice Scroll'}</span>
                       </button>
 
                       {/* Copy Button */}
@@ -3629,6 +3753,9 @@ function App() {
                           listeningSessionIdRef.current++;
                           setIsPaused(false);
                           isPausedRef.current = false;
+                          setIsVoiceScroll(false);
+                          setScrollSpeed(0);
+                          setActiveReadIndex(0);
                         }}
                         className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
                       >
@@ -3644,6 +3771,9 @@ function App() {
                           setIsAiFullscreen(false);
                           setIsPaused(false);
                           isPausedRef.current = false;
+                          setIsVoiceScroll(false);
+                          setScrollSpeed(0);
+                          setActiveReadIndex(0);
                           setTranscript('');
                           setFinalizedText('');
                           setInterimText('');
@@ -3792,9 +3922,41 @@ function App() {
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: `${stealthFontSize}px` }}
                   >
                     {aiAnswer ? (
-                      <ReactMarkdown components={markdownComponents}>
-                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
-                      </ReactMarkdown>
+                      isVoiceScroll ? (
+                        (() => {
+                          const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
+                          const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+                          return (
+                            <div className="space-y-2">
+                              {paragraphs.map((para, idx) => {
+                                const isPast = idx < activeReadIndex;
+                                const isCurrent = idx === activeReadIndex;
+                                return (
+                                  <div
+                                    key={idx}
+                                    ref={el => { paragraphRefs.current[idx] = el; }}
+                                    className={`transition-all duration-300 rounded-xl ${
+                                      isCurrent
+                                        ? 'opacity-100 ring-1 ring-cyan-400/50 bg-cyan-500/[0.04] p-1.5'
+                                        : isPast
+                                        ? 'opacity-40 filter saturate-50'
+                                        : 'opacity-85'
+                                    }`}
+                                  >
+                                    <ReactMarkdown components={markdownComponents}>
+                                      {para}
+                                    </ReactMarkdown>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <ReactMarkdown components={markdownComponents}>
+                          {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
+                        </ReactMarkdown>
+                      )
                     ) : (
                       "Generating..."
                     )}
@@ -3911,6 +4073,40 @@ function App() {
                                       </ReactMarkdown>
                                     </div>
                                   </div>
+                                </div>
+                              );
+                            })()
+                          ) : isVoiceScroll ? (
+                            (() => {
+                              const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
+                              const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+                              return (
+                                <div className="space-y-4">
+                                  {paragraphs.map((para, idx) => {
+                                    const isPast = idx < activeReadIndex;
+                                    const isCurrent = idx === activeReadIndex;
+                                    return (
+                                      <div
+                                        key={idx}
+                                        ref={el => { paragraphRefs.current[idx] = el; }}
+                                        onClick={() => {
+                                          setActiveReadIndex(idx);
+                                          paragraphRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }}
+                                        className={`transition-all duration-500 rounded-2xl cursor-pointer ${
+                                          isCurrent
+                                            ? 'opacity-100 ring-2 ring-cyan-400/60 bg-cyan-500/[0.05] p-3 -mx-2 shadow-[0_0_25px_rgba(6,182,212,0.15)]'
+                                            : isPast
+                                            ? 'opacity-35 filter saturate-50 p-1 -mx-1 hover:opacity-70'
+                                            : 'opacity-85 p-1 -mx-1 hover:opacity-100'
+                                        }`}
+                                      >
+                                        <ReactMarkdown components={markdownComponents}>
+                                          {para}
+                                        </ReactMarkdown>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               );
                             })()
