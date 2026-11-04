@@ -1420,8 +1420,17 @@ function App() {
         setAnswerPos({ x: state.initialX + dx, y: state.initialY + dy });
       }
     };
+    const handlePointerUp = () => {
+      dragStateRef.current = { panel: null, startX: 0, startY: 0, initialX: 0, initialY: 0 };
+    };
     window.addEventListener('pointermove', handlePointerMove);
-    return () => window.removeEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
   }, []);
 
 
@@ -1522,6 +1531,10 @@ function App() {
     const handleMouseLeave = () => {
       // If stealth mode is off, NEVER pass through mouse events!
       if (!stealthMode || (!isAiFullscreen && !isRecording)) {
+        if (currentIgnoreRef.current !== false) {
+          currentIgnoreRef.current = false;
+          ipcRenderer.send('set-ignore-mouse-events', false);
+        }
         return;
       }
       if (currentIgnoreRef.current !== true) {
@@ -1554,6 +1567,7 @@ function App() {
     if (!stealthMode) {
       currentIgnoreRef.current = false;
       ipcRenderer.send('set-ignore-mouse-events', false);
+      ipcRenderer.invoke('set-ignore-mouse-events', false);
     }
   }, [stealthMode]);
 
@@ -3559,7 +3573,7 @@ function App() {
     <>
 
       <div
-        className={`absolute inset-0 flex flex-col items-center pointer-events-none font-sans select-none animate-in fade-in duration-150 fill-mode-both click-through-bg ${isAiFullscreen ? 'p-4' : ''}`}
+        className={`absolute inset-0 flex flex-col items-center ${stealthMode ? 'pointer-events-none click-through-bg' : 'pointer-events-auto'} font-sans select-none animate-in fade-in duration-150 fill-mode-both ${isAiFullscreen ? 'p-4' : ''}`}
         style={{ transition: 'none' }}
       >
         <AnimatePresence mode="wait">
@@ -3570,7 +3584,7 @@ function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: -12 }}
               transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="flex flex-col w-full h-full gap-4 items-center pointer-events-none z-50"
+              className={`flex flex-col w-full h-full gap-4 items-center ${stealthMode ? 'pointer-events-none' : 'pointer-events-auto'} z-50`}
             >
             {/* Top Bar Panel */}
             <div
@@ -3595,12 +3609,10 @@ function App() {
                     initialX: topBarPos.x,
                     initialY: topBarPos.y
                   };
-                  target.setPointerCapture(e.pointerId);
                 }
               }}
-              onPointerUp={(e) => {
-                dragStateRef.current.panel = null;
-                (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+              onPointerUp={() => {
+                dragStateRef.current = { panel: null, startX: 0, startY: 0, initialX: 0, initialY: 0 };
               }}
             >
               {isTopBarMinimized ? (
@@ -3876,12 +3888,10 @@ function App() {
                     initialX: answerPos.x,
                     initialY: answerPos.y
                   };
-                  target.setPointerCapture(e.pointerId);
                 }
               }}
-              onPointerUp={(e) => {
-                dragStateRef.current.panel = null;
-                (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+              onPointerUp={() => {
+                dragStateRef.current = { panel: null, startX: 0, startY: 0, initialX: 0, initialY: 0 };
               }}
             >
               {isAnswerMinimized ? (
@@ -4135,7 +4145,7 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className={`flex flex-col w-full h-full overflow-hidden ${isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
+            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
           >
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}

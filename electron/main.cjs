@@ -181,17 +181,22 @@ function createWindow() {
   });
 
   ipcMain.handle('set-stealth', (event, enable) => {
-    isStealthMode = enable;
-    if (mainWindow) {
-      applyStealthProtection(mainWindow, enable);
-      if (!enable) {
+    isStealthMode = Boolean(enable);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      applyStealthProtection(mainWindow, isStealthMode);
+      if (!isStealthMode) {
         mainWindow.setIgnoreMouseEvents(false);
       }
     }
   });
 
   ipcMain.handle('set-ignore-mouse-events', (event, ignore) => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // If stealth mode is OFF, NEVER ignore mouse events - window must be 100% clickable!
+      if (!isStealthMode) {
+        mainWindow.setIgnoreMouseEvents(false);
+        return;
+      }
       if (ignore) {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
       } else {
@@ -202,7 +207,12 @@ function createWindow() {
   
   // Also support ipcRenderer.send (fire-and-forget variant)
   ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // If stealth mode is OFF, NEVER ignore mouse events - window must be 100% clickable!
+      if (!isStealthMode) {
+        mainWindow.setIgnoreMouseEvents(false);
+        return;
+      }
       if (ignore) {
         mainWindow.setIgnoreMouseEvents(true, { forward: true });
       } else {
