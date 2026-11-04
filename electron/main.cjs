@@ -222,8 +222,12 @@ function createWindow() {
   });
 
   ipcMain.handle('set-focusable', (event, focusable) => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setFocusable(focusable);
+      if (focusable) {
+        mainWindow.focus();
+        mainWindow.webContents.focus();
+      }
       // Always re-assert screen-saver level so we stay above fullscreen apps
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
     }

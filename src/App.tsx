@@ -724,7 +724,6 @@ function App() {
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest && target.closest('.stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', false);
@@ -733,7 +732,6 @@ function App() {
     };
     const handleFocusOut = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest && target.closest('.stealth-exempt')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
         if (globalHotkeysEnabled) {
           ipcRenderer.invoke('toggle-global-hotkeys', true);
@@ -1713,30 +1711,43 @@ function App() {
     if (showVirtualKeyboard) {
       setEditTranscript(transcript);
 
+      // Force window to take active OS focus and immediately silence all background hotkeys
+      ipcRenderer.invoke('set-focusable', true);
+      ipcRenderer.invoke('focus-window');
+      ipcRenderer.invoke('toggle-global-hotkeys', false);
+
       const focusTextarea = () => {
-        if (virtualKeyboardTextareaRef.current) {
-          virtualKeyboardTextareaRef.current.focus();
-          virtualKeyboardTextareaRef.current.selectionStart = virtualKeyboardTextareaRef.current.value.length;
-          virtualKeyboardTextareaRef.current.selectionEnd = virtualKeyboardTextareaRef.current.value.length;
+        const el = virtualKeyboardTextareaRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
         }
       };
 
-      // Try multiple times to beat the IPC window focus
-      setTimeout(focusTextarea, 50);
-      setTimeout(focusTextarea, 150);
-      setTimeout(focusTextarea, 300);
+      focusTextarea();
+      requestAnimationFrame(focusTextarea);
+      setTimeout(focusTextarea, 20);
+      setTimeout(focusTextarea, 80);
+      setTimeout(focusTextarea, 200);
 
-      const handleGlobalKeydown = (e: KeyboardEvent) => {
-        // If they start typing and the textarea isn't focused, focus it
-        if (document.activeElement !== virtualKeyboardTextareaRef.current && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-          focusTextarea();
+      const handleGlobalKeydown = () => {
+        const el = virtualKeyboardTextareaRef.current;
+        if (el && document.activeElement !== el) {
+          el.focus();
         }
       };
 
-      window.addEventListener('keydown', handleGlobalKeydown);
-      return () => window.removeEventListener('keydown', handleGlobalKeydown);
+      window.addEventListener('keydown', handleGlobalKeydown, true);
+      return () => {
+        window.removeEventListener('keydown', handleGlobalKeydown, true);
+      };
+    } else {
+      if (isRecording) {
+        ipcRenderer.invoke('toggle-global-hotkeys', true);
+      }
     }
-  }, [showVirtualKeyboard]);
+  }, [showVirtualKeyboard, transcript, isRecording]);
 
   const [deleteMsg, setDeleteMsg] = useState('');
 
@@ -7365,6 +7376,10 @@ function App() {
 
                       <textarea
                         ref={virtualKeyboardTextareaRef}
+                        autoFocus
+                        onFocus={() => {
+                          ipcRenderer.invoke('toggle-global-hotkeys', false);
+                        }}
                         className="w-full h-56 bg-transparent text-white p-6 outline-none resize-none text-lg font-medium leading-relaxed custom-scrollbar placeholder-white/20 select-text"
                         value={editTranscript}
                         onChange={(e) => setEditTranscript(e.target.value)}
@@ -7387,7 +7402,6 @@ function App() {
                           // Shift+Enter, Alt+Enter, Ctrl+Enter and all physical typing keys work natively with 0 interference!
                         }}
                         placeholder="Type question or prompt with your physical keyboard, or click on-screen buttons below..."
-                        autoFocus
                       />
 
                       <div className="bg-black/60 p-4 flex flex-col gap-2 items-center border-t border-white/10 select-none">
