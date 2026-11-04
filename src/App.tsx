@@ -370,6 +370,8 @@ function App() {
   const [localNotesStealth, setLocalNotesStealth] = useState(false);
   const [localRenameStealth, setLocalRenameStealth] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [finalizedText, setFinalizedText] = useState('');
+  const [interimText, setInterimText] = useState('');
   const finalizedTranscriptRef = useRef('');
   const interimTranscriptRef = useRef('');
   const [aiAnswer, setAiAnswer] = useState('');
@@ -723,8 +725,30 @@ function App() {
     localStorage.setItem('chatgpt_api_keys', JSON.stringify(chatgptKeys));
     localStorage.setItem('deepseek_api_keys', JSON.stringify(deepseekKeys));
     localStorage.setItem('glm_api_keys', JSON.stringify(glmKeys));
-    initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
-    setSTTApiKey(groqKeys.filter(k => k.trim()));
+
+    let targetProvider = provider;
+    const hasCurrent = (
+      (provider === 'groq' && groqKeys.some(k => k.trim())) ||
+      (provider === 'gemini-flash' && geminiKeys.some(k => k.trim())) ||
+      (provider === 'claude' && claudeKeys.some(k => k.key.trim())) ||
+      (provider === 'chatgpt' && chatgptKeys.some(k => k.key.trim())) ||
+      (provider === 'deepseek' && deepseekKeys.some(k => k.key.trim()))
+    );
+
+    if (!hasCurrent) {
+      if (geminiKeys.some(k => k.trim())) targetProvider = 'gemini-flash';
+      else if (groqKeys.some(k => k.trim())) targetProvider = 'groq';
+      else if (claudeKeys.some(k => k.key.trim())) targetProvider = 'claude';
+      else if (chatgptKeys.some(k => k.key.trim())) targetProvider = 'chatgpt';
+      else if (deepseekKeys.some(k => k.key.trim())) targetProvider = 'deepseek';
+
+      setProvider(targetProvider);
+      switchProvider(targetProvider);
+      localStorage.setItem('selected_provider', targetProvider);
+    }
+
+    initAIClient(targetProvider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
+    setSTTApiKey(groqKeys.filter(k => k.trim()), geminiKeys.filter(k => k.trim()));
 
     if (msgs.length === 0) {
       msgs.push({ type: 'success', text: 'Saved successfully!' });
@@ -1543,13 +1567,22 @@ function App() {
     ipcRenderer.invoke('quit-and-install-update');
   };
 
-  // Synchronize dynamic window sizing: 150px compact dock vs 850px for modals or AI answer
+  // Auto-scroll transcript box to bottom as words stream in
+  useEffect(() => {
+    if (transcriptScrollRef.current) {
+      transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+    }
+  }, [finalizedText, interimText, transcript]);
+
+  // Synchronize dynamic window sizing: compact dock vs 860px for modals, snapshot preview, or AI answer
   useEffect(() => {
     if (isRecording) {
-      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal;
-      ipcRenderer.invoke('set-ai-fullscreen-bounds', isExpanded);
+      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal || Boolean(previewSnapshot);
+      const hasSnapshots = currentSnapshots.length > 0;
+      const isTranscriptTall = transcript.length > 80;
+      ipcRenderer.invoke('set-ai-fullscreen-bounds', isExpanded, { hasSnapshots, isTranscriptTall });
     }
-  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, isRecording]);
+  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, previewSnapshot, isRecording, currentSnapshots.length, transcript.length > 80]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -1707,24 +1740,41 @@ function App() {
       return;
     }
 
-    const hasGroqKey = groqKeys.some(k => k.trim() !== '');
-    // Check if the currently selected provider has at least one key configured
-    const hasActiveProviderKey = (() => {
-      if (provider === 'groq') return groqKeys.some(k => k.trim());
-      if (provider === 'gemini-flash') return geminiKeys.some(k => k.trim());
-      if (provider === 'claude') return claudeKeys.some(k => k.key.trim());
-      if (provider === 'chatgpt') return chatgptKeys.some(k => k.key.trim());
-      if (provider === 'deepseek') return deepseekKeys.some(k => k.key.trim());
-      // glm and others
-      return glmKeys.some(k => k.key.trim());
-    })();
+    const hasGroq = groqKeys.some(k => k.trim() !== '');
+    const hasGemini = geminiKeys.some(k => k.trim() !== '');
+    const hasClaude = claudeKeys.some(k => k.key.trim() !== '');
+    const hasChatGPT = chatgptKeys.some(k => k.key.trim() !== '');
+    const hasDeepSeek = deepseekKeys.some(k => k.key.trim() !== '');
+    const hasGlm = glmKeys.some(k => k.key.trim() !== '');
 
-    if (!hasActiveProviderKey || !hasGroqKey) {
-      if (!hasActiveProviderKey) setAlertMessage({ title: 'API Key Missing', message: `Please add at least one valid API key for the selected provider (${provider}).`, type: 'warning' });
-      else if (!hasGroqKey) setAlertMessage({ title: 'Groq Key Missing', message: 'Please add at least one valid Groq API key for transcription (speech-to-text).', type: 'warning' });
+    const hasAnyKey = hasGroq || hasGemini || hasClaude || hasChatGPT || hasDeepSeek || hasGlm;
+    if (!hasAnyKey) {
+      setAlertMessage({ title: 'API Key Required', message: 'Please add at least one valid API key (Gemini, Groq, Claude, ChatGPT, or DeepSeek) in Settings to start the interview.', type: 'warning' });
       setLocalSettingsStealth(stealthMode);
       setShowSettings(true);
       return;
+    }
+
+    // Determine the active provider: if current selected provider has a key, keep it; otherwise auto-select the provider that has a key!
+    let activeProvider = provider;
+    const isCurrentProviderValid = (
+      (provider === 'groq' && hasGroq) ||
+      (provider === 'gemini-flash' && hasGemini) ||
+      (provider === 'claude' && hasClaude) ||
+      (provider === 'chatgpt' && hasChatGPT) ||
+      (provider === 'deepseek' && hasDeepSeek)
+    );
+
+    if (!isCurrentProviderValid) {
+      if (hasGemini) activeProvider = 'gemini-flash';
+      else if (hasGroq) activeProvider = 'groq';
+      else if (hasClaude) activeProvider = 'claude';
+      else if (hasChatGPT) activeProvider = 'chatgpt';
+      else if (hasDeepSeek) activeProvider = 'deepseek';
+
+      setProvider(activeProvider);
+      switchProvider(activeProvider);
+      localStorage.setItem('selected_provider', activeProvider);
     }
 
     if (!selectedSource) {
@@ -1786,8 +1836,26 @@ function App() {
     }
 
     if (!silent) {
-      setProvider('groq');
-      switchProvider('groq');
+      let activeProvider = provider;
+      const hasCurrent = (
+        (provider === 'groq' && groqKeys.some(k => k.trim())) ||
+        (provider === 'gemini-flash' && geminiKeys.some(k => k.trim())) ||
+        (provider === 'claude' && claudeKeys.some(k => k.key.trim())) ||
+        (provider === 'chatgpt' && chatgptKeys.some(k => k.key.trim())) ||
+        (provider === 'deepseek' && deepseekKeys.some(k => k.key.trim()))
+      );
+
+      if (!hasCurrent) {
+        if (geminiKeys.some(k => k.trim())) activeProvider = 'gemini-flash';
+        else if (groqKeys.some(k => k.trim())) activeProvider = 'groq';
+        else if (claudeKeys.some(k => k.key.trim())) activeProvider = 'claude';
+        else if (chatgptKeys.some(k => k.key.trim())) activeProvider = 'chatgpt';
+        else if (deepseekKeys.some(k => k.key.trim())) activeProvider = 'deepseek';
+
+        setProvider(activeProvider);
+        switchProvider(activeProvider);
+        localStorage.setItem('selected_provider', activeProvider);
+      }
       setIsAnswerMinimized(false);
       setIsTranscriptMinimized(false);
       setIsTopBarMinimized(false);
@@ -1824,6 +1892,8 @@ function App() {
       }
 
       setTranscript('');
+      setFinalizedText('');
+      setInterimText('');
       finalizedTranscriptRef.current = '';
       interimTranscriptRef.current = '';
       // Reset to current interview layout dimensions and position exactly when recording starts
@@ -1836,9 +1906,10 @@ function App() {
     setShowSessionPrompt(false);
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
+    const validGeminiKeys = geminiKeys.filter(k => k.trim());
 
     initAIClient(provider, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys);
-    setSTTApiKey(validGroqKeys);
+    setSTTApiKey(validGroqKeys, validGeminiKeys);
 
     await initSTT(() => { });
     clearAudioBuffer();
@@ -2124,6 +2195,8 @@ function App() {
           silenceFramesRef.current = 0;
 
           if (!isPausedRef.current) {
+            setFinalizedText(finalizedTranscriptRef.current);
+            setInterimText('');
             setTranscript(finalizedTranscriptRef.current);
           }
         }
@@ -2145,6 +2218,8 @@ function App() {
         clearAudioBuffer();
         interimTranscriptRef.current = '';
         if (!isPausedRef.current) {
+          setFinalizedText(finalizedTranscriptRef.current);
+          setInterimText('');
           setTranscript(finalizedTranscriptRef.current);
         }
         isProcessingRef.current = false;
@@ -2193,6 +2268,8 @@ function App() {
       } else if (text) {
         interimTranscriptRef.current = text;
         if (!isPausedRef.current) {
+          setInterimText(text);
+          setFinalizedText(finalizedTranscriptRef.current);
           setTranscript((finalizedTranscriptRef.current + ' ' + text).trim());
         }
       }
@@ -2376,6 +2453,8 @@ function App() {
 
       // Clear everything from the screen so it's perfectly fresh
       setTranscript('');
+      setFinalizedText('');
+      setInterimText('');
       setAiAnswer('');
       setSessionLog('');
       setRecordingSeconds(0);
@@ -2613,6 +2692,8 @@ function App() {
 
     listeningSessionIdRef.current++; // Invalidate any in-flight STT processing
     setTranscript('');
+    setFinalizedText('');
+    setInterimText('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     clearAudioBuffer();
@@ -2631,6 +2712,8 @@ function App() {
       setIsPaused(true);
       isPausedRef.current = true;
       setTranscript('');
+      setFinalizedText('');
+      setInterimText('');
       finalizedTranscriptRef.current = '';
       interimTranscriptRef.current = '';
       clearAudioBuffer();
@@ -2643,6 +2726,8 @@ function App() {
     }
     listeningSessionIdRef.current++; // Invalidate any in-flight STT processing
     setTranscript('');
+    setFinalizedText('');
+    setInterimText('');
     finalizedTranscriptRef.current = '';
     interimTranscriptRef.current = '';
     clearAudioBuffer();
@@ -2652,6 +2737,15 @@ function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // If Snapshot Preview is open, Escape closes ONLY the preview modal and returns to live transcript!
+      if (previewSnapshot) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setPreviewSnapshot(null);
+        }
+        return;
+      }
+
       // If Virtual Keyboard Editor is open, completely bypass ALL interview shortcuts so user can type on physical keyboard!
       if (showVirtualKeyboard) {
         if (e.key === 'Escape') {
@@ -2733,7 +2827,10 @@ function App() {
         e.preventDefault();
         setShowVirtualKeyboard(true);
       } else if (key === 'escape') {
-        if (showVirtualKeyboard) {
+        if (previewSnapshot) {
+          e.preventDefault();
+          setPreviewSnapshot(null);
+        } else if (showVirtualKeyboard) {
           e.preventDefault();
           setShowVirtualKeyboard(false);
           if (globalHotkeysEnabled) ipcRenderer.invoke('toggle-global-hotkeys', true);
@@ -2757,6 +2854,8 @@ function App() {
           setIsGenerating(false);
           setIsAiFullscreen(false);
           setTranscript('');
+          setFinalizedText('');
+          setInterimText('');
           finalizedTranscriptRef.current = '';
           interimTranscriptRef.current = '';
           setAiAnswer('');
@@ -2777,6 +2876,8 @@ function App() {
           setIsPaused(false);
           isPausedRef.current = false;
           setTranscript('');
+          setFinalizedText('');
+          setInterimText('');
           finalizedTranscriptRef.current = '';
           interimTranscriptRef.current = '';
           setAiAnswer('');
@@ -2828,6 +2929,8 @@ function App() {
           setIsGenerating(false);
           setIsAiFullscreen(false);
           setTranscript('');
+          setFinalizedText('');
+          setInterimText('');
           finalizedTranscriptRef.current = '';
           interimTranscriptRef.current = '';
           setAiAnswer('');
@@ -2896,7 +2999,7 @@ function App() {
     };
     // manualTriggerAI intentionally excluded — we use manualTriggerAIRef.current to avoid
     // re-registering this expensive listener on every render during AI streaming
-  }, [isRecording, isPaused, isGenerating, currentSnapshots, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
+  }, [isRecording, isPaused, isGenerating, currentSnapshots, previewSnapshot, transcript, provider, isAiFullscreen, groqKeys, geminiKeys, claudeKeys, chatgptKeys, deepseekKeys, glmKeys]);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -3223,6 +3326,8 @@ function App() {
                           setIsGenerating(false);
                           setIsAiFullscreen(false);
                           setTranscript('');
+                          setFinalizedText('');
+                          setInterimText('');
                           finalizedTranscriptRef.current = '';
                           interimTranscriptRef.current = '';
                           setAiAnswer('');
@@ -3246,6 +3351,8 @@ function App() {
                           setIsPaused(false);
                           isPausedRef.current = false;
                           setTranscript('');
+                          setFinalizedText('');
+                          setInterimText('');
                           finalizedTranscriptRef.current = '';
                           interimTranscriptRef.current = '';
                           clearAudioBuffer();
@@ -5830,18 +5937,33 @@ function App() {
                           <div className="flex items-center gap-2.5 w-full no-drag">
                             <div
                               ref={transcriptScrollRef}
-                              className="flex-1 min-h-[46px] max-h-[72px] overflow-y-auto custom-scrollbar bg-black/80 border border-cyan-500/25 hover:border-cyan-400/50 rounded-xl px-4 py-2 select-text transition-colors shadow-inner flex items-center"
+                              className="flex-1 min-h-[48px] max-h-[110px] overflow-y-auto custom-scrollbar bg-black/80 border border-cyan-500/25 hover:border-cyan-400/50 rounded-xl px-4 py-2.5 select-text transition-[height] duration-200 shadow-inner flex flex-col justify-center"
                               style={{ fontSize: `${transcriptTextSize}px` }}
                             >
-                              {transcript ? (
-                                <span className="text-white font-medium leading-relaxed tracking-wide select-text">
-                                  {transcript}
-                                </span>
+                              {finalizedText || interimText || transcript ? (
+                                <div className="leading-relaxed tracking-wide select-text">
+                                  {finalizedText && (
+                                    <span className="text-white font-medium">
+                                      {finalizedText}
+                                      {interimText ? ' ' : ''}
+                                    </span>
+                                  )}
+                                  {interimText ? (
+                                    <span className="text-cyan-300 font-semibold drop-shadow-[0_0_8px_rgba(6,182,212,0.4)] animate-pulse inline-flex items-center gap-1">
+                                      {interimText}
+                                      <span className="inline-block w-1.5 h-3 bg-cyan-400 rounded-xs animate-ping align-middle" />
+                                    </span>
+                                  ) : !finalizedText && transcript ? (
+                                    <span className="text-white font-medium">
+                                      {transcript}
+                                    </span>
+                                  ) : null}
+                                </div>
                               ) : (
-                                <span className="text-white/40 italic flex items-center gap-2 select-none text-xs">
+                                <div className="text-white/40 italic flex items-center gap-2 select-none text-xs">
                                   <span className="inline-block w-2 h-2 rounded-full bg-cyan-400/60 animate-ping"></span>
                                   Listening to conversation... (Interviewer questions appear here)
-                                </span>
+                                </div>
                               )}
                             </div>
 
@@ -5849,7 +5971,7 @@ function App() {
                             <button
                               onClick={() => { if (!isGenerating) manualTriggerAI(); }}
                               disabled={isGenerating}
-                              className="h-[46px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[180px]"
+                              className="h-[48px] px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black text-xs tracking-wider uppercase rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0 cursor-pointer min-w-[180px]"
                             >
                               {isGenerating ? (
                                 <>
@@ -5868,26 +5990,26 @@ function App() {
 
                           {/* Snapshots Strip (if any exist) */}
                           {currentSnapshots.length > 0 && (
-                            <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 px-2 bg-black/50 rounded-lg border border-white/5 no-drag">
+                            <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1.5 px-2.5 bg-black/60 rounded-xl border border-cyan-500/20 no-drag mt-0.5 shadow-md">
                               <span className="text-[9.5px] text-cyan-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
                                 <Crop size={10} /> Snips:
                               </span>
                               {currentSnapshots.map((snap, idx) => (
-                                <div key={idx} className="relative h-[36px] aspect-video rounded overflow-hidden border border-cyan-500/30 bg-black/80 group shrink-0 shadow-sm">
+                                <div key={idx} className="relative h-[40px] aspect-video rounded-lg overflow-hidden border border-cyan-500/40 bg-black/80 group shrink-0 shadow-md ring-1 ring-cyan-500/20">
                                   <img src={snap} alt={`Snapshot ${idx + 1}`} className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                                    <button onClick={() => setPreviewSnapshot(snap)} className="p-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors">
-                                      <Eye size={9} />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                    <button onClick={() => setPreviewSnapshot(snap)} className="p-1 bg-white/20 hover:bg-white/30 text-white rounded transition-colors" title="Preview">
+                                      <Eye size={10} />
                                     </button>
-                                    <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-0.5 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors">
-                                      <Trash2 size={9} />
+                                    <button onClick={() => setCurrentSnapshots(prev => prev.filter((_, i) => i !== idx))} className="p-1 bg-rose-500/80 hover:bg-rose-500 text-white rounded transition-colors" title="Delete">
+                                      <Trash2 size={10} />
                                     </button>
                                   </div>
                                 </div>
                               ))}
                               {currentSnapshots.length > 1 && (
-                                <button onClick={() => setCurrentSnapshots([])} className="h-[36px] px-2 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9px] font-bold shrink-0">
-                                  <Trash2 size={10} /> Clear
+                                <button onClick={() => setCurrentSnapshots([])} className="h-[40px] px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors flex items-center justify-center gap-1 text-[9.5px] font-bold shrink-0">
+                                  <Trash2 size={11} /> Clear
                                 </button>
                               )}
                             </div>
@@ -5908,13 +6030,17 @@ function App() {
                         <AlertTriangle className="text-rose-500" size={20} /> Missing API Keys
                       </h3>
                       <p className="text-brand-subtext text-sm mb-6 leading-relaxed">
-                        You must provide a valid API key (at least Groq Key 1) before starting the interview. Go to Settings and add your API keys to continue.
+                        Please provide at least one valid API key (Gemini, Groq, Claude, ChatGPT, or DeepSeek) before starting the interview. Go to Settings and add your API keys to continue.
                       </p>
                       <button
-                        onClick={() => setShowApiKeyMissingError(false)}
+                        onClick={() => {
+                          setShowApiKeyMissingError(false);
+                          setLocalSettingsStealth(stealthMode);
+                          setShowSettings(true);
+                        }}
                         className="w-full bg-brand-accent hover:bg-brand-accentSec text-white py-2.5 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
                       >
-                        Got it
+                        Open Settings
                       </button>
                     </div>
                   </div>
@@ -6150,19 +6276,29 @@ function App() {
               {/* Snapshot Fullscreen Preview Modal */}
               {previewSnapshot && (
                 <div
-                  className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-200"
+                  className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 select-none"
                   onClick={() => setPreviewSnapshot(null)}
                 >
-                  <button
-                    className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
-                    onClick={(e) => { e.stopPropagation(); setPreviewSnapshot(null); }}
-                  >
-                    <X size={24} />
-                  </button>
+                  {/* Top Bar for Preview Screen with explicit Close & Escape indicator */}
+                  <div className="absolute top-4 right-6 flex items-center gap-3 z-30" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-mono text-white/50 bg-black/60 px-2.5 py-1 rounded-lg border border-white/10">
+                      Press <kbd className="text-cyan-400 font-bold">Esc</kbd> to close preview
+                    </span>
+                    <button
+                      className="p-2.5 bg-white/10 hover:bg-rose-500/80 text-white rounded-xl transition-all border border-white/10 shadow-lg cursor-pointer flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewSnapshot(null);
+                      }}
+                      title="Close Preview Screen (Esc)"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
                   <img
                     src={previewSnapshot}
                     alt="Snapshot Preview"
-                    className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-150"
+                    className="max-w-[95%] max-h-[85%] object-contain rounded-2xl shadow-2xl border border-cyan-500/30 animate-in zoom-in-95 duration-150"
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
@@ -6723,6 +6859,8 @@ function App() {
                           } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
                             e.preventDefault();
                             setTranscript(editTranscript);
+                            setFinalizedText(editTranscript);
+                            setInterimText('');
                             finalizedTranscriptRef.current = editTranscript;
                             interimTranscriptRef.current = '';
                             clearAudioBuffer();
@@ -6875,6 +7013,8 @@ function App() {
                             <button
                               onClick={() => {
                                 setTranscript(editTranscript);
+                                setFinalizedText(editTranscript);
+                                setInterimText('');
                                 finalizedTranscriptRef.current = editTranscript;
                                 interimTranscriptRef.current = '';
                                 clearAudioBuffer();
@@ -7085,7 +7225,10 @@ function App() {
                                 <button
                                   onClick={() => {
                                     setTranscript(item.question);
+                                    setFinalizedText(item.question);
+                                    setInterimText('');
                                     finalizedTranscriptRef.current = item.question;
+                                    interimTranscriptRef.current = '';
                                     let snaps: string[] = [];
                                     if (item.images && item.images.length > 0) {
                                       snaps = item.images;

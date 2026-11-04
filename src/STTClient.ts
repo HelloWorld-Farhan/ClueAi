@@ -1,16 +1,83 @@
 let groqApiKeys: string[] = [];
+let geminiApiKeys: string[] = [];
 let currentGroqIndex = 0;
+let currentGeminiIndex = 0;
 
 export async function initSTT(onProgress: (info: any) => void) {
   // We no longer need to download a heavy local model!
-  // We will use Groq's lightning-fast Whisper API for free.
+  // We use cloud STT (Groq Whisper or Gemini Flash) for instant transcription.
   onProgress({ status: 'done' });
   return true;
 }
 
-export function setSTTApiKey(keys: string[]) {
-  groqApiKeys = keys;
+export function setSTTApiKey(keys: string[], geminiKeys: string[] = []) {
+  groqApiKeys = keys.filter(k => k.trim());
+  geminiApiKeys = geminiKeys.filter(k => k.trim());
   currentGroqIndex = 0;
+  currentGeminiIndex = 0;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1] || '';
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function transcribeWithGemini(wavBlob: Blob): Promise<string> {
+  if (geminiApiKeys.length === 0) return '';
+  const apiKey = geminiApiKeys[currentGeminiIndex];
+  currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
+
+  try {
+    const base64Audio = await blobToBase64(wavBlob);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: 'audio/wav',
+                  data: base64Audio
+                }
+              },
+              {
+                text: 'Transcribe the spoken audio verbatim into English text. Return ONLY the exact words spoken without quotes, introduction, commentary, or markdown. If there is silence, music, or no clear speech, return nothing.'
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.0,
+          maxOutputTokens: 1024
+        }
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return `ERR: ${res.status} ${errText}`;
+    }
+
+    const data = await res.json();
+    const candidate = data.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text || '';
+    return text.trim();
+  } catch (err: any) {
+    return `ERR: ${err?.message || err}`;
+  }
 }
 
 function encodeWAV(samples: Float32Array, sampleRate: number = 16000) {
@@ -47,46 +114,52 @@ function encodeWAV(samples: Float32Array, sampleRate: number = 16000) {
 }
 
 export async function transcribeAudioChunk(audioData: Float32Array, contextText: string = ''): Promise<string> {
-  if (groqApiKeys.length === 0) return 'ERR: No API Key';
+  if (groqApiKeys.length === 0 && geminiApiKeys.length === 0) return '';
   if (audioData.length === 0) return '';
 
   try {
     const wavBlob = encodeWAV(audioData, 16000);
-    const formData = new FormData();
-    formData.append('file', wavBlob, 'audio.wav');
-    formData.append('model', 'whisper-large-v3-turbo');
-    formData.append('language', 'en'); 
-    formData.append('temperature', '0.0');
-    
-    // Build a targeted prompt using standard jargon ONLY, no sentences or periods to prevent Whisper prompt-leaking!
-    let promptString = "SAP, ABAP, OData, ALV, RAP, CDS, REST API, Fiori, BAPI, SQL, Java, Python, Developer, Consultant, Data Dictionary, Transparent Table, Pool Table";
-    if (contextText) {
-      // Add context as comma-separated words to prevent sentence hallucination
-      const cleanContext = contextText.replace(/[^a-zA-Z0-9 ]/g, ' ').slice(0, 100).trim().split(/\s+/).join(', ');
-      promptString += ", " + cleanContext;
+    let text = '';
+
+    if (groqApiKeys.length > 0) {
+      const formData = new FormData();
+      formData.append('file', wavBlob, 'audio.wav');
+      formData.append('model', 'whisper-large-v3-turbo');
+      formData.append('language', 'en'); 
+      formData.append('temperature', '0.0');
+      
+      // Build a targeted prompt using standard jargon ONLY, no sentences or periods to prevent Whisper prompt-leaking!
+      let promptString = "SAP, ABAP, OData, ALV, RAP, CDS, REST API, Fiori, BAPI, SQL, Java, Python, Developer, Consultant, Data Dictionary, Transparent Table, Pool Table";
+      if (contextText) {
+        // Add context as comma-separated words to prevent sentence hallucination
+        const cleanContext = contextText.replace(/[^a-zA-Z0-9 ]/g, ' ').slice(0, 100).trim().split(/\s+/).join(', ');
+        promptString += ", " + cleanContext;
+      }
+      
+      formData.append('prompt', promptString);
+
+      const apiKey = groqApiKeys[currentGroqIndex];
+      currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
+
+      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey.trim()}`
+        },
+        body: formData
+      });
+
+      if (!res.ok) {
+         const errText = await res.text();
+         return `ERR: ${res.status} ${errText}`;
+      }
+
+      const data = await res.json();
+      text = (data.text || '').trim();
+    } else if (geminiApiKeys.length > 0) {
+      text = await transcribeWithGemini(wavBlob);
+      if (text.startsWith('ERR:')) return text;
     }
-    
-    formData.append('prompt', promptString);
-
-
-    const apiKey = groqApiKeys[currentGroqIndex];
-    currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
-
-    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey.trim()}`
-      },
-      body: formData
-    });
-
-    if (!res.ok) {
-       const errText = await res.text();
-       return `ERR: ${res.status} ${errText}`;
-    }
-
-    const data = await res.json();
-    let text = (data.text || '').trim();
     
     // Hallucination Filter
     const lowerText = text.toLowerCase();

@@ -104,7 +104,8 @@ window.addEventListener('mouseup', (e) => {
 
 // ESC key cancellation - critical for snipping window to close cleanly
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
+    e.preventDefault();
     ipcRenderer.send('snip-cancel');
   }
 });

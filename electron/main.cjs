@@ -523,8 +523,8 @@ function createWindow() {
       const { width } = primaryDisplay.workAreaSize;
       
       const w = layout === 'horizontal' ? 1080 : 450;
-      // Low profile compact dock height while listening/transcribing: 195px fits two-tier controls & live transcript perfectly!
-      const h = 195;
+      // Low profile compact dock height while listening/transcribing: 215px fits two-tier controls & live transcript perfectly!
+      const h = 215;
 
       mainWindow.setBounds({
         width: w,
@@ -539,16 +539,16 @@ function createWindow() {
     }
   });
 
-  ipcMain.handle('set-ai-fullscreen-bounds', (event, isFullscreen) => {
+  ipcMain.handle('set-ai-fullscreen-bounds', (event, isFullscreen, options = {}) => {
     if (mainWindow) {
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.workAreaSize;
-      const w = 1080;
+      const w = Math.min(1150, width - 20);
 
       if (isFullscreen) {
-        // Expand window downwards to display the full AI Answer view, staying strictly above the Windows taskbar
-        const h = Math.min(800, height - 40);
+        // Expand window downwards to display the full view / snapshot preview / AI answer
+        const h = Math.min(860, height - 20);
         mainWindow.setBounds({
           width: w,
           height: h,
@@ -557,10 +557,17 @@ function createWindow() {
         });
       } else {
         // Shrink back to low-profile transcription dock at the top
-        const h = 195;
+        // Dynamically accommodate snapshots and expanded transcript comfortably without clipping
+        let h = 215;
+        if (options && options.hasSnapshots) {
+          h += 68; // 283px total: guarantees all 4 corners, borders, and shadows of snapshot cards are 100% visible
+        }
+        if (options && options.isTranscriptTall) {
+          h += 45; // extra room for multiline transcript expansion
+        }
         mainWindow.setBounds({
           width: w,
-          height: h,
+          height: Math.min(h, height - 20),
           x: Math.round((width - w) / 2),
           y: 0
         });
@@ -671,7 +678,7 @@ function createWindow() {
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const scaleFactor = primaryDisplay.scaleFactor;
-      const { width, height } = primaryDisplay.size;
+      const { x, y, width, height } = primaryDisplay.bounds;
       
       const physicalWidth = Math.round(width * scaleFactor);
       const physicalHeight = Math.round(height * scaleFactor);
@@ -695,10 +702,10 @@ function createWindow() {
       }
       
       snipWindow = new BrowserWindow({
+        x: x,
+        y: y,
         width: width,
         height: height,
-        x: 0,
-        y: 0,
         frame: false,
         transparent: true,
         alwaysOnTop: true,
@@ -720,9 +727,19 @@ function createWindow() {
       // Critical: snip window must also be content-protected
       applyStealthProtection(snipWindow, isStealthMode);
       snipWindow.loadFile(path.join(__dirname, 'snipping.html'));
+
+      // Instant Escape cancellation hook at the window level
+      snipWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.key === 'Escape') {
+          event.preventDefault();
+          if (snipWindow) { snipWindow.close(); snipWindow = null; }
+          if (mainWindow) mainWindow.setOpacity(1);
+        }
+      });
       
       snipWindow.webContents.once('did-finish-load', () => {
-        snipWindow.showInactive();
+        snipWindow.show();
+        snipWindow.focus();
         snipWindow.webContents.send('snip-image', base64Image);
       });
       
