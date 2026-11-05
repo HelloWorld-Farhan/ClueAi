@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2 } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -446,7 +446,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.6.6');
+  const [appVersion, setAppVersion] = useState('5.6.7');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -459,6 +459,75 @@ function App() {
   const hasShownStartupPopupRef = useRef(false);
   const [isHistoryScrolled, setIsHistoryScrolled] = useState(false);
   const [isCodeSplitView, setIsCodeSplitView] = useState(true);
+
+  // --- STORAGE MONITOR & CACHE CONTROLS ---
+  const [storageInfo, setStorageInfo] = useState<{
+    appSizeMB: number;
+    appStorageFormatted: string;
+    totalStorageGB: number;
+    freeStorageGB: number;
+    usedStorageGB: number;
+    usedPercent: number;
+    isFilling: boolean;
+    isFull: boolean;
+  }>({
+    appSizeMB: 0,
+    appStorageFormatted: '0 MB',
+    totalStorageGB: 0,
+    freeStorageGB: 0,
+    usedStorageGB: 0,
+    usedPercent: 0,
+    isFilling: false,
+    isFull: false
+  });
+  const [showStorageModal, setShowStorageModal] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [cacheClearedSuccess, setCacheClearedSuccess] = useState(false);
+
+  // Semver comparison helper
+  const isNewerVersion = (latest: string, current: string): boolean => {
+    try {
+      const l = latest.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+      const c = current.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+      for (let i = 0; i < Math.max(l.length, c.length); i++) {
+        const numL = l[i] ?? 0;
+        const numC = c[i] ?? 0;
+        if (numL > numC) return true;
+        if (numL < numC) return false;
+      }
+      return false;
+    } catch {
+      return latest !== current;
+    }
+  };
+
+  const fetchStorageInfo = useCallback(() => {
+    try {
+      if (ipcRenderer && ipcRenderer.invoke) {
+        ipcRenderer.invoke('get-storage-info').then((info: any) => {
+          if (info) {
+            setStorageInfo(info);
+          }
+        }).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      const res = await ipcRenderer.invoke('clear-clueai-cache');
+      if (res && res.success) {
+        setCacheClearedSuccess(true);
+        setTimeout(() => setCacheClearedSuccess(false), 3500);
+      }
+    } catch (err) {
+      console.error('Error clearing cache:', err);
+    } finally {
+      setIsClearingCache(false);
+      fetchStorageInfo();
+    }
+  };
 
   // Word-Level Voice Teleprompter Reading Tracker
   const [readWordIndex, setReadWordIndex] = useState(0);
@@ -1523,7 +1592,7 @@ function App() {
       }
 
       // 2. If any modal dialog is active or app is on the dashboard, NEVER pass through mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -1640,11 +1709,54 @@ function App() {
     };
   }, [globalHotkeysEnabled, isRecording]);
 
-  // Auto-updater IPC event listeners & version retrieval
+  const handleCheckForUpdates = useCallback(() => {
+    setUpdateStatus('checking');
+
+    // Fast instant check against release repository with 3.5s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+    fetch('https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/latest', { cache: 'no-store', signal: controller.signal })
+      .then(r => r.json())
+      .then(d => {
+        clearTimeout(timeoutId);
+        if (d && d.tag_name) {
+          const latestTag = d.tag_name.replace(/^v/, '').trim();
+          if (isNewerVersion(latestTag, appVersion)) {
+            setUpdateStatus('available');
+            setUpdateInfo({
+              version: latestTag,
+              releaseDate: d.published_at,
+              releaseNotes: d.body
+            });
+            if (!showUpdateModalRef.current && !hasShownStartupPopupRef.current) {
+              hasShownStartupPopupRef.current = true;
+              setShowStartupUpdatePopup(true);
+            }
+            return;
+          }
+        }
+        setUpdateStatus('not-available');
+      })
+      .catch(() => {
+        clearTimeout(timeoutId);
+        setUpdateStatus('not-available');
+      });
+
+    // Also trigger native updater in background
+    ipcRenderer.invoke('check-for-updates').catch(() => {});
+  }, [appVersion]);
+
+  // Auto-updater IPC event listeners & version retrieval & initial checks
   useEffect(() => {
     ipcRenderer.invoke('get-app-version').then((v: string) => {
       if (v) setAppVersion(v);
     }).catch(() => { });
+
+    // Work 1 & Work 3: Check for updates fast on every startup + initialize storage monitor
+    handleCheckForUpdates();
+    fetchStorageInfo();
+    const storageTimer = setInterval(fetchStorageInfo, 25000);
 
     const handleUpdaterStatus = (_event: any, data: any) => {
       if (!data) return;
@@ -1678,38 +1790,10 @@ function App() {
 
     ipcRenderer.on('updater-status', handleUpdaterStatus);
     return () => {
+      clearInterval(storageTimer);
       ipcRenderer.removeListener('updater-status', handleUpdaterStatus);
     };
-  }, []);
-
-  const handleCheckForUpdates = () => {
-    setUpdateStatus('checking');
-
-    // Instant check against release repository
-    fetch('https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/latest', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => {
-        if (d && d.tag_name) {
-          const latestTag = d.tag_name.replace(/^v/, '').trim();
-          if (latestTag !== appVersion && latestTag > appVersion) {
-            setUpdateStatus('available');
-            setUpdateInfo({
-              version: latestTag,
-              releaseDate: d.published_at,
-              releaseNotes: d.body
-            });
-            return;
-          }
-        }
-        setUpdateStatus('not-available');
-      })
-      .catch(() => {
-        setUpdateStatus('not-available');
-      });
-
-    // Also trigger native updater in background
-    ipcRenderer.invoke('check-for-updates').catch(() => {});
-  };
+  }, [handleCheckForUpdates, fetchStorageInfo]);
 
   const handleDownloadUpdate = () => {
     setUpdateStatus('downloading');
@@ -1748,12 +1832,12 @@ function App() {
   // Synchronize dynamic window sizing: compact dock vs 860px for modals, snapshot preview, or AI answer
   useEffect(() => {
     if (isRecording) {
-      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal || Boolean(previewSnapshot);
+      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal || showStorageModal || storageInfo.isFull || Boolean(previewSnapshot);
       const hasSnapshots = currentSnapshots.length > 0;
       const isTranscriptTall = transcript.length > 80;
       ipcRenderer.invoke('set-ai-fullscreen-bounds', isExpanded, { hasSnapshots, isTranscriptTall });
     }
-  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, previewSnapshot, isRecording, currentSnapshots.length, transcript.length > 80]);
+  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, showStorageModal, storageInfo.isFull, previewSnapshot, isRecording, currentSnapshots.length, transcript.length > 80]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -2425,61 +2509,65 @@ function App() {
 
       // Special handling for Voice Scroll (Teleprompter Word & Paragraph Speech Tracking)
       if (isAiFullscreenRef.current && isVoiceScrollRef.current) {
-        const voiceText = await transcribeAudioChunk(currentAudio);
+        if (!aiAnswerRef.current) {
+          clearAudioBuffer();
+          isProcessingRef.current = false;
+          return;
+        }
+
+        const cleanAnswer = aiAnswerRef.current.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
+        const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+        // 1. Flatten all words with global indices
+        let totalWords = 0;
+        const allWordsList: { raw: string; clean: string; idx: number; pIdx: number }[] = [];
+        paragraphs.forEach((p, pIdx) => {
+          const words = p.split(/\s+/).filter(Boolean);
+          words.forEach(w => {
+            const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+            allWordsList.push({ raw: w, clean, idx: totalWords++, pIdx });
+          });
+        });
+
+        const curWordIdx = readWordProgressRef.current || 0;
+
+        // Context prompt: prime Whisper STT with the exact upcoming words from the solution
+        const promptSnippet = allWordsList.slice(curWordIdx, curWordIdx + 25).map(w => w.raw).join(' ');
+        const voiceText = await transcribeAudioChunk(currentAudio, promptSnippet);
         clearAudioBuffer(); // Keep buffer responsive and short for real-time word tracking
 
         if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 1) {
           const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1);
-          if (spokenWords.length > 0 && aiAnswerRef.current) {
-            const cleanAnswer = aiAnswerRef.current.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
-            const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
-
-            // 1. Flatten all words with global indices
-            let totalWords = 0;
-            const allWordsList: { raw: string; clean: string; idx: number; pIdx: number }[] = [];
-            paragraphs.forEach((p, pIdx) => {
-              const words = p.split(/\s+/).filter(Boolean);
-              words.forEach(w => {
-                const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-                allWordsList.push({ raw: w, clean, idx: totalWords++, pIdx });
-              });
-            });
-
-            const curWordIdx = readWordProgressRef.current || 0;
-            let furthestMatchedWord = -1;
-
-            // Search forward window from curWordIdx up to curWordIdx + 35 words
-            const searchLimit = Math.min(allWordsList.length, curWordIdx + 35);
-            for (let i = curWordIdx; i < searchLimit; i++) {
-              const w = allWordsList[i];
-              if (w && w.clean.length > 1 && spokenWords.includes(w.clean)) {
-                furthestMatchedWord = i;
-              }
-            }
-
-            // If not found in immediate window, search across any forward words (e.g. user skipped ahead)
-            if (furthestMatchedWord === -1 && spokenWords.length >= 2) {
-              for (let i = curWordIdx; i < allWordsList.length; i++) {
-                const w = allWordsList[i];
-                if (w && w.clean.length > 2 && spokenWords.includes(w.clean)) {
-                  furthestMatchedWord = i;
+          if (spokenWords.length > 0 && allWordsList.length > 0) {
+            // Strictly match words sequentially from curWordIdx (prevents jumping anywhere)
+            let checkIdx = curWordIdx;
+            for (const sw of spokenWords) {
+              let foundAt = -1;
+              const maxAhead = Math.min(allWordsList.length, checkIdx + 4);
+              for (let k = checkIdx; k < maxAhead; k++) {
+                const candidate = allWordsList[k]?.clean;
+                if (candidate && (candidate === sw || (candidate.length > 3 && sw.length > 3 && (candidate.includes(sw) || sw.includes(candidate))))) {
+                  foundAt = k;
                   break;
                 }
               }
+              if (foundAt !== -1) {
+                checkIdx = foundAt + 1;
+              }
             }
 
-            if (furthestMatchedWord !== -1 && furthestMatchedWord >= curWordIdx) {
-              const nextWordIdx = furthestMatchedWord + 1;
+            // Advance strictly within a controlled sequential window (at most 8 words forward per audio chunk)
+            if (checkIdx > curWordIdx && (checkIdx - curWordIdx) <= 8) {
+              const nextWordIdx = checkIdx;
               setReadWordIndex(nextWordIdx);
               readWordProgressRef.current = nextWordIdx;
 
-              // Also update active paragraph index for paragraph indicator
-              const targetPara = allWordsList[furthestMatchedWord]?.pIdx ?? activeReadIndexRef.current;
+              const targetPara = allWordsList[nextWordIdx - 1]?.pIdx ?? activeReadIndexRef.current;
               setActiveReadIndex(targetPara);
 
               // Smoothly scroll the matched word or paragraph into center view
-              if (wordRefs.current[furthestMatchedWord]) {
-                wordRefs.current[furthestMatchedWord]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              if (wordRefs.current[nextWordIdx - 1]) {
+                wordRefs.current[nextWordIdx - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               } else if (paragraphRefs.current[targetPara]) {
                 paragraphRefs.current[targetPara]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
@@ -4497,8 +4585,42 @@ function App() {
                         </button>
                       </div>
 
-                      {/* Right: Info, Settings & Primary START INTERVIEW CTA */}
+                      {/* Right: Storage Monitor, Info, Settings & Primary START INTERVIEW CTA */}
                       <div className="flex items-center gap-2.5 no-drag">
+                        {/* Storage Monitor Badge - positioned to the left of the Info button and right of Stealth */}
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => setShowStorageModal(true)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                            storageInfo.isFull
+                              ? 'bg-rose-500/25 border-rose-500 text-rose-300 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]'
+                              : storageInfo.isFilling
+                              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                              : 'bg-white/[0.04] hover:bg-white/[0.08] text-white/80 hover:text-white border-white/10 hover:border-cyan-500/40 shadow-sm'
+                          }`}
+                          title="Click to view ClueAI storage footprint and disk management"
+                        >
+                          <HardDrive size={13} className={storageInfo.isFull ? 'text-rose-400 animate-bounce' : storageInfo.isFilling ? 'text-amber-400' : 'text-cyan-400'} />
+                          <div className="flex items-center gap-1.5 font-medium">
+                            <span className="text-[11px] text-cyan-300 font-mono">ClueAI: {storageInfo.appStorageFormatted}</span>
+                            <span className="text-white/20">|</span>
+                            <span className={`text-[11px] ${storageInfo.isFull ? 'text-rose-400 font-bold' : storageInfo.isFilling ? 'text-amber-300' : 'text-white/70'}`}>
+                              Free: {storageInfo.freeStorageGB} GB
+                            </span>
+                          </div>
+                          {storageInfo.isFilling && !storageInfo.isFull && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/30 text-amber-200 border border-amber-400/40 rounded-full animate-pulse">
+                              {storageInfo.usedPercent}% Used
+                            </span>
+                          )}
+                          {storageInfo.isFull && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-black bg-rose-500/40 text-rose-200 border border-rose-400/50 rounded-full animate-pulse">
+                              100% FULL
+                            </span>
+                          )}
+                        </motion.button>
+
                         <button
                           onClick={() => setShowInfo(!showInfo)}
                           className={`p-2 rounded-xl transition-all border cursor-pointer ${showInfo ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-white/[0.04] text-white/70 hover:text-white border-white/10 hover:bg-white/10'}`}
@@ -5076,6 +5198,288 @@ function App() {
                           <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 leading-relaxed text-xs">
                             {renderReleaseNotes(updateInfo.releaseNotes)}
                           </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ClueAI Storage Management Modal */}
+              <AnimatePresence>
+                {showStorageModal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.94, opacity: 0, y: 15 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.94, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className="bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 w-full max-w-2xl rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.2)] flex flex-col gap-5 relative max-h-[88vh] overflow-hidden"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between pb-3.5 border-b border-white/10 shrink-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center shadow-inner">
+                            <HardDrive size={20} className="text-cyan-300" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                              ClueAI Storage & Disk Center
+                            </h2>
+                            <p className="text-xs text-white/50 font-medium">
+                              Live laptop disk monitoring and application cache management
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => setShowStorageModal(false)}
+                          className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      {/* Main Grid: ClueAI Footprint & Laptop Disk */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Card 1: ClueAI Application Footprint */}
+                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-4 flex flex-col justify-between shadow-inner">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400">
+                              Application Footprint
+                            </span>
+                            <div className="flex items-baseline gap-2 mt-2">
+                              <span className="text-3xl font-black text-cyan-300 font-mono tracking-tight">
+                                {storageInfo.appStorageFormatted}
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 mt-1 leading-relaxed">
+                              UserData directory, local SQLite stores, and Chromium caches.
+                            </p>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-white/5">
+                            {cacheClearedSuccess ? (
+                              <div className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 animate-pulse">
+                                <CheckCircle2 size={14} />
+                                <span>Cache Cleared Successfully!</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={handleClearCache}
+                                disabled={isClearingCache}
+                                className="w-full py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-cyan-400/40 transition-all text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                              >
+                                {isClearingCache ? (
+                                  <>
+                                    <Loader2 size={13} className="animate-spin text-cyan-400" />
+                                    <span>Purging Cache...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Trash2 size={13} className="text-rose-400" />
+                                    <span>Clear ClueAI Storage Cache</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card 2: Laptop Hard Drive Capacity */}
+                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-4 flex flex-col justify-between shadow-inner">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-white/50">
+                                Laptop Disk Status
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                storageInfo.isFull
+                                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                  : storageInfo.isFilling
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              }`}>
+                                {storageInfo.usedPercent}% Used
+                              </span>
+                            </div>
+
+                            <div className="flex items-baseline gap-2 mt-2">
+                              <span className="text-3xl font-black text-white font-mono tracking-tight">
+                                {storageInfo.freeStorageGB}
+                              </span>
+                              <span className="text-xs text-white/50 font-bold uppercase">GB Free</span>
+                            </div>
+                            <p className="text-xs text-white/50 mt-1 leading-relaxed">
+                              Total Capacity: {storageInfo.totalStorageGB} GB | Used: {storageInfo.usedStorageGB} GB
+                            </p>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-white/5">
+                            {/* Storage Gauge Bar */}
+                            <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden p-0.5">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  storageInfo.isFull
+                                    ? 'bg-gradient-to-r from-rose-500 to-red-600 shadow-[0_0_12px_rgba(244,63,94,0.6)]'
+                                    : storageInfo.isFilling
+                                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                                    : 'bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_12px_rgba(6,182,212,0.5)]'
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(5, storageInfo.usedPercent))}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Storage Alert Notice */}
+                      {storageInfo.isFull ? (
+                        <div className="bg-rose-500/15 border border-rose-500/40 rounded-2xl p-3.5 flex items-center gap-3 text-rose-200 text-xs">
+                          <AlertTriangle size={18} className="text-rose-400 shrink-0 animate-bounce" />
+                          <div className="leading-snug">
+                            <strong className="text-rose-100 block">Critical Warning: Laptop Storage is 100% Full!</strong>
+                            ClueAI cannot store temporary caches or audio recordings. Please clear cache or free drive space immediately.
+                          </div>
+                        </div>
+                      ) : storageInfo.isFilling ? (
+                        <div className="bg-amber-500/15 border border-amber-500/40 rounded-2xl p-3.5 flex items-center gap-3 text-amber-200 text-xs">
+                          <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+                          <div className="leading-snug">
+                            <strong className="text-amber-100 block">Notice: Laptop Storage Is Filling Up ({storageInfo.usedPercent}%)</strong>
+                            Your primary disk is above 90% capacity. We recommend clearing ClueAI cache or Windows temp files.
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3.5 flex items-center gap-3 text-emerald-200 text-xs">
+                          <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                          <div className="leading-snug">
+                            <strong className="text-emerald-100 block">Storage Healthy & Optimized</strong>
+                            Plenty of high-speed NVMe/SSD headroom available for AI streaming and transcripts.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Footer Controls */}
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10 shrink-0">
+                        <button
+                          onClick={() => {
+                            shell.openExternal('ms-settings:storagesense');
+                          }}
+                          className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Settings size={13} />
+                          <span>Windows Storage Settings</span>
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={fetchStorageInfo}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <RefreshCw size={13} />
+                            <span>Refresh</span>
+                          </button>
+
+                          <button
+                            onClick={() => setShowStorageModal(false)}
+                            className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/10 transition-colors cursor-pointer"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Critical 100% Storage Full Full-Screen Blocking Modal */}
+              <AnimatePresence>
+                {storageInfo.isFull && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[99999] bg-[#05060b]/98 backdrop-blur-3xl flex items-center justify-center p-6 select-none pointer-events-auto"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.9, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.9, y: 20 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                      className="bg-gradient-to-b from-[#18080d] to-[#090507] border-2 border-rose-500/70 rounded-3xl p-8 max-w-lg w-full shadow-[0_0_80px_rgba(244,63,94,0.4)] flex flex-col items-center text-center gap-5"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/60 flex items-center justify-center shadow-[0_0_30px_rgba(244,63,94,0.5)] animate-bounce">
+                        <AlertTriangle size={36} className="text-rose-400" />
+                      </div>
+
+                      <div>
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/25 text-rose-300 border border-rose-500/50 inline-block mb-2 animate-pulse">
+                          Storage Critical • Controls Locked
+                        </span>
+                        <h2 className="text-2xl font-black text-white tracking-tight">Laptop Storage 100% Full</h2>
+                        <p className="text-rose-200/80 text-sm mt-2 leading-relaxed">
+                          Your laptop's primary storage is completely full ({storageInfo.usedPercent}% used, {storageInfo.freeStorageGB} GB free).
+                          All ClueAI controls are blocked to prevent data loss or crashes. Please clear storage cache to continue.
+                        </p>
+                      </div>
+
+                      {/* Quick Stats */}
+                      <div className="w-full bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-center justify-between text-left">
+                        <div>
+                          <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold">ClueAI Footprint</p>
+                          <p className="text-base font-bold text-cyan-400 font-mono">{storageInfo.appStorageFormatted}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold">Laptop Drive</p>
+                          <p className="text-base font-bold text-rose-400 font-mono">{storageInfo.freeStorageGB} GB Free / {storageInfo.totalStorageGB} GB</p>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="w-full flex flex-col gap-2.5">
+                        <button
+                          onClick={handleClearCache}
+                          disabled={isClearingCache}
+                          className="w-full py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white shadow-[0_0_25px_rgba(244,63,94,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                        >
+                          {isClearingCache ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin text-white" />
+                              <span>Clearing ClueAI Storage Cache...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 size={16} />
+                              <span>Clear ClueAI Storage Cache Now</span>
+                            </>
+                          )}
+                        </button>
+
+                        <div className="flex items-center gap-2 w-full">
+                          <button
+                            onClick={() => {
+                              shell.openExternal('ms-settings:storagesense');
+                            }}
+                            className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Settings size={13} />
+                            <span>Windows Storage</span>
+                          </button>
+                          <button
+                            onClick={fetchStorageInfo}
+                            className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <RefreshCw size={13} />
+                            <span>Re-check Disk Space</span>
+                          </button>
                         </div>
                       </div>
                     </motion.div>
