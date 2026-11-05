@@ -8,30 +8,29 @@
 !macroend
 
 !macro customUnInstall
-  ; 1. Terminate any running ClueAI processes
-  nsExec::Exec 'taskkill /F /T /IM ClueAI.exe'
-  nsExec::Exec 'taskkill /F /T /IM clueai.exe'
+  ; Only perform complete wipe during explicit user uninstallation, NEVER during in-app or installer updates!
+  ${ifNot} ${isUpdated}
+    ; 1. Wipe UserData, settings, resumes, and API keys completely
+    RMDir /r "$APPDATA\ClueAI"
+    RMDir /r "$APPDATA\clueai"
 
-  ; 2. Wipe all UserData, settings, resumes, and API keys completely
-  RMDir /r "$APPDATA\ClueAI"
-  RMDir /r "$APPDATA\clueai"
+    ; 2. Wipe local app data, caches, update staging files, and installed files
+    RMDir /r "$LOCALAPPDATA\ClueAI"
+    RMDir /r "$LOCALAPPDATA\clueai"
+    RMDir /r "$LOCALAPPDATA\clueai-updater"
+    RMDir /r "$LOCALAPPDATA\Programs\clueai"
+    RMDir /r "$LOCALAPPDATA\Programs\ClueAI"
 
-  ; 3. Wipe all local app data, caches, update staging files, and installed files
-  RMDir /r "$LOCALAPPDATA\ClueAI"
-  RMDir /r "$LOCALAPPDATA\clueai"
-  RMDir /r "$LOCALAPPDATA\clueai-updater"
-  RMDir /r "$LOCALAPPDATA\Programs\clueai"
-  RMDir /r "$LOCALAPPDATA\Programs\ClueAI"
+    ; 3. Wipe temporary files
+    RMDir /r "$TEMP\clueai*"
+    RMDir /r "$TEMP\electron*"
 
-  ; 4. Wipe temporary files
-  RMDir /r "$TEMP\clueai*"
-  RMDir /r "$TEMP\electron*"
-
-  ; 5. Remove all registry entries
-  DeleteRegKey HKCU "Software\ClueAI"
-  DeleteRegKey HKCU "Software\clueai"
-  DeleteRegKey HKCU "Software\com.clueai.app"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClueAI"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.clueai.app"
+    ; 4. Remove registry entries
+    DeleteRegKey HKCU "Software\ClueAI"
+    DeleteRegKey HKCU "Software\clueai"
+    DeleteRegKey HKCU "Software\com.clueai.app"
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClueAI"
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.clueai.app"
+  ${endif}
 !macroend
 

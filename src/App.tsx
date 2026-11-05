@@ -446,10 +446,12 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.5.0');
+  const [appVersion, setAppVersion] = useState('5.6.4');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [installProgress, setInstallProgress] = useState(0);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isHistoryScrolled, setIsHistoryScrolled] = useState(false);
   const [isCodeSplitView, setIsCodeSplitView] = useState(true);
@@ -1647,7 +1649,16 @@ function App() {
   };
 
   const handleRestartToInstall = () => {
-    ipcRenderer.invoke('quit-and-install-update');
+    setIsInstallingUpdate(true);
+    setInstallProgress(15);
+    setTimeout(() => setInstallProgress(45), 350);
+    setTimeout(() => setInstallProgress(85), 750);
+    setTimeout(() => {
+      setInstallProgress(100);
+      setTimeout(() => {
+        ipcRenderer.invoke('quit-and-install-update');
+      }, 500);
+    }, 1200);
   };
 
   // Auto-scroll transcript box to bottom as words stream in
@@ -4773,7 +4784,32 @@ function App() {
 
                           {/* Primary CTA Buttons for Left Column */}
                           <div className="pt-2 flex flex-col gap-2.5">
-                            {updateStatus === 'downloaded' ? (
+                            {isInstallingUpdate ? (
+                              <div className="bg-[#05060b] border border-cyan-400/60 rounded-2xl p-4 flex flex-col gap-3 shadow-[0_0_30px_rgba(6,182,212,0.35)]">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-white flex items-center gap-2">
+                                    <Sparkles size={16} className="text-cyan-400 animate-spin" />
+                                    {installProgress < 40 ? 'Extracting Update Files...' : installProgress < 85 ? 'Applying ClueAI Files...' : 'Launching ClueAI v5.6.4...'}
+                                  </span>
+                                  <span className="font-mono text-cyan-300 font-black px-2.5 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/40 text-xs">
+                                    {installProgress}%
+                                  </span>
+                                </div>
+                                <div className="w-full h-3.5 bg-black/80 rounded-full overflow-hidden border border-cyan-500/30 p-0.5 relative">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full transition-all duration-300 shadow-[0_0_18px_rgba(6,182,212,0.9)]"
+                                    style={{ width: `${installProgress}%` }}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] text-cyan-200/80 font-mono">
+                                  <span>Auto-relaunching in seconds...</span>
+                                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                    Live
+                                  </span>
+                                </div>
+                              </div>
+                            ) : updateStatus === 'downloaded' ? (
                               <button
                                 onClick={handleRestartToInstall}
                                 className="w-full py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_25px_rgba(6,182,212,0.6)] border border-cyan-300/60 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 animate-pulse cursor-pointer"
