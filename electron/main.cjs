@@ -1013,12 +1013,12 @@ if (!gotTheLock) {
         }
       });
 
-      // Quiet startup check after 4 seconds
+      // Fast startup check after 1.5 seconds
       setTimeout(() => {
         try {
           autoUpdater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
         } catch (e) {}
-      }, 4000);
+      }, 1500);
     }
   
   globalShortcut.register('CommandOrControl+Shift+K', () => {

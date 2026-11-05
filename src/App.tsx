@@ -446,7 +446,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.6.5');
+  const [appVersion, setAppVersion] = useState('5.6.6');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -459,6 +459,14 @@ function App() {
   const hasShownStartupPopupRef = useRef(false);
   const [isHistoryScrolled, setIsHistoryScrolled] = useState(false);
   const [isCodeSplitView, setIsCodeSplitView] = useState(true);
+
+  // Word-Level Voice Teleprompter Reading Tracker
+  const [readWordIndex, setReadWordIndex] = useState(0);
+  const readWordIndexRef = useRef(0);
+  readWordIndexRef.current = readWordIndex;
+  const readWordProgressRef = useRef(0);
+  readWordProgressRef.current = readWordIndex;
+  const wordRefs = useRef<{ [idx: number]: HTMLElement | null }>({});
 
 
   const [username, setUsername] = useState(() => {
@@ -1515,7 +1523,7 @@ function App() {
       }
 
       // 2. If any modal dialog is active or app is on the dashboard, NEVER pass through mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions;
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -1595,6 +1603,28 @@ function App() {
     }
   }, [stealthMode]);
 
+  // Robust snapshot preview window focus and Escape key handling in all modes (including Stealth)
+  useEffect(() => {
+    if (previewSnapshot) {
+      currentIgnoreRef.current = false;
+      ipcRenderer.send('set-ignore-mouse-events', false);
+      ipcRenderer.invoke('focus-window').catch(() => {});
+
+      const handlePreviewKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
+          e.preventDefault();
+          e.stopPropagation();
+          setPreviewSnapshot(null);
+        }
+      };
+
+      window.addEventListener('keydown', handlePreviewKeyDown, { capture: true });
+      return () => {
+        window.removeEventListener('keydown', handlePreviewKeyDown, { capture: true });
+      };
+    }
+  }, [previewSnapshot]);
+
   // Restore mouse responsiveness and reset passthrough whenever the window is shown/restored
   useEffect(() => {
     const handleWindowShown = () => {
@@ -1654,15 +1684,31 @@ function App() {
 
   const handleCheckForUpdates = () => {
     setUpdateStatus('checking');
-    ipcRenderer.invoke('check-for-updates').then((res: any) => {
-      if (res && res.error) {
-        setUpdateStatus('error');
-        setUpdateInfo(prev => ({ ...prev, message: res.error }));
-      }
-    }).catch((err: any) => {
-      setUpdateStatus('error');
-      setUpdateInfo(prev => ({ ...prev, message: err?.message || 'Check failed' }));
-    });
+
+    // Instant check against release repository
+    fetch('https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/latest', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.tag_name) {
+          const latestTag = d.tag_name.replace(/^v/, '').trim();
+          if (latestTag !== appVersion && latestTag > appVersion) {
+            setUpdateStatus('available');
+            setUpdateInfo({
+              version: latestTag,
+              releaseDate: d.published_at,
+              releaseNotes: d.body
+            });
+            return;
+          }
+        }
+        setUpdateStatus('not-available');
+      })
+      .catch(() => {
+        setUpdateStatus('not-available');
+      });
+
+    // Also trigger native updater in background
+    ipcRenderer.invoke('check-for-updates').catch(() => {});
   };
 
   const handleDownloadUpdate = () => {
@@ -2377,54 +2423,66 @@ function App() {
 
       silenceFramesRef.current = 0; // Reset silence counter since they are speaking
 
-      // Special handling for Voice Scroll (Teleprompter Speech Tracking)
+      // Special handling for Voice Scroll (Teleprompter Word & Paragraph Speech Tracking)
       if (isAiFullscreenRef.current && isVoiceScrollRef.current) {
         const voiceText = await transcribeAudioChunk(currentAudio);
         clearAudioBuffer(); // Keep buffer responsive and short for real-time word tracking
-        
+
         if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 1) {
-          const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+          const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1);
           if (spokenWords.length > 0 && aiAnswerRef.current) {
             const cleanAnswer = aiAnswerRef.current.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
             const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
-            
-            const currentIdx = activeReadIndexRef.current;
-            let bestMatchIdx = -1;
-            let maxMatches = 0;
 
-            // Search in forward window from currentIdx to currentIdx + 3
-            for (let i = currentIdx; i < Math.min(paragraphs.length, currentIdx + 4); i++) {
-              const paraWords = paragraphs[i].toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-              const paraWordSet = new Set(paraWords);
-              let matches = 0;
-              for (const sw of spokenWords) {
-                if (paraWordSet.has(sw)) matches++;
-              }
-              if (matches >= 2 && matches > maxMatches) {
-                maxMatches = matches;
-                bestMatchIdx = i;
-              }
-            }
+            // 1. Flatten all words with global indices
+            let totalWords = 0;
+            const allWordsList: { raw: string; clean: string; idx: number; pIdx: number }[] = [];
+            paragraphs.forEach((p, pIdx) => {
+              const words = p.split(/\s+/).filter(Boolean);
+              words.forEach(w => {
+                const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+                allWordsList.push({ raw: w, clean, idx: totalWords++, pIdx });
+              });
+            });
 
-            // If not found in forward window, search across all paragraphs
-            if (bestMatchIdx === -1 && spokenWords.length >= 3) {
-              for (let i = 0; i < paragraphs.length; i++) {
-                const paraWords = paragraphs[i].toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-                const paraWordSet = new Set(paraWords);
-                let matches = 0;
-                for (const sw of spokenWords) {
-                  if (paraWordSet.has(sw)) matches++;
-                }
-                if (matches >= 3 && matches > maxMatches) {
-                  maxMatches = matches;
-                  bestMatchIdx = i;
-                }
+            const curWordIdx = readWordProgressRef.current || 0;
+            let furthestMatchedWord = -1;
+
+            // Search forward window from curWordIdx up to curWordIdx + 35 words
+            const searchLimit = Math.min(allWordsList.length, curWordIdx + 35);
+            for (let i = curWordIdx; i < searchLimit; i++) {
+              const w = allWordsList[i];
+              if (w && w.clean.length > 1 && spokenWords.includes(w.clean)) {
+                furthestMatchedWord = i;
               }
             }
 
-            if (bestMatchIdx !== -1 && bestMatchIdx >= currentIdx) {
-              setActiveReadIndex(bestMatchIdx);
-              paragraphRefs.current[bestMatchIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // If not found in immediate window, search across any forward words (e.g. user skipped ahead)
+            if (furthestMatchedWord === -1 && spokenWords.length >= 2) {
+              for (let i = curWordIdx; i < allWordsList.length; i++) {
+                const w = allWordsList[i];
+                if (w && w.clean.length > 2 && spokenWords.includes(w.clean)) {
+                  furthestMatchedWord = i;
+                  break;
+                }
+              }
+            }
+
+            if (furthestMatchedWord !== -1 && furthestMatchedWord >= curWordIdx) {
+              const nextWordIdx = furthestMatchedWord + 1;
+              setReadWordIndex(nextWordIdx);
+              readWordProgressRef.current = nextWordIdx;
+
+              // Also update active paragraph index for paragraph indicator
+              const targetPara = allWordsList[furthestMatchedWord]?.pIdx ?? activeReadIndexRef.current;
+              setActiveReadIndex(targetPara);
+
+              // Smoothly scroll the matched word or paragraph into center view
+              if (wordRefs.current[furthestMatchedWord]) {
+                wordRefs.current[furthestMatchedWord]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              } else if (paragraphRefs.current[targetPara]) {
+                paragraphRefs.current[targetPara]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
             }
           }
         }
@@ -3773,6 +3831,8 @@ function App() {
                             if (next) {
                               setScrollSpeed(0); // Mutual exclusion: turn off normal scroll
                               setActiveReadIndex(0);
+                              setReadWordIndex(0);
+                              readWordProgressRef.current = 0;
                               aiAnswerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                               if (!isRecordingRef.current) {
                                 startRecording(true);
@@ -3831,6 +3891,8 @@ function App() {
                           setIsVoiceScroll(false);
                           setScrollSpeed(0);
                           setActiveReadIndex(0);
+                          setReadWordIndex(0);
+                          readWordProgressRef.current = 0;
                         }}
                         className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
                       >
@@ -3849,6 +3911,8 @@ function App() {
                           setIsVoiceScroll(false);
                           setScrollSpeed(0);
                           setActiveReadIndex(0);
+                          setReadWordIndex(0);
+                          readWordProgressRef.current = 0;
                           setTranscript('');
                           setFinalizedText('');
                           setInterimText('');
@@ -3999,29 +4063,46 @@ function App() {
                         (() => {
                           const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
                           const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+                          let globalWordCounter = 0;
+                          const parsedParas = paragraphs.map((para, pIdx) => {
+                            const words = para.split(/\s+/).filter(Boolean).map(w => {
+                              const wordObj = { raw: w, idx: globalWordCounter, pIdx };
+                              globalWordCounter++;
+                              return wordObj;
+                            });
+                            return { pIdx, para, words };
+                          });
+
                           return (
-                            <div className="space-y-2">
-                              {paragraphs.map((para, idx) => {
-                                const isPast = idx < activeReadIndex;
-                                const isCurrent = idx === activeReadIndex;
-                                return (
-                                  <div
-                                    key={idx}
-                                    ref={el => { paragraphRefs.current[idx] = el; }}
-                                    className={`transition-all duration-300 rounded-xl ${
-                                      isCurrent
-                                        ? 'opacity-100 ring-1 ring-cyan-400/50 bg-cyan-500/[0.04] p-1.5'
-                                        : isPast
-                                        ? 'opacity-40 filter saturate-50'
-                                        : 'opacity-85'
-                                    }`}
-                                  >
-                                    <ReactMarkdown components={markdownComponents}>
-                                      {para}
-                                    </ReactMarkdown>
-                                  </div>
-                                );
-                              })}
+                            <div className="space-y-3">
+                              {parsedParas.map(({ pIdx, words }) => (
+                                <div key={pIdx} className="leading-snug flex flex-wrap gap-x-1.5 gap-y-1">
+                                  {words.map((w) => {
+                                    const isPast = w.idx < readWordIndex;
+                                    const isCurrent = w.idx === readWordIndex;
+                                    return (
+                                      <span
+                                        key={w.idx}
+                                        onClick={() => {
+                                          setReadWordIndex(w.idx);
+                                          readWordProgressRef.current = w.idx;
+                                          setActiveReadIndex(pIdx);
+                                        }}
+                                        className={`cursor-pointer transition-all duration-150 ${
+                                          isCurrent
+                                            ? 'text-cyan-300 font-black bg-cyan-400/25 px-1 py-0.5 rounded ring-1 ring-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]'
+                                            : isPast
+                                            ? 'text-white/35 font-normal filter saturate-50'
+                                            : 'text-white/95 font-semibold'
+                                        }`}
+                                      >
+                                        {w.raw}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              ))}
                             </div>
                           );
                         })()
@@ -4153,30 +4234,59 @@ function App() {
                             (() => {
                               const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
                               const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+                              let globalWordCounter = 0;
+                              const parsedParas = paragraphs.map((para, pIdx) => {
+                                const words = para.split(/\s+/).filter(Boolean).map(w => {
+                                  const wordObj = { raw: w, idx: globalWordCounter, pIdx };
+                                  globalWordCounter++;
+                                  return wordObj;
+                                });
+                                return { pIdx, para, words };
+                              });
+
                               return (
-                                <div className="space-y-4">
-                                  {paragraphs.map((para, idx) => {
-                                    const isPast = idx < activeReadIndex;
-                                    const isCurrent = idx === activeReadIndex;
+                                <div className="space-y-5">
+                                  {parsedParas.map(({ pIdx, words }) => {
+                                    const isParaActive = words.some(w => w.idx === readWordIndex);
+                                    const isParaPast = words.every(w => w.idx < readWordIndex);
                                     return (
                                       <div
-                                        key={idx}
-                                        ref={el => { paragraphRefs.current[idx] = el; }}
-                                        onClick={() => {
-                                          setActiveReadIndex(idx);
-                                          paragraphRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        }}
-                                        className={`transition-all duration-500 rounded-2xl cursor-pointer ${
-                                          isCurrent
-                                            ? 'opacity-100 ring-2 ring-cyan-400/60 bg-cyan-500/[0.05] p-3 -mx-2 shadow-[0_0_25px_rgba(6,182,212,0.15)]'
-                                            : isPast
-                                            ? 'opacity-35 filter saturate-50 p-1 -mx-1 hover:opacity-70'
-                                            : 'opacity-85 p-1 -mx-1 hover:opacity-100'
+                                        key={pIdx}
+                                        ref={el => { paragraphRefs.current[pIdx] = el; }}
+                                        className={`transition-all duration-300 rounded-2xl p-4 border leading-relaxed flex flex-wrap gap-x-2 gap-y-1.5 ${
+                                          isParaActive
+                                            ? 'border-cyan-400/50 bg-cyan-500/[0.04] shadow-[0_0_25px_rgba(6,182,212,0.12)] ring-1 ring-cyan-400/30'
+                                            : isParaPast
+                                            ? 'border-white/5 bg-white/[0.01] opacity-40'
+                                            : 'border-white/10 bg-white/[0.02] opacity-90'
                                         }`}
                                       >
-                                        <ReactMarkdown components={markdownComponents}>
-                                          {para}
-                                        </ReactMarkdown>
+                                        {words.map((w) => {
+                                          const isPast = w.idx < readWordIndex;
+                                          const isCurrent = w.idx === readWordIndex;
+                                          return (
+                                            <span
+                                              key={w.idx}
+                                              ref={el => { wordRefs.current[w.idx] = el; }}
+                                              onClick={() => {
+                                                setReadWordIndex(w.idx);
+                                                readWordProgressRef.current = w.idx;
+                                                setActiveReadIndex(pIdx);
+                                                wordRefs.current[w.idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                              }}
+                                              className={`cursor-pointer transition-all duration-150 select-text ${
+                                                isCurrent
+                                                  ? 'text-cyan-300 font-black bg-cyan-400/25 px-1.5 py-0.5 rounded-lg ring-2 ring-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.6)] scale-105 inline-block'
+                                                  : isPast
+                                                  ? 'text-white/35 font-normal filter saturate-50 hover:text-white/70'
+                                                  : 'text-white/95 font-semibold hover:text-cyan-200'
+                                              }`}
+                                            >
+                                              {w.raw}
+                                            </span>
+                                          );
+                                        })}
                                       </div>
                                     );
                                   })}
@@ -4309,42 +4419,56 @@ function App() {
                           whileHover={{ scale: 1.04, boxShadow: "0 0 25px rgba(6,182,212,0.6)" }}
                           whileTap={{ scale: 0.96 }}
                           onClick={() => {
-                            setShowUpdateModal(true);
-                            if (updateStatus === 'idle') handleCheckForUpdates();
+                            if (updateStatus === 'available') {
+                              setShowUpdateModal(true);
+                              handleDownloadUpdate();
+                            } else if (updateStatus === 'downloaded') {
+                              handleRestartToInstall();
+                            } else {
+                              setShowUpdateModal(true);
+                              handleCheckForUpdates();
+                            }
                           }}
-                          className={`flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-cyan-400/50 cursor-pointer ${
+                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border cursor-pointer ${
                             (updateStatus === 'available')
-                              ? 'shadow-[0_0_25px_rgba(6,182,212,0.8)] border-cyan-200/90 animate-pulse'
+                              ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-black shadow-[0_0_25px_rgba(6,182,212,0.85)] border-cyan-200/90 animate-pulse'
                               : (updateStatus === 'downloaded')
-                              ? 'shadow-[0_0_25px_rgba(16,185,129,0.8)] border-emerald-300 animate-bounce'
+                              ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-black shadow-[0_0_25px_rgba(16,185,129,0.8)] border-emerald-300 animate-bounce'
                               : (updateStatus === 'downloading')
-                              ? 'shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
-                              : 'shadow-[0_0_20px_rgba(6,182,212,0.4)]'
+                              ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.7)] animate-pulse'
+                              : (updateStatus === 'not-available')
+                              ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 shadow-sm hover:bg-emerald-500/25'
+                              : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
                           }`}
                         >
                           {updateStatus === 'downloading' ? (
                             <>
-                              <Loader2 size={13} className="animate-spin text-white" />
+                              <Loader2 size={13} className="animate-spin text-cyan-200" />
                               <span>Downloading {downloadProgress.percent}%</span>
                             </>
                           ) : updateStatus === 'downloaded' ? (
                             <>
-                              <Sparkles size={13} className="text-white" />
+                              <Sparkles size={13} className="text-black" />
                               <span>Restart & Install v{updateInfo.version || appVersion}</span>
                             </>
                           ) : updateStatus === 'available' ? (
                             <>
                               <span className="relative flex h-2.5 w-2.5 mr-0.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-200 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-black"></span>
                               </span>
-                              <Sparkles size={13} className="text-white" />
-                              <span>Hello! Update v{updateInfo.version || appVersion} Ready</span>
+                              <Sparkles size={13} className="text-black" />
+                              <span>Update v{updateInfo.version || appVersion} Ready!</span>
+                            </>
+                          ) : updateStatus === 'not-available' ? (
+                            <>
+                              <CheckCircle2 size={13} className="text-emerald-400" />
+                              <span>Up to Date (v{appVersion})</span>
                             </>
                           ) : updateStatus === 'checking' ? (
                             <>
                               <RefreshCw size={12} className="animate-spin text-white" />
-                              <span>Checking...</span>
+                              <span>Checking Server...</span>
                             </>
                           ) : (
                             <>
@@ -6940,16 +7064,16 @@ function App() {
               {/* Snapshot Fullscreen Preview Modal */}
               {previewSnapshot && (
                 <div
-                  className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 select-none"
+                  className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 select-none stealth-exempt pointer-events-auto"
                   onClick={() => setPreviewSnapshot(null)}
                 >
                   {/* Top Bar for Preview Screen with explicit Close & Escape indicator */}
-                  <div className="absolute top-4 right-6 flex items-center gap-3 z-30" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-[11px] font-mono text-white/50 bg-black/60 px-2.5 py-1 rounded-lg border border-white/10">
+                  <div className="absolute top-4 right-6 flex items-center gap-3 z-30 stealth-exempt pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-mono text-white/50 bg-black/60 px-2.5 py-1 rounded-lg border border-white/10 select-none">
                       Press <kbd className="text-cyan-400 font-bold">Esc</kbd> to close preview
                     </span>
                     <button
-                      className="p-2.5 bg-white/10 hover:bg-rose-500/80 text-white rounded-xl transition-all border border-white/10 shadow-lg cursor-pointer flex items-center justify-center"
+                      className="p-2.5 bg-white/10 hover:bg-rose-500/80 text-white rounded-xl transition-all border border-white/10 shadow-lg cursor-pointer flex items-center justify-center stealth-exempt pointer-events-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPreviewSnapshot(null);
@@ -6962,7 +7086,7 @@ function App() {
                   <img
                     src={previewSnapshot}
                     alt="Snapshot Preview"
-                    className="max-w-[95%] max-h-[85%] object-contain rounded-2xl shadow-2xl border border-cyan-500/30 animate-in zoom-in-95 duration-150"
+                    className="max-w-[95%] max-h-[85%] object-contain rounded-2xl shadow-2xl border border-cyan-500/30 animate-in zoom-in-95 duration-150 stealth-exempt pointer-events-auto cursor-default"
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
