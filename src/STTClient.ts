@@ -128,12 +128,13 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       formData.append('language', 'en'); 
       formData.append('temperature', '0.0');
       
-      // Build a targeted prompt using standard jargon ONLY, no sentences or periods to prevent Whisper prompt-leaking!
-      let promptString = "SAP, ABAP, OData, ALV, RAP, CDS, REST API, Fiori, BAPI, SQL, Java, Python, Developer, Consultant, Data Dictionary, Transparent Table, Pool Table";
+      // Build a targeted prompt using context words to prime Whisper without hallucinations
+      let promptString = "JavaScript, React, Node, Python, SQL, REST API, Frontend, Backend, Engineer, Developer";
       if (contextText) {
-        // Add context as comma-separated words to prevent sentence hallucination
-        const cleanContext = contextText.replace(/[^a-zA-Z0-9 ]/g, ' ').slice(0, 100).trim().split(/\s+/).join(', ');
-        promptString += ", " + cleanContext;
+        const cleanWords = contextText.replace(/[^a-zA-Z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 40).join(', ');
+        if (cleanWords) {
+          promptString = cleanWords;
+        }
       }
       
       formData.append('prompt', promptString);

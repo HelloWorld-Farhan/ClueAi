@@ -408,6 +408,8 @@ function App() {
   });
   const [showStealthWarning, setShowStealthWarning] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const showVirtualKeyboardRef = useRef(false);
+  showVirtualKeyboardRef.current = showVirtualKeyboard;
   const virtualKeyboardTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [transcriptTextSize, setTranscriptTextSize] = useState(() => {
@@ -446,7 +448,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.6.7');
+  const [appVersion, setAppVersion] = useState('5.6.8');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -481,6 +483,8 @@ function App() {
     isFull: false
   });
   const [showStorageModal, setShowStorageModal] = useState(false);
+  const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [cacheClearedSuccess, setCacheClearedSuccess] = useState(false);
 
@@ -1592,7 +1596,7 @@ function App() {
       }
 
       // 2. If any modal dialog is active or app is on the dashboard, NEVER pass through mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -1832,12 +1836,12 @@ function App() {
   // Synchronize dynamic window sizing: compact dock vs 860px for modals, snapshot preview, or AI answer
   useEffect(() => {
     if (isRecording) {
-      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal || showStorageModal || storageInfo.isFull || Boolean(previewSnapshot);
+      const isExpanded = isAiFullscreen || showSettings || showInfo || showVirtualKeyboard || showPreviousQuestions || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || Boolean(previewSnapshot);
       const hasSnapshots = currentSnapshots.length > 0;
       const isTranscriptTall = transcript.length > 80;
       ipcRenderer.invoke('set-ai-fullscreen-bounds', isExpanded, { hasSnapshots, isTranscriptTall });
     }
-  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, showStorageModal, storageInfo.isFull, previewSnapshot, isRecording, currentSnapshots.length, transcript.length > 80]);
+  }, [isAiFullscreen, showSettings, showInfo, showVirtualKeyboard, showPreviousQuestions, showUpdateModal, showStorageModal, showClearStorageConfirm, storageInfo.isFull, previewSnapshot, isRecording, currentSnapshots.length, transcript.length > 80]);
 
   useEffect(() => {
     localStorage.setItem('appStealthMode', stealthMode.toString());
@@ -1886,6 +1890,8 @@ function App() {
 
   useEffect(() => {
     if (showVirtualKeyboard) {
+      clearAudioBuffer();
+      interimTranscriptRef.current = '';
       setEditTranscript(transcript);
 
       // Force window to take active OS focus and immediately silence all background hotkeys
@@ -2361,6 +2367,8 @@ function App() {
       const inputSampleRate = audioCtx.sampleRate || 16000;
 
       processor.onaudioprocess = (e) => {
+        // Work 3: When manual edit / keyword editor is open, do not buffer speech
+        if (showVirtualKeyboardRef.current) return;
         if ((isPausedRef.current && !isVoiceScrollRef.current) || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
@@ -2384,6 +2392,11 @@ function App() {
 
         audioChunksRef.current.push(resampled);
         totalAudioSamplesRef.current += resampled.length;
+
+        // Work 2: Low-latency voice scroll - trigger recognition as soon as ~300ms audio is captured
+        if (isAiFullscreenRef.current && isVoiceScrollRef.current && totalAudioSamplesRef.current >= 16000 * 0.3 && !isProcessingRef.current) {
+          processAudioRef.current();
+        }
       };
 
       mixer.connect(processor);
@@ -2442,12 +2455,15 @@ function App() {
 
   const processAudio = async () => {
     if (!streamRef.current) return;
+    // Work 3: If manual edit section is open, do not transcribe or inject words
+    if (showVirtualKeyboardRef.current) return;
     if ((isPausedRef.current && !isVoiceScrollRef.current) || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) {
       return;
     }
     if (isProcessingRef.current) return;
 
-    if (totalAudioSamplesRef.current < 16000 * 0.5) {
+    const minSamples = (isAiFullscreenRef.current && isVoiceScrollRef.current) ? (16000 * 0.3) : (16000 * 0.5);
+    if (totalAudioSamplesRef.current < minSamples) {
       return;
     }
 
@@ -2536,17 +2552,21 @@ function App() {
         const voiceText = await transcribeAudioChunk(currentAudio, promptSnippet);
         clearAudioBuffer(); // Keep buffer responsive and short for real-time word tracking
 
-        if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 1) {
-          const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1);
+        if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 0) {
+          const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 0);
           if (spokenWords.length > 0 && allWordsList.length > 0) {
             // Strictly match words sequentially from curWordIdx (prevents jumping anywhere)
             let checkIdx = curWordIdx;
             for (const sw of spokenWords) {
               let foundAt = -1;
-              const maxAhead = Math.min(allWordsList.length, checkIdx + 4);
+              const maxAhead = Math.min(allWordsList.length, checkIdx + 5);
               for (let k = checkIdx; k < maxAhead; k++) {
                 const candidate = allWordsList[k]?.clean;
-                if (candidate && (candidate === sw || (candidate.length > 3 && sw.length > 3 && (candidate.includes(sw) || sw.includes(candidate))))) {
+                if (!candidate) continue;
+                const isMatch = candidate === sw ||
+                  (candidate.length > 3 && sw.length > 3 && (candidate.includes(sw) || sw.includes(candidate))) ||
+                  (candidate.length >= 4 && sw.length >= 4 && candidate.slice(0, 3) === sw.slice(0, 3));
+                if (isMatch) {
                   foundAt = k;
                   break;
                 }
@@ -5272,7 +5292,10 @@ function App() {
                               </div>
                             ) : (
                               <button
-                                onClick={handleClearCache}
+                                onClick={() => {
+                                  setDeleteConfirmInput('');
+                                  setShowClearStorageConfirm(true);
+                                }}
                                 disabled={isClearingCache}
                                 className="w-full py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-cyan-400/40 transition-all text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                               >
@@ -5370,6 +5393,7 @@ function App() {
                       <div className="flex items-center justify-between pt-2 border-t border-white/10 shrink-0">
                         <button
                           onClick={() => {
+                            ipcRenderer.invoke('minimize-window');
                             shell.openExternal('ms-settings:storagesense');
                           }}
                           className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -5394,6 +5418,87 @@ function App() {
                             Close
                           </button>
                         </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Clear Storage Cache Confirmation Modal */}
+              <AnimatePresence>
+                {showClearStorageConfirm && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.94, opacity: 0, y: 10 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.94, opacity: 0, y: 10 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                      className="bg-[#0e090c] border border-rose-500/50 w-full max-w-md rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_35px_rgba(244,63,94,0.25)] flex flex-col gap-4 text-center"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-rose-500/20 border border-rose-500/50 flex items-center justify-center mx-auto text-rose-400">
+                        <AlertTriangle size={24} />
+                      </div>
+
+                      <div>
+                        <h3 className="text-lg font-black text-white">Confirm Storage Cache Purge</h3>
+                        <p className="text-xs text-rose-200/70 mt-1.5 leading-relaxed">
+                          This will purge temporary audio buffers, cache files, and logs ({storageInfo.appStorageFormatted}). Your API keys and interview preferences will remain intact.
+                        </p>
+                      </div>
+
+                      <div className="bg-black/40 border border-white/10 rounded-xl p-3 text-left">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-white/50 block mb-1">
+                          Type <span className="text-rose-400 font-mono font-black">DELETE</span> to confirm:
+                        </label>
+                        <input
+                          type="text"
+                          value={deleteConfirmInput}
+                          onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && deleteConfirmInput.trim().toUpperCase() === 'DELETE') {
+                              e.preventDefault();
+                              setShowClearStorageConfirm(false);
+                              handleClearCache();
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault();
+                              setShowClearStorageConfirm(false);
+                            }
+                          }}
+                          placeholder="DELETE"
+                          autoFocus
+                          className="w-full bg-white/5 border border-white/15 focus:border-rose-400 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder-white/30 outline-none transition-colors"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => setShowClearStorageConfirm(false)}
+                          className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (deleteConfirmInput.trim().toUpperCase() === 'DELETE') {
+                              setShowClearStorageConfirm(false);
+                              handleClearCache();
+                            }
+                          }}
+                          disabled={deleteConfirmInput.trim().toUpperCase() !== 'DELETE' || isClearingCache}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                            deleteConfirmInput.trim().toUpperCase() === 'DELETE'
+                              ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.5)] border border-rose-400'
+                              : 'bg-white/10 text-white/40 border border-white/5'
+                          }`}
+                        >
+                          <Trash2 size={13} />
+                          <span>Delete Cache</span>
+                        </button>
                       </div>
                     </motion.div>
                   </motion.div>
@@ -5446,7 +5551,10 @@ function App() {
                       {/* Action Buttons */}
                       <div className="w-full flex flex-col gap-2.5">
                         <button
-                          onClick={handleClearCache}
+                          onClick={() => {
+                            setDeleteConfirmInput('');
+                            setShowClearStorageConfirm(true);
+                          }}
                           disabled={isClearingCache}
                           className="w-full py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white shadow-[0_0_25px_rgba(244,63,94,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                         >
@@ -5466,6 +5574,7 @@ function App() {
                         <div className="flex items-center gap-2 w-full">
                           <button
                             onClick={() => {
+                              ipcRenderer.invoke('minimize-window');
                               shell.openExternal('ms-settings:storagesense');
                             }}
                             className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer"

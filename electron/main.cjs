@@ -687,7 +687,7 @@ function createWindow() {
   ipcMain.handle('minimize-window', () => {
     unregisterAllHotkeys();
     if (mainWindow) {
-      mainWindow.hide();
+      mainWindow.minimize();
     }
   });
 
