@@ -224,11 +224,13 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
           <div
             className="fixed inset-0 z-[100]"
             onPointerDown={(e) => { e.stopPropagation(); setIsOpen(false); }}
+            onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
           />
         )}
         <div
-          className="flex items-center justify-between gap-2 cursor-pointer w-full relative z-[105]"
-          onPointerDown={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+          className="flex items-center justify-between gap-2 cursor-pointer w-full relative z-[105] select-none"
+          onPointerDown={(e) => { e.stopPropagation(); setIsOpen(prev => !prev); }}
+          onClick={(e) => { e.stopPropagation(); setIsOpen(prev => !prev); }}
         >
           <div className="flex flex-wrap items-center justify-end gap-2">
             {icon && icon}
@@ -245,6 +247,11 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
@@ -448,7 +455,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.6.9');
+  const [appVersion, setAppVersion] = useState('5.7.0');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -487,6 +494,8 @@ function App() {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [cacheClearedSuccess, setCacheClearedSuccess] = useState(false);
+  const [isRefreshingStorage, setIsRefreshingStorage] = useState(false);
+  const [storageRefreshedMsg, setStorageRefreshedMsg] = useState(false);
 
   // Semver comparison helper
   const isNewerVersion = (latest: string, current: string): boolean => {
@@ -505,17 +514,31 @@ function App() {
     }
   };
 
-  const fetchStorageInfo = useCallback(() => {
+  const fetchStorageInfo = useCallback(async () => {
     try {
       if (ipcRenderer && ipcRenderer.invoke) {
-        ipcRenderer.invoke('get-storage-info').then((info: any) => {
-          if (info) {
-            setStorageInfo(info);
-          }
-        }).catch(() => {});
+        const info = await ipcRenderer.invoke('get-storage-info');
+        if (info) {
+          setStorageInfo(info);
+        }
       }
     } catch {}
   }, []);
+
+  const handleRefreshStorage = async () => {
+    setIsRefreshingStorage(true);
+    setStorageRefreshedMsg(false);
+    try {
+      await fetchStorageInfo();
+      // Ensure smooth, visible spin animation feedback
+      await new Promise(r => setTimeout(r, 650));
+      setStorageRefreshedMsg(true);
+      setTimeout(() => setStorageRefreshedMsg(false), 2500);
+    } catch {}
+    finally {
+      setIsRefreshingStorage(false);
+    }
+  };
 
   const handleClearCache = async () => {
     setIsClearingCache(true);
@@ -1497,6 +1520,8 @@ function App() {
   const isAiFullscreenRef = useRef(false);
   isAiFullscreenRef.current = isAiFullscreen;
   const [frozenQuestionTranscript, setFrozenQuestionTranscript] = useState('');
+  const frozenQuestionTranscriptRef = useRef('');
+  frozenQuestionTranscriptRef.current = frozenQuestionTranscript;
 
   useEffect(() => {
     ipcRenderer.send('set-window-maximized', isAiFullscreen);
@@ -1595,9 +1620,10 @@ function App() {
         return;
       }
 
-      // 2. If any modal dialog is active or app is on the dashboard, NEVER pass through mouse events!
+      // 2. If AI fullscreen is open, or any modal dialog is active, or app is on the dashboard:
+      // ALWAYS ensure the window is 100% interactive so the answer screen never gets stuck or locks out clicks!
       const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
-      if (isAnyModalActive || (!isAiFullscreen && !isRecording)) {
+      if (isAiFullscreen || isAnyModalActive || (!isRecording && !isAiFullscreen)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
           ipcRenderer.send('set-ignore-mouse-events', false);
@@ -1634,8 +1660,9 @@ function App() {
     };
 
     const handleMouseLeave = () => {
-      // If stealth mode is off, NEVER pass through mouse events!
-      if (!stealthMode || (!isAiFullscreen && !isRecording)) {
+      // If stealth mode is off, or AI answer is fullscreen, or any modal is open, or dashboard is visible: NEVER ignore mouse events!
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      if (!stealthMode || isAiFullscreen || isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
           ipcRenderer.send('set-ignore-mouse-events', false);
@@ -1649,7 +1676,7 @@ function App() {
     };
 
     const handleMouseEnter = () => {
-      if (!stealthMode || (!isAiFullscreen && !isRecording)) {
+      if (!stealthMode || isAiFullscreen || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
           ipcRenderer.send('set-ignore-mouse-events', false);
@@ -2558,68 +2585,69 @@ function App() {
         if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 0) {
           const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 0);
           if (spokenWords.length > 0 && allWordsList.length > 0) {
-            // Stage 1: Intelligent N-Gram Phrase Combination Detection
-            // If the user speaks fast, detect multi-word combinations (bigrams, trigrams) within upcoming 35 words
-            let bestPhraseIdx = -1;
-            let highestPhraseMatches = 0;
-            const phraseSearchLimit = Math.min(allWordsList.length, curWordIdx + 35);
+            // Strict Contiguous Speech Tracking:
+            // Anchor tightly to curWordIdx with an immediate lookahead window of at most 8 words.
+            // Never jump far ahead or skip to the bottom on scattered single-word hits!
+            const stopWords = new Set(['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'is', 'it', 'as', 'by', 'with', 'this', 'that']);
+            const lookaheadWindow = Math.min(allWordsList.length, curWordIdx + 8);
 
-            for (let i = curWordIdx; i < phraseSearchLimit; i++) {
-              let matchedCount = 0;
+            const isWordMatch = (target: string, spoken: string) => {
+              if (!target || !spoken) return false;
+              if (target === spoken) return true;
+              if (target.length > 3 && spoken.length > 3 && (target.includes(spoken) || spoken.includes(target))) return true;
+              if (target.length >= 4 && spoken.length >= 4 && target.slice(0, 3) === spoken.slice(0, 3)) return true;
+              return false;
+            };
+
+            let matchedIdx = -1;
+
+            // Strategy 1: Contiguous multi-word match (bigram / trigram) starting from curWordIdx within lookahead
+            for (let i = curWordIdx; i < lookaheadWindow; i++) {
+              let consecutiveMatches = 0;
               for (let s = 0; s < spokenWords.length; s++) {
-                const targetWord = allWordsList[i + matchedCount]?.clean;
-                const spoken = spokenWords[s];
-                if (targetWord && spoken) {
-                  const isMatch = targetWord === spoken ||
-                    (targetWord.length > 3 && spoken.length > 3 && (targetWord.includes(spoken) || spoken.includes(targetWord))) ||
-                    (targetWord.length >= 4 && spoken.length >= 4 && targetWord.slice(0, 3) === spoken.slice(0, 3));
-                  if (isMatch) {
-                    matchedCount++;
+                const targetWord = allWordsList[i + consecutiveMatches]?.clean;
+                const spokenWord = spokenWords[s];
+                if (targetWord && spokenWord && isWordMatch(targetWord, spokenWord)) {
+                  consecutiveMatches++;
+                } else if (consecutiveMatches > 0) {
+                  break; // Enforce strict contiguity: if broken, stop counting
+                }
+              }
+              // If we matched 2 or more contiguous words, this is a verified match!
+              if (consecutiveMatches >= 2) {
+                matchedIdx = i + consecutiveMatches;
+                break;
+              }
+            }
+
+            // Strategy 2: If no 2-word contiguous phrase found, check if the immediate next non-stopword matches
+            if (matchedIdx === -1) {
+              for (let s = 0; s < Math.min(spokenWords.length, 3); s++) {
+                const sw = spokenWords[s];
+                if (stopWords.has(sw)) continue; // Skip stop-words to prevent false skips
+                for (let k = curWordIdx; k < Math.min(allWordsList.length, curWordIdx + 4); k++) {
+                  const targetClean = allWordsList[k]?.clean;
+                  if (targetClean && !stopWords.has(targetClean) && isWordMatch(targetClean, sw)) {
+                    matchedIdx = k + 1;
+                    break;
                   }
                 }
-              }
-              if (matchedCount >= 2 && matchedCount > highestPhraseMatches) {
-                highestPhraseMatches = matchedCount;
-                bestPhraseIdx = i + matchedCount;
+                if (matchedIdx !== -1) break;
               }
             }
 
-            // Stage 2: Step-by-Step Lookahead Matching
-            let sequentialIdx = curWordIdx;
-            for (const sw of spokenWords) {
-              let foundAt = -1;
-              const maxAhead = Math.min(allWordsList.length, sequentialIdx + 6);
-              for (let k = sequentialIdx; k < maxAhead; k++) {
-                const candidate = allWordsList[k]?.clean;
-                if (!candidate) continue;
-                const isMatch = candidate === sw ||
-                  (candidate.length > 3 && sw.length > 3 && (candidate.includes(sw) || sw.includes(candidate))) ||
-                  (candidate.length >= 4 && sw.length >= 4 && candidate.slice(0, 3) === sw.slice(0, 3));
-                if (isMatch) {
-                  foundAt = k;
-                  break;
-                }
-              }
-              if (foundAt !== -1) {
-                sequentialIdx = foundAt + 1;
-              }
-            }
+            // Safety Guard: A single audio chunk can NEVER jump more than 6 words forward!
+            if (matchedIdx > curWordIdx) {
+              const boundedNextIdx = Math.min(curWordIdx + 6, Math.min(allWordsList.length, matchedIdx));
+              setReadWordIndex(boundedNextIdx);
+              readWordProgressRef.current = boundedNextIdx;
 
-            // Pick the best match: phrase combination anchor takes precedence if confident, else sequential
-            const targetWordIdx = (highestPhraseMatches >= 2 && bestPhraseIdx > curWordIdx) ? bestPhraseIdx : sequentialIdx;
-
-            // Advance cursor whenever forward speech is matched (no artificial cutoffs that cause freezing!)
-            if (targetWordIdx > curWordIdx) {
-              const nextWordIdx = Math.min(allWordsList.length, targetWordIdx);
-              setReadWordIndex(nextWordIdx);
-              readWordProgressRef.current = nextWordIdx;
-
-              const targetPara = allWordsList[nextWordIdx - 1]?.pIdx ?? activeReadIndexRef.current;
+              const targetPara = allWordsList[boundedNextIdx - 1]?.pIdx ?? activeReadIndexRef.current;
               setActiveReadIndex(targetPara);
 
               // Smoothly scroll the matched word or paragraph into center view
-              if (wordRefs.current[nextWordIdx - 1]) {
-                wordRefs.current[nextWordIdx - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              if (wordRefs.current[boundedNextIdx - 1]) {
+                wordRefs.current[boundedNextIdx - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               } else if (paragraphRefs.current[targetPara]) {
                 paragraphRefs.current[targetPara]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
@@ -2817,18 +2845,30 @@ function App() {
     setTimeout(() => setModelChangeMsg(''), 3000);
 
     if (isAiFullscreen) {
-      let currentTranscript = finalizedTranscriptRef.current || transcript || '';
-      const langNote = `\n[User requested code in ${nextLang}]`;
-      currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
-      currentTranscript += langNote;
+      const baseQuestion = (
+        frozenQuestionTranscriptRef.current ||
+        frozenQuestionTranscript ||
+        (currentSessionHistory.length > 0 ? currentSessionHistory[currentSessionHistory.length - 1]?.question : '') ||
+        finalizedTranscriptRef.current ||
+        transcript ||
+        ''
+      ).replace(/\n*\[(?:User requested code in|Please rewrite the solution code in) .*?\]/gi, '').trim();
+
+      const targetQuestion = baseQuestion 
+        ? `${baseQuestion}\n\n[Please rewrite the solution code in ${nextLang}]`
+        : `[Please rewrite the solution code in ${nextLang}]`;
+
+      const targetImages = currentSnapshots.length > 0
+        ? currentSnapshots
+        : (currentSessionHistory.length > 0 ? currentSessionHistory[currentSessionHistory.length - 1]?.images || [] : []);
 
       await manualTriggerAIRef.current(
-        currentSnapshots.length > 0 ? currentSnapshots : undefined,
-        currentTranscript,
+        targetImages.length > 0 ? targetImages : undefined,
+        targetQuestion,
         nextLang
       );
     }
-  }, [preferredCodeLanguage, isAiFullscreen, transcript, currentSnapshots]);
+  }, [preferredCodeLanguage, isAiFullscreen, transcript, currentSnapshots, frozenQuestionTranscript, currentSessionHistory]);
 
   const handleSnipClick = async () => {
     const wasPaused = isPausedRef.current;
@@ -3543,7 +3583,9 @@ function App() {
                   initial={{ opacity: 0, scale: 0.9, y: -2 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="text-[11px] font-mono font-bold tracking-wider uppercase text-cyan-400 bg-cyan-500/10 border border-cyan-500/25 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm"
+                  onClick={() => cycleNextCodeLanguage()}
+                  title="Click to cycle programming language (Press 9)"
+                  className="text-[11px] font-mono font-bold tracking-wider uppercase text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 active:scale-95 border border-cyan-500/25 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm cursor-pointer transition-all"
                 >
                   <Code2 size={11} className="text-cyan-400" />
                   {displayLang || preferredCodeLanguage.toLowerCase()}
@@ -3555,18 +3597,33 @@ function App() {
                     <CustomSelect
                       value={displayLang || preferredCodeLanguage.toLowerCase()}
                       onChange={async (targetLang: string) => {
-                        if (!targetLang || targetLang === displayLang) return;
-                        const langLabel = targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
+                        if (!targetLang || targetLang.toLowerCase() === (displayLang || preferredCodeLanguage.toLowerCase())) return;
+                        const langLabel = targetLang === 'c++' ? 'C++' : targetLang === 'c#' ? 'C#' : targetLang.charAt(0).toUpperCase() + targetLang.slice(1);
                         setPreferredCodeLanguage(langLabel);
                         localStorage.setItem('clueai_code_language', langLabel);
-                        let currentTranscript = finalizedTranscriptRef.current || transcript || '';
-                        const langNote = `\n[User requested code in ${langLabel}]`;
-                        currentTranscript = currentTranscript.replace(/\n\[User requested code in .*?\]/g, '');
-                        currentTranscript += langNote;
+                        setModelChangeMsg(`Language: ${langLabel}`);
+                        setTimeout(() => setModelChangeMsg(''), 3000);
+
+                        const baseQuestion = (
+                          frozenQuestionTranscriptRef.current ||
+                          frozenQuestionTranscript ||
+                          (currentSessionHistory.length > 0 ? currentSessionHistory[currentSessionHistory.length - 1]?.question : '') ||
+                          finalizedTranscriptRef.current ||
+                          transcript ||
+                          ''
+                        ).replace(/\n*\[(?:User requested code in|Please rewrite the solution code in) .*?\]/gi, '').trim();
+
+                        const targetQuestion = baseQuestion 
+                          ? `${baseQuestion}\n\n[Please rewrite the solution code in ${langLabel}]`
+                          : `[Please rewrite the solution code in ${langLabel}]`;
+
+                        const targetImages = currentSnapshots.length > 0
+                          ? currentSnapshots
+                          : (currentSessionHistory.length > 0 ? currentSessionHistory[currentSessionHistory.length - 1]?.images || [] : []);
 
                         await manualTriggerAI(
-                          currentSnapshots.length > 0 ? currentSnapshots : undefined,
-                          currentTranscript,
+                          targetImages.length > 0 ? targetImages : undefined,
+                          targetQuestion,
                           langLabel
                         );
                       }}
@@ -3831,7 +3888,7 @@ function App() {
     <>
 
       <div
-        className={`absolute inset-0 flex flex-col items-center ${stealthMode ? 'pointer-events-none click-through-bg' : 'pointer-events-auto'} font-sans select-none animate-in fade-in duration-150 fill-mode-both ${isAiFullscreen ? 'p-4' : ''}`}
+        className={`absolute inset-0 flex flex-col items-center ${stealthMode && !isAiFullscreen ? 'pointer-events-none click-through-bg' : 'pointer-events-auto'} font-sans select-none animate-in fade-in duration-150 fill-mode-both ${isAiFullscreen ? 'p-4' : ''}`}
         style={{ transition: 'none' }}
       >
         <AnimatePresence>
@@ -3842,7 +3899,7 @@ function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: -8 }}
               transition={{ duration: 0.16, ease: "easeOut" }}
-              className={`flex flex-col w-full h-full gap-4 items-center ${stealthMode ? 'pointer-events-none' : 'pointer-events-auto'} z-50`}
+              className="flex flex-col w-full h-full gap-4 items-center pointer-events-auto z-50"
             >
             {/* Top Bar Panel */}
             <div
@@ -5436,11 +5493,16 @@ function App() {
 
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={fetchStorageInfo}
-                            className="px-4 py-2 rounded-xl text-xs font-bold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+                            onClick={handleRefreshStorage}
+                            disabled={isRefreshingStorage}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 ${
+                              storageRefreshedMsg
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                : 'text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30'
+                            }`}
                           >
-                            <RefreshCw size={13} />
-                            <span>Refresh</span>
+                            <RefreshCw size={13} className={isRefreshingStorage ? "animate-spin text-cyan-300" : storageRefreshedMsg ? "text-emerald-400" : ""} />
+                            <span>{isRefreshingStorage ? "Refreshing..." : storageRefreshedMsg ? "Refreshed!" : "Refresh"}</span>
                           </button>
 
                           <button
@@ -5615,11 +5677,16 @@ function App() {
                             <span>Windows Storage</span>
                           </button>
                           <button
-                            onClick={fetchStorageInfo}
-                            className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            onClick={handleRefreshStorage}
+                            disabled={isRefreshingStorage}
+                            className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 ${
+                              storageRefreshedMsg
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            }`}
                           >
-                            <RefreshCw size={13} />
-                            <span>Re-check Disk Space</span>
+                            <RefreshCw size={13} className={isRefreshingStorage ? "animate-spin text-cyan-300" : storageRefreshedMsg ? "text-emerald-400" : ""} />
+                            <span>{isRefreshingStorage ? "Checking Disk..." : storageRefreshedMsg ? "Refreshed!" : "Re-check Disk Space"}</span>
                           </button>
                         </div>
                       </div>
