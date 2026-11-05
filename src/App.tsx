@@ -223,33 +223,32 @@ const CustomSelect = ({ value, onChange, options, className, icon, listClassName
         {isOpen && (
           <div
             className="fixed inset-0 z-[100]"
-            onPointerDown={(e) => { e.stopPropagation(); setIsOpen(false); }}
-            onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
           />
         )}
-        <div
-          className="flex items-center justify-between gap-2 cursor-pointer w-full relative z-[105] select-none"
-          onPointerDown={(e) => { e.stopPropagation(); setIsOpen(prev => !prev); }}
-          onClick={(e) => { e.stopPropagation(); setIsOpen(prev => !prev); }}
+        <button
+          type="button"
+          className="flex items-center justify-between gap-2 cursor-pointer w-full relative z-[105] select-none text-left bg-transparent border-none outline-none p-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(prev => !prev);
+          }}
         >
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-start gap-2 truncate">
             {icon && icon}
             <span className="truncate">{selectedOption?.label || value}</span>
           </div>
           <ChevronDown size={14} className={`text-brand-subtext transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
-        </div>
+        </button>
         {isOpen && (
           <div className={`absolute z-[110] left-0 right-0 top-full mt-1.5 bg-[#18181b] border border-white/10 rounded-xl overflow-hidden shadow-2xl max-h-60 overflow-y-auto ${listClassName || ''}`}>
             {options.map((opt: any) => (
               <div
                 key={opt.value}
-                className={`px-4 py-3 hover:bg-white/10 cursor-pointer text-sm transition-colors ${opt.value === value ? 'bg-brand-accent/20 text-white font-bold' : 'text-brand-subtext hover:text-white'}`}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
+                className={`px-4 py-2.5 hover:bg-white/10 cursor-pointer text-sm transition-colors ${opt.value === value ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-brand-subtext hover:text-white'}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onChange(opt.value);
@@ -455,7 +454,10 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.0');
+  const [appVersion, setAppVersion] = useState('5.7.1');
+  const [showVoiceKeysWarning, setShowVoiceKeysWarning] = useState(false);
+  const [sessionModalMode, setSessionModalMode] = useState<'new' | 'resume'>('new');
+  const [sessionSearchTerm, setSessionSearchTerm] = useState('');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -1622,7 +1624,7 @@ function App() {
 
       // 2. If AI fullscreen is open, or any modal dialog is active, or app is on the dashboard:
       // ALWAYS ensure the window is 100% interactive so the answer screen never gets stuck or locks out clicks!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showVoiceKeysWarning || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAiFullscreen || isAnyModalActive || (!isRecording && !isAiFullscreen)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -1661,7 +1663,7 @@ function App() {
 
     const handleMouseLeave = () => {
       // If stealth mode is off, or AI answer is fullscreen, or any modal is open, or dashboard is visible: NEVER ignore mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showVoiceKeysWarning || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (!stealthMode || isAiFullscreen || isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -2514,20 +2516,29 @@ function App() {
         totalAudioSamplesRef.current = currentAudio.length;
       }
 
-      // Only calculate max volume on the most recent ~1.2 seconds to know if they are speaking RIGHT NOW
+      // Dual-Metric Voice Activity Detection (VAD): RMS Energy + Peak Amplitude
       const recentAudio = currentAudio.slice(Math.max(0, currentAudio.length - 16000 * 1.2));
+      let sumSquares = 0;
       let maxVal = 0;
       for (let i = 0; i < recentAudio.length; i++) {
-        if (Math.abs(recentAudio[i]) > maxVal) maxVal = Math.abs(recentAudio[i]);
+        const val = recentAudio[i];
+        const absVal = Math.abs(val);
+        if (absVal > maxVal) maxVal = absVal;
+        sumSquares += val * val;
       }
+      const rms = Math.sqrt(sumSquares / (recentAudio.length || 1));
 
-      // Dynamic noise gate threshold. Adjusted to 0.012 so remote participant voices (Zoom/Teams/Meet)
-      // are accurately transcribed while ignoring purely dead silence/low static.
-      if (maxVal < 0.012) {
+      // Noise Gate: Room noise, fan hum, and static produce low RMS (< 0.008) and peak (< 0.025).
+      // Vocal speech produces strong RMS (> 0.010) and peak (> 0.030).
+      const isVoiceActive = isVoiceScrollRef.current
+        ? (rms >= 0.010 && maxVal >= 0.030)
+        : (rms >= 0.006 && maxVal >= 0.020);
+
+      if (!isVoiceActive) {
         silenceFramesRef.current += 1;
-        // If silent for more than 2 seconds (4 frames of 500ms) and buffer is not empty
-        if (silenceFramesRef.current > 4 && totalAudioSamplesRef.current > 0) {
-          logEvent("Silence >2s detected. Committing sentence and flushing STT buffer.");
+        // If silent for more than 1.5s (3 frames of 500ms) and buffer is not empty
+        if (silenceFramesRef.current > 3 && totalAudioSamplesRef.current > 0) {
+          logEvent("Silence detected. Committing sentence and flushing STT buffer.");
 
           if (!isVoiceScrollRef.current) {
             if (interimTranscriptRef.current) {
@@ -4023,6 +4034,15 @@ function App() {
                       {/* Voice Scroll (Teleprompter Speech-Follow Mode) */}
                       <button
                         onClick={() => {
+                          const validGroq = groqKeys.filter(k => k.trim()).length;
+                          const validGemini = geminiKeys.filter(k => k.trim()).length;
+                          const has8Keys = validGroq >= 8 || validGemini >= 8;
+
+                          if (!isVoiceScroll && !has8Keys) {
+                            setShowVoiceKeysWarning(true);
+                            return;
+                          }
+
                           setIsVoiceScroll(prev => {
                             const next = !prev;
                             if (next) {
@@ -7560,7 +7580,7 @@ function App() {
                       animate={{ scale: 1, opacity: 1, y: 0 }}
                       exit={{ scale: 0.92, opacity: 0, y: 15 }}
                       transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                      className="relative w-full max-w-md bg-[#0a0c16]/95 border border-cyan-500/40 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] overflow-hidden"
+                      className="relative w-full max-w-lg bg-[#0a0c16]/95 border border-cyan-500/40 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] overflow-hidden"
                     >
                       <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
                         <div className="flex items-center gap-2.5">
@@ -7581,42 +7601,121 @@ function App() {
                       </div>
 
                       <div className="p-6 space-y-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-brand-subtext uppercase tracking-[0.2em] mb-2">Resume Existing Session</label>
-                          <div className="relative">
-                            <CustomSelect
-                              value={currentSessionId}
-                              onChange={(val: string) => {
-                                setCurrentSessionId(val);
-                                if (val) {
-                                  const s = sessions.find(x => x.id === val);
-                                  if (s) setSessionNameInput(s.name);
-                                  setSessionError('');
-                                } else {
-                                  setSessionNameInput('');
-                                }
-                              }}
-                              options={[
-                                { value: '', label: '-- Create a New Session Instead --' },
-                                ...sessions.map(s => ({ value: s.id, label: `${s.name} (${s.date || 'Old Session'})` }))
-                              ]}
-                              className="w-full bg-[#18181b] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white transition-all"
-                            />
-                          </div>
+                        {/* Session Mode Selector Tabs */}
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-black/50 border border-white/10 rounded-2xl">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSessionModalMode('new');
+                              setCurrentSessionId('');
+                              setSessionNameInput('');
+                              setSessionError('');
+                            }}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              sessionModalMode === 'new'
+                                ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/25 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            <Plus size={14} />
+                            <span>Create New Session</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSessionModalMode('resume');
+                              if (sessions.length > 0 && !currentSessionId) {
+                                setCurrentSessionId(sessions[0].id);
+                                setSessionNameInput(sessions[0].name);
+                              }
+                              setSessionError('');
+                            }}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              sessionModalMode === 'resume'
+                                ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/25 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            <Clock size={14} />
+                            <span>Resume Past Session ({sessions.length})</span>
+                          </button>
                         </div>
 
-                        {!currentSessionId && (
-                          <div>
-                            <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-2">New Session Name</label>
-                            <input
-                              type="text"
-                              autoFocus
-                              value={sessionNameInput}
-                              onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
-                              placeholder="e.g. Meta / Google Final Round"
-                              onKeyDown={e => { if (e.key === 'Enter') startRecording(); }}
-                              className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
-                            />
+                        {sessionModalMode === 'new' ? (
+                          <div className="space-y-3 animate-in fade-in duration-150">
+                            <div>
+                              <label className="block text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-2">New Session Name</label>
+                              <input
+                                type="text"
+                                autoFocus
+                                value={sessionNameInput}
+                                onChange={e => { setSessionNameInput(e.target.value); setSessionError(''); }}
+                                placeholder="e.g. Meta / Google Final Round"
+                                onKeyDown={e => { if (e.key === 'Enter') startRecording(); }}
+                                className="stealth-exempt w-full bg-[#18181b] border border-cyan-500/30 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all shadow-[0_0_15px_rgba(34,211,238,0.05)]"
+                              />
+                            </div>
+                            <p className="text-[11px] text-white/40 leading-relaxed">
+                              Each session maintains its own discrete transcript history, uploaded snapshots, and coding questions.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5 animate-in fade-in duration-150">
+                            {sessions.length > 3 && (
+                              <input
+                                type="text"
+                                value={sessionSearchTerm}
+                                onChange={e => setSessionSearchTerm(e.target.value)}
+                                placeholder="Search past sessions..."
+                                className="w-full bg-[#18181b] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-cyan-400/50"
+                              />
+                            )}
+
+                            <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                              {sessions.length === 0 ? (
+                                <div className="text-center py-6 text-white/40 text-xs">
+                                  No past sessions found. Start a new session above!
+                                </div>
+                              ) : (
+                                sessions
+                                  .filter(s => !sessionSearchTerm || s.name.toLowerCase().includes(sessionSearchTerm.toLowerCase()))
+                                  .map(s => {
+                                    const isSelected = currentSessionId === s.id;
+                                    return (
+                                      <div
+                                        key={s.id}
+                                        onClick={() => {
+                                          setCurrentSessionId(s.id);
+                                          setSessionNameInput(s.name);
+                                          setSessionError('');
+                                        }}
+                                        onDoubleClick={() => startRecording()}
+                                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                                          isSelected
+                                            ? 'bg-cyan-500/15 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                                            : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/10'
+                                        }`}
+                                      >
+                                        <div className="truncate pr-2">
+                                          <div className={`text-xs font-bold truncate ${isSelected ? 'text-cyan-300' : 'text-white'}`}>
+                                            {s.name}
+                                          </div>
+                                          <div className="text-[10px] text-white/40 mt-0.5">
+                                            {s.date || 'Saved Session'}
+                                          </div>
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-2">
+                                          {isSelected ? (
+                                            <span className="w-5 h-5 rounded-full bg-cyan-400 text-black flex items-center justify-center font-bold text-xs">✓</span>
+                                          ) : (
+                                            <span className="w-5 h-5 rounded-full border border-white/20" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -7633,6 +7732,70 @@ function App() {
                         <button onClick={() => setShowSessionPrompt(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-white/50 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">Cancel</button>
                         <button onClick={startRecording} className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] flex items-center gap-2 cursor-pointer active:scale-95">
                           Start AI Interview <Play size={12} fill="currentColor" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Voice Scroll 8-Key Requirement Warning Modal */}
+              <AnimatePresence>
+                {showVoiceKeysWarning && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto select-none"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.94, opacity: 0, y: 10 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.94, opacity: 0, y: 10 }}
+                      className="bg-[#0b0c14] border border-cyan-500/40 rounded-3xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(6,182,212,0.25)]"
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2.5 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                          <Key size={20} />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-black text-white">Voice Scroll Requires 8 API Keys</h3>
+                          <p className="text-[11px] text-white/50">Zero-latency teleprompter speech tracking</p>
+                        </div>
+                      </div>
+                      <p className="text-white/80 text-xs leading-relaxed mb-4">
+                        To follow your speech in real time across sentences without hitting free-tier API rate limits (HTTP 429), Voice Scroll rotates through 8 API keys per chunk.
+                      </p>
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-3 mb-5 space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Groq Keys Configured:</span>
+                          <span className={`font-mono font-bold ${groqKeys.filter(k => k.trim()).length >= 8 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {groqKeys.filter(k => k.trim()).length} / 8 Loaded
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Gemini Keys Configured:</span>
+                          <span className={`font-mono font-bold ${geminiKeys.filter(k => k.trim()).length >= 8 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {geminiKeys.filter(k => k.trim()).length} / 8 Loaded
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2.5 justify-end">
+                        <button
+                          onClick={() => setShowVoiceKeysWarning(false)}
+                          className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowVoiceKeysWarning(false);
+                            setShowSettings(true);
+                            setApiAccordion('groq');
+                          }}
+                          className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Settings size={14} /> Open Settings to Add Keys
                         </button>
                       </div>
                     </motion.div>

@@ -30,54 +30,75 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+export function getSTTKeyStats() {
+  return {
+    groqCount: groqApiKeys.length,
+    geminiCount: geminiApiKeys.length,
+    totalCount: groqApiKeys.length + geminiApiKeys.length
+  };
+}
+
 async function transcribeWithGemini(wavBlob: Blob): Promise<string> {
   if (geminiApiKeys.length === 0) return '';
-  const apiKey = geminiApiKeys[currentGeminiIndex];
-  currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
 
-  try {
-    const base64Audio = await blobToBase64(wavBlob);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  mimeType: 'audio/wav',
-                  data: base64Audio
+  let attempts = 0;
+  const maxAttempts = geminiApiKeys.length;
+
+  while (attempts < maxAttempts) {
+    const apiKey = geminiApiKeys[currentGeminiIndex];
+    currentGeminiIndex = (currentGeminiIndex + 1) % geminiApiKeys.length;
+    attempts++;
+
+    try {
+      const base64Audio = await blobToBase64(wavBlob);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: 'audio/wav',
+                    data: base64Audio
+                  }
+                },
+                {
+                  text: 'Transcribe the spoken audio verbatim into English text. Return ONLY the exact words spoken without quotes, introduction, commentary, or markdown. If there is silence, background noise, or no clear human speech, return empty text.'
                 }
-              },
-              {
-                text: 'Transcribe the spoken audio verbatim into English text. Return ONLY the exact words spoken without quotes, introduction, commentary, or markdown. If there is silence, music, or no clear speech, return nothing.'
-              }
-            ]
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.0,
+            maxOutputTokens: 1024
           }
-        ],
-        generationConfig: {
-          temperature: 0.0,
-          maxOutputTokens: 1024
-        }
-      })
-    });
+        })
+      });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return `ERR: ${res.status} ${errText}`;
+      if (res.status === 429 || res.status === 401 || res.status === 403) {
+        console.warn(`[STT Gemini] Key ${currentGeminiIndex} rate limited or invalid (${res.status}), failing over to next key...`);
+        continue;
+      }
+
+      if (!res.ok) {
+        continue;
+      }
+
+      const data = await res.json();
+      const candidate = data.candidates?.[0];
+      const text = candidate?.content?.parts?.[0]?.text || '';
+      return text.trim();
+    } catch {
+      continue;
     }
-
-    const data = await res.json();
-    const candidate = data.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text || '';
-    return text.trim();
-  } catch (err: any) {
-    return `ERR: ${err?.message || err}`;
   }
+
+  return '';
 }
 
 function encodeWAV(samples: Float32Array, sampleRate: number = 16000) {
@@ -139,31 +160,53 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       
       formData.append('prompt', promptString);
 
-      const apiKey = groqApiKeys[currentGroqIndex];
-      currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
+      // Multi-Key Round Robin with automatic 429/401 failover
+      let attempts = 0;
+      const maxAttempts = groqApiKeys.length;
+      let success = false;
 
-      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey.trim()}`
-        },
-        body: formData
-      });
+      while (attempts < maxAttempts && !success) {
+        const apiKey = groqApiKeys[currentGroqIndex];
+        currentGroqIndex = (currentGroqIndex + 1) % groqApiKeys.length;
+        attempts++;
 
-      if (!res.ok) {
-         const errText = await res.text();
-         return `ERR: ${res.status} ${errText}`;
+        try {
+          const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey.trim()}`
+            },
+            body: formData
+          });
+
+          if (res.status === 429 || res.status === 401 || res.status === 403) {
+            console.warn(`[STT Groq] Key slot rate limited (${res.status}), instantly rotating to next key...`);
+            continue;
+          }
+
+          if (!res.ok) {
+            continue;
+          }
+
+          const data = await res.json();
+          text = (data.text || '').trim();
+          success = true;
+        } catch {
+          // Network interruption on this key, rotate to next
+          continue;
+        }
       }
 
-      const data = await res.json();
-      text = (data.text || '').trim();
+      if (!success && geminiApiKeys.length > 0) {
+        text = await transcribeWithGemini(wavBlob);
+      }
     } else if (geminiApiKeys.length > 0) {
       text = await transcribeWithGemini(wavBlob);
       if (text.startsWith('ERR:')) return text;
     }
     
-    // Hallucination Filter
-    const lowerText = text.toLowerCase();
+    // Hallucination & Noise Filter
+    const lowerText = text.toLowerCase().trim();
     const hallucinations = [
       "thanks for watching", 
       "thank you for watching", 
@@ -174,24 +217,27 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       "you can support the channel",
       "transcribed by",
       "subtitles by",
-      "captions by"
+      "captions by",
+      "silence",
+      "you",
+      "huh",
+      "um",
+      "thank you",
+      "bye"
     ];
     
-    // Check if the entire string matches a known hallucination
-    if (hallucinations.some(h => lowerText.includes(h)) && text.length < 50) {
-      console.log(`[STT Filter] Blocked hallucination: "${text}"`);
+    // Check if the string matches a known hallucination
+    if (hallucinations.some(h => lowerText === h || (lowerText.includes(h) && text.length < 35))) {
       return '';
     }
 
-    // Check for purely non-alphanumeric or bracketed/asterisk hallucinations (e.g. *sigh*, [music])
+    // Check for purely non-alphanumeric or bracketed/asterisk hallucinations (e.g. *sigh*, [music], ., !)
     if (/^[\*\(\[].*[\*\)\]]$/.test(text) || !/[a-zA-Z0-9]/.test(text)) {
-      console.log(`[STT Filter] Blocked noise/bracket: "${text}"`);
       return '';
     }
     
     // If it's a single word and very short, it's often a hallucination when surrounded by silence
-    if (text.split(/\s+/).length === 1 && text.length < 4 && !/^[A-Z]+$/.test(text)) {
-      console.log(`[STT Filter] Blocked short fragment: "${text}"`);
+    if (text.split(/\s+/).length === 1 && text.length < 3 && !/^[A-Z0-9]+$/.test(text)) {
       return '';
     }
 
