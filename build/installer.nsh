@@ -3,6 +3,10 @@
 
 !macro customInit
   ; Safe initialization for fresh installs and in-app updates
+  ; Terminate any running ClueAI processes so files are never locked during install or update
+  nsExec::Exec 'taskkill /F /T /IM ClueAI.exe'
+  nsExec::Exec 'taskkill /F /T /IM clueai.exe'
+  Sleep 300
   ; Do NOT delete $LOCALAPPDATA\clueai-updater because in-app updates run directly from that folder
   ; Do NOT delete user data/settings during installation
 !macroend

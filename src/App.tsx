@@ -1677,14 +1677,19 @@ function App() {
   }, [opacity]);
 
   useEffect(() => {
-    ipcRenderer.invoke('get-desktop-sources').then((s: any) => {
-      setSources(s);
-      if (s.length > 0) setSelectedSource(s[0].id);
-    });
-
     // ALWAYS default to Stealth Mode ON every time the app opens for maximum safety
     setStealthMode(true);
     ipcRenderer.invoke('set-stealth', true);
+
+    // Defer desktop sources enumeration to prevent startup UI blocking
+    const timer = setTimeout(() => {
+      ipcRenderer.invoke('get-desktop-sources').then((s: any) => {
+        setSources(s);
+        if (s.length > 0) setSelectedSource(s[0].id);
+      }).catch(() => {});
+    }, 150);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

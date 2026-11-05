@@ -39,6 +39,9 @@ function applyStealthProtection(win, enabled) {
 
 if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disable-gpu-sandbox');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
 }
 
 function createWindow() {
@@ -85,7 +88,7 @@ function createWindow() {
     }
   });
 
-  // Safety fallback: if GPU delays ready-to-show, force show after 800ms
+  // Fast safety fallback: show immediately if ready-to-show delays
   setTimeout(() => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
@@ -93,7 +96,7 @@ function createWindow() {
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       applyStealthProtection(mainWindow, isStealthMode);
     }
-  }, 800);
+  }, 200);
 
   // Force the window to the absolute highest z-level, above all fullscreen apps
   // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
@@ -678,7 +681,22 @@ function createWindow() {
       } catch (err) {
         console.warn('Failed to write .in_app_update token:', err.message);
       }
-      autoUpdater.quitAndInstall(false, true);
+      try {
+        if (snipWindow) { snipWindow.destroy(); snipWindow = null; }
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.destroy();
+        }
+      } catch (e) {}
+      try {
+        // Run silently (/S) and force-run after installation (--force-run)
+        autoUpdater.quitAndInstall(true, true);
+      } catch (err) {
+        console.error('quitAndInstall error:', err);
+      }
+      // Force exit after short delay to ensure process doesn't lock executable files
+      setTimeout(() => {
+        app.exit(0);
+      }, 500);
     }
   });
 
@@ -938,6 +956,9 @@ if (!gotTheLock) {
         } catch (err) {
           console.warn('Failed to write .in_app_update token in before-quit-for-update:', err.message);
         }
+        setTimeout(() => {
+          app.exit(0);
+        }, 300);
       });
 
       autoUpdater.on('error', (err) => {
