@@ -446,13 +446,17 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.6.4');
+  const [appVersion, setAppVersion] = useState('5.6.5');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const [installProgress, setInstallProgress] = useState(0);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showStartupUpdatePopup, setShowStartupUpdatePopup] = useState(false);
+  const showUpdateModalRef = useRef(false);
+  showUpdateModalRef.current = showUpdateModal;
+  const hasShownStartupPopupRef = useRef(false);
   const [isHistoryScrolled, setIsHistoryScrolled] = useState(false);
   const [isCodeSplitView, setIsCodeSplitView] = useState(true);
 
@@ -1257,27 +1261,47 @@ function App() {
     };
   }, [showSettings, selectedMicId]);
 
-  // Sync mic state continuously to keep settings UI aligned with Windows system settings
+  // Sync mic state continuously and reactively to keep settings UI aligned with Windows system settings
   useEffect(() => {
     // Initial sync
-    ipcRenderer.invoke('get-mic-state').then((state: any) => {
-      if (state) {
-        setSysMicVolume(state.volume);
-        setSysMicMuted(state.muted);
-      }
-    }).catch(() => { });
-
-    const audioSyncInterval = setInterval(async () => {
-      try {
-        const state = await ipcRenderer.invoke('get-mic-state');
-        if (state) {
+    const syncState = () => {
+      ipcRenderer.invoke('get-mic-state').then((state: any) => {
+        if (state && typeof state.volume === 'number') {
           setSysMicVolume(state.volume);
-          setSysMicMuted(state.muted);
+          setSysMicMuted(Boolean(state.muted));
         }
-      } catch (e) { }
-    }, 1000);
-    return () => clearInterval(audioSyncInterval);
+      }).catch(() => { });
+    };
+
+    syncState();
+
+    const handleMicStateChanged = (_event: any, state: { volume: number; muted: boolean }) => {
+      if (state && typeof state.volume === 'number') {
+        setSysMicVolume(state.volume);
+        setSysMicMuted(Boolean(state.muted));
+      }
+    };
+
+    ipcRenderer.on('mic-state-changed', handleMicStateChanged);
+
+    const audioSyncInterval = setInterval(syncState, 800);
+    return () => {
+      clearInterval(audioSyncInterval);
+      ipcRenderer.removeListener('mic-state-changed', handleMicStateChanged);
+    };
   }, []);
+
+  // Instant sync when settings modal opens
+  useEffect(() => {
+    if (showSettings) {
+      ipcRenderer.invoke('get-mic-state').then((state: any) => {
+        if (state && typeof state.volume === 'number') {
+          setSysMicVolume(state.volume);
+          setSysMicMuted(Boolean(state.muted));
+        }
+      }).catch(() => { });
+    }
+  }, [showSettings]);
 
   useEffect(() => {
     localStorage.setItem('resume_text', resumeText);
@@ -1601,6 +1625,13 @@ function App() {
           releaseDate: data.releaseDate,
           releaseNotes: data.releaseNotes,
         });
+        if (!showUpdateModalRef.current && !hasShownStartupPopupRef.current) {
+          hasShownStartupPopupRef.current = true;
+          setShowStartupUpdatePopup(true);
+        }
+      } else if (data.status === 'not-available') {
+        // Quietly marked as up to date; do not prompt or re-check
+        setUpdateStatus('not-available');
       } else if (data.status === 'downloading') {
         setDownloadProgress({
           percent: data.percent || 0,
@@ -2200,7 +2231,7 @@ function App() {
       const inputSampleRate = audioCtx.sampleRate || 16000;
 
       processor.onaudioprocess = (e) => {
-        if (isPausedRef.current || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) return;
+        if ((isPausedRef.current && !isVoiceScrollRef.current) || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
         let resampled: Float32Array;
@@ -2281,7 +2312,7 @@ function App() {
 
   const processAudio = async () => {
     if (!streamRef.current) return;
-    if (isPausedRef.current || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) {
+    if ((isPausedRef.current && !isVoiceScrollRef.current) || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) {
       return;
     }
     if (isProcessingRef.current) return;
@@ -2322,15 +2353,17 @@ function App() {
         if (silenceFramesRef.current > 4 && totalAudioSamplesRef.current > 0) {
           logEvent("Silence >2s detected. Committing sentence and flushing STT buffer.");
 
-          if (interimTranscriptRef.current) {
-            finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
+          if (!isVoiceScrollRef.current) {
+            if (interimTranscriptRef.current) {
+              finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
+            }
           }
 
           clearAudioBuffer(); // FLUSH buffer!
           interimTranscriptRef.current = ''; // Reset interim
           silenceFramesRef.current = 0;
 
-          if (!isPausedRef.current) {
+          if (!isPausedRef.current && !isVoiceScrollRef.current) {
             setFinalizedText(finalizedTranscriptRef.current);
             setInterimText('');
             setTranscript(finalizedTranscriptRef.current);
@@ -3741,6 +3774,9 @@ function App() {
                               setScrollSpeed(0); // Mutual exclusion: turn off normal scroll
                               setActiveReadIndex(0);
                               aiAnswerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                              if (!isRecordingRef.current) {
+                                startRecording(true);
+                              }
                             }
                             return next;
                           });
@@ -3842,7 +3878,7 @@ function App() {
                       </span>
                     </div>
                     <div className="text-white text-[13px] leading-snug max-h-[52px] overflow-y-auto custom-scrollbar select-text pr-2">
-                      {(frozenQuestionTranscript || transcript || "").trim() || "Screenshot / Vision analysis provided."}
+                      {(frozenQuestionTranscript || (isVoiceScroll ? "" : transcript) || "").trim() || "Screenshot / Vision analysis provided."}
                     </div>
 
                     {/* Inline Snapshots */}
@@ -4635,6 +4671,62 @@ function App() {
                 )}
               </AnimatePresence>
 
+              {/* Compact Startup Update Popup (Work 3) */}
+              <AnimatePresence>
+                {showStartupUpdatePopup && !showUpdateModal && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                    className="fixed bottom-6 right-6 z-50 pointer-events-auto max-w-sm w-full p-4 rounded-2xl bg-[#090b14]/95 border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_30px_rgba(6,182,212,0.25)] backdrop-blur-2xl flex flex-col gap-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500/25 to-blue-600/25 border border-cyan-400/40 text-cyan-300 flex items-center justify-center shrink-0 shadow-inner">
+                          <Sparkles size={16} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-black text-white">Update Ready</h4>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+                              v{updateInfo.version || '5.6.5'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-white/60 mt-0.5">A new version of ClueAI is ready to install.</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowStartupUpdatePopup(false)}
+                        className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Dismiss"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/10">
+                      <button
+                        onClick={() => setShowStartupUpdatePopup(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        Later
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowStartupUpdatePopup(false);
+                          setShowUpdateModal(true);
+                          handleDownloadUpdate();
+                        }}
+                        className="px-4 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      >
+                        <Download size={13} /> Update Now
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Modern Horizontal Update Center Modal with Framer Motion */}
               <AnimatePresence>
                 {showUpdateModal && (
@@ -4662,7 +4754,7 @@ function App() {
                             <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
                               ClueAI Update Center
                             </h2>
-                            <p className="text-xs text-white/50">Official real-time updates powered by GitHub Releases</p>
+                            <p className="text-xs text-white/50">Official real-time updates powered by ClueAI Cloud Server</p>
                           </div>
                         </div>
 
@@ -4716,7 +4808,7 @@ function App() {
                             {updateStatus === 'checking' && (
                               <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-2xl p-3.5 flex items-center gap-3">
                                 <Loader2 size={18} className="animate-spin text-cyan-400 shrink-0" />
-                                <span className="text-xs text-cyan-200 font-medium">Checking GitHub Releases repository for latest packages...</span>
+                                <span className="text-xs text-cyan-200 font-medium">Connecting to update server... Verifying latest release...</span>
                               </div>
                             )}
 
@@ -4735,7 +4827,7 @@ function App() {
                                 <AlertTriangle size={18} className="text-rose-400 shrink-0" />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs text-rose-200 font-bold">Update Notice</p>
-                                  <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not verify GitHub Releases'}</p>
+                                  <p className="text-[11px] text-rose-200/70 truncate">{updateInfo.message || 'Could not connect to update server'}</p>
                                 </div>
                                 <button
                                   onClick={handleCheckForUpdates}
@@ -5782,7 +5874,10 @@ function App() {
                                 </div>
                                 <div className="flex items-center gap-2.5">
                                   <button
-                                    onClick={() => shell.openExternal('ms-settings:sound')}
+                                    onClick={() => {
+                                      minimizeApp();
+                                      shell.openExternal('ms-settings:sound');
+                                    }}
                                     className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-brand-border text-white/80 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
                                   >
                                     Windows Sound Settings
@@ -5814,7 +5909,7 @@ function App() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-brand-subtext">Free on-demand updates powered directly via official GitHub Releases.</p>
+                                <p className="text-xs text-brand-subtext">Free on-demand updates powered directly via ClueAI Cloud Server.</p>
                               </div>
 
                               <div className="flex items-center gap-2">

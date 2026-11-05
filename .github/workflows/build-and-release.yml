@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Target Release Tag'
         required: false
-        default: 'v5.6.4'
+        default: 'v5.6.5'
 
 permissions:
   contents: write

@@ -137,6 +137,32 @@ function createWindow() {
   });
 
   // --- AUDIO API IPC HANDLERS ---
+  if (audio && audio.mic) {
+    try {
+      audio.mic.start(250);
+      audio.mic.on('change', (val) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          const vol = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
+          mainWindow.webContents.send('mic-state-changed', {
+            volume: typeof vol === 'number' ? vol : audio.mic.get(),
+            muted: audio.mic.isMuted()
+          });
+        }
+      });
+      audio.mic.on('toggle', (val) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          const isM = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
+          mainWindow.webContents.send('mic-state-changed', {
+            volume: audio.mic.get(),
+            muted: Boolean(isM)
+          });
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to start audio.mic listener:', err.message);
+    }
+  }
+
   ipcMain.handle('get-mic-state', () => {
     try {
       if (audio && audio.mic) {
@@ -152,8 +178,16 @@ function createWindow() {
     try {
       if (audio && audio.mic) {
         audio.mic.set(volume);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('mic-state-changed', {
+            volume: audio.mic.get(),
+            muted: audio.mic.isMuted()
+          });
+        }
+        return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
       }
     } catch (e) {}
+    return { volume: 100, muted: false };
   });
 
   ipcMain.handle('toggle-mic-mute', (event, muteState) => {
@@ -165,8 +199,16 @@ function createWindow() {
         } else {
            audio.mic.toggle();
         }
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('mic-state-changed', {
+            volume: audio.mic.get(),
+            muted: audio.mic.isMuted()
+          });
+        }
+        return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
       }
     } catch (e) {}
+    return { volume: 100, muted: false };
   });
 
 
