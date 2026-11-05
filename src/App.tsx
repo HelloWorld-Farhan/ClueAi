@@ -448,7 +448,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.6.8');
+  const [appVersion, setAppVersion] = useState('5.6.9');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [updateInfo, setUpdateInfo] = useState<{ version?: string; releaseDate?: string; releaseNotes?: string | any[]; message?: string }>({});
   const [downloadProgress, setDownloadProgress] = useState<{ percent: number; bytesPerSecond: number; transferred: number; total: number }>({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
@@ -2184,6 +2184,9 @@ function App() {
 
     setSessionError('');
     setShowSessionPrompt(false);
+    setIsRecording(true);
+    setIsPaused(false);
+    ipcRenderer.invoke('start-interview-window', layout);
 
     const validGroqKeys = groqKeys.filter(k => k.trim());
     const validGeminiKeys = geminiKeys.filter(k => k.trim());
@@ -2555,12 +2558,38 @@ function App() {
         if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 0) {
           const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 0);
           if (spokenWords.length > 0 && allWordsList.length > 0) {
-            // Strictly match words sequentially from curWordIdx (prevents jumping anywhere)
-            let checkIdx = curWordIdx;
+            // Stage 1: Intelligent N-Gram Phrase Combination Detection
+            // If the user speaks fast, detect multi-word combinations (bigrams, trigrams) within upcoming 35 words
+            let bestPhraseIdx = -1;
+            let highestPhraseMatches = 0;
+            const phraseSearchLimit = Math.min(allWordsList.length, curWordIdx + 35);
+
+            for (let i = curWordIdx; i < phraseSearchLimit; i++) {
+              let matchedCount = 0;
+              for (let s = 0; s < spokenWords.length; s++) {
+                const targetWord = allWordsList[i + matchedCount]?.clean;
+                const spoken = spokenWords[s];
+                if (targetWord && spoken) {
+                  const isMatch = targetWord === spoken ||
+                    (targetWord.length > 3 && spoken.length > 3 && (targetWord.includes(spoken) || spoken.includes(targetWord))) ||
+                    (targetWord.length >= 4 && spoken.length >= 4 && targetWord.slice(0, 3) === spoken.slice(0, 3));
+                  if (isMatch) {
+                    matchedCount++;
+                  }
+                }
+              }
+              if (matchedCount >= 2 && matchedCount > highestPhraseMatches) {
+                highestPhraseMatches = matchedCount;
+                bestPhraseIdx = i + matchedCount;
+              }
+            }
+
+            // Stage 2: Step-by-Step Lookahead Matching
+            let sequentialIdx = curWordIdx;
             for (const sw of spokenWords) {
               let foundAt = -1;
-              const maxAhead = Math.min(allWordsList.length, checkIdx + 5);
-              for (let k = checkIdx; k < maxAhead; k++) {
+              const maxAhead = Math.min(allWordsList.length, sequentialIdx + 6);
+              for (let k = sequentialIdx; k < maxAhead; k++) {
                 const candidate = allWordsList[k]?.clean;
                 if (!candidate) continue;
                 const isMatch = candidate === sw ||
@@ -2572,13 +2601,16 @@ function App() {
                 }
               }
               if (foundAt !== -1) {
-                checkIdx = foundAt + 1;
+                sequentialIdx = foundAt + 1;
               }
             }
 
-            // Advance strictly within a controlled sequential window (at most 8 words forward per audio chunk)
-            if (checkIdx > curWordIdx && (checkIdx - curWordIdx) <= 8) {
-              const nextWordIdx = checkIdx;
+            // Pick the best match: phrase combination anchor takes precedence if confident, else sequential
+            const targetWordIdx = (highestPhraseMatches >= 2 && bestPhraseIdx > curWordIdx) ? bestPhraseIdx : sequentialIdx;
+
+            // Advance cursor whenever forward speech is matched (no artificial cutoffs that cause freezing!)
+            if (targetWordIdx > curWordIdx) {
+              const nextWordIdx = Math.min(allWordsList.length, targetWordIdx);
               setReadWordIndex(nextWordIdx);
               readWordProgressRef.current = nextWordIdx;
 
@@ -3802,14 +3834,14 @@ function App() {
         className={`absolute inset-0 flex flex-col items-center ${stealthMode ? 'pointer-events-none click-through-bg' : 'pointer-events-auto'} font-sans select-none animate-in fade-in duration-150 fill-mode-both ${isAiFullscreen ? 'p-4' : ''}`}
         style={{ transition: 'none' }}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {isAiFullscreen ? (
             <motion.div
               key="ai-fullscreen-panel"
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: -12 }}
-              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              exit={{ opacity: 0, scale: 0.98, y: -8 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
               className={`flex flex-col w-full h-full gap-4 items-center ${stealthMode ? 'pointer-events-none' : 'pointer-events-auto'} z-50`}
             >
             {/* Top Bar Panel */}
@@ -6993,10 +7025,10 @@ function App() {
               {isRecording && (
                 <motion.div
                   key="command-dock-view"
-                  initial={{ opacity: 0, scale: 0.96, y: -16 }}
+                  initial={{ opacity: 0, scale: 0.98, y: -8 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: -16 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                  exit={{ opacity: 0, scale: 0.98, y: -8 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
                   className="flex-1 flex flex-col gap-4 min-h-0 relative px-4 pointer-events-auto"
                 >
                   {/* Redesigned Sleek, Low-Profile Ultra-Wide Command Dock with Framer Motion */}
