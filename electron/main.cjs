@@ -69,7 +69,7 @@ function createWindow() {
       backgroundThrottling: false,
     },
   });
-  
+
   mainWindow.once('ready-to-show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -186,7 +186,7 @@ function createWindow() {
         }
         return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { volume: 100, muted: false };
   });
 
@@ -194,10 +194,10 @@ function createWindow() {
     try {
       if (audio && audio.mic) {
         if (muteState !== undefined) {
-           if (muteState) audio.mic.mute();
-           else audio.mic.unmute();
+          if (muteState) audio.mic.mute();
+          else audio.mic.unmute();
         } else {
-           audio.mic.toggle();
+          audio.mic.toggle();
         }
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('mic-state-changed', {
@@ -207,7 +207,7 @@ function createWindow() {
         }
         return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { volume: 100, muted: false };
   });
 
@@ -249,7 +249,7 @@ function createWindow() {
       }
     }
   });
-  
+
   // Also support ipcRenderer.send (fire-and-forget variant)
   ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -288,7 +288,7 @@ function createWindow() {
 
   const unregisterAllHotkeys = () => {
     [...rawKeys, ...windowKeys].forEach(k => {
-      try { globalShortcut.unregister(k); } catch(e){}
+      try { globalShortcut.unregister(k); } catch (e) { }
     });
   };
 
@@ -304,7 +304,7 @@ function createWindow() {
       'NUM7': 'edit-transcript', 'Alt+7': 'edit-transcript', 'Alt+Q': 'edit-transcript',
       'NUM8': 'toggle-history', 'Alt+8': 'toggle-history', 'Alt+H': 'toggle-history'
     };
-    
+
     for (const [key, action] of Object.entries(shortcuts)) {
       try {
         globalShortcut.register(key, () => {
@@ -312,7 +312,7 @@ function createWindow() {
             mainWindow.webContents.send('trigger-hotkey', action);
           }
         });
-      } catch(e) {
+      } catch (e) {
         console.error('Failed to register global shortcut:', key);
       }
     }
@@ -323,13 +323,13 @@ function createWindow() {
         mainWindow.setPosition(currX + dx, currY + dy);
       }
     };
-    
+
     const resizeWindow = (dw, dh) => {
       if (mainWindow) {
         const bounds = mainWindow.getBounds();
         let newW = bounds.width + dw;
         let newH = bounds.height + dh;
-        
+
         // Horizontal layout is roughly w: 1000, h: 300
         // Vertical layout is roughly w: 400, h: 700
         // We'll enforce a generic safe minimum here based on aspect ratio approximation
@@ -370,7 +370,7 @@ function createWindow() {
     for (const [key, action] of Object.entries(windowActions)) {
       try {
         globalShortcut.register(key, action);
-      } catch(e) {
+      } catch (e) {
         // Silently ignore speculative minus bindings that Electron might reject on some OS versions
         if (!key.toLowerCase().includes('minus') && !key.toLowerCase().includes('subtract')) {
           console.error('Failed to register window shortcut:', key);
@@ -451,7 +451,7 @@ function createWindow() {
     const bounds = mainWindow.getBounds();
     dragOffset = { x: cursorPos.x - bounds.x, y: cursorPos.y - bounds.y };
     dragSize = { width: bounds.width, height: bounds.height };
-    
+
     if (dragInterval) clearInterval(dragInterval);
     const dragStartTime = Date.now();
 
@@ -535,7 +535,7 @@ function createWindow() {
   ipcMain.handle('parse-pdf-buffer', async (event, arrayBuffer) => {
     try {
       const uint8Array = new Uint8Array(arrayBuffer);
-      
+
       // Handle different versions of pdf-parse exports (v1.x function vs v2.x class)
       if (typeof pdfParse === 'function') {
         const data = await pdfParse(Buffer.from(arrayBuffer));
@@ -568,7 +568,7 @@ function createWindow() {
   ipcMain.handle('set-layout', (event, layout) => {
     if (mainWindow) {
       if (layout === 'horizontal') {
-        mainWindow.setSize(1000, 800); 
+        mainWindow.setSize(1000, 800);
       } else {
         mainWindow.setSize(450, 800);
       }
@@ -588,7 +588,7 @@ function createWindow() {
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width } = primaryDisplay.workAreaSize;
-      
+
       const w = layout === 'horizontal' ? 1080 : 450;
       // Low profile compact dock height while listening/transcribing: 215px fits two-tier controls & live transcript perfectly!
       const h = 215;
@@ -599,7 +599,7 @@ function createWindow() {
         x: Math.round((width - w) / 2),
         y: 0
       });
-      
+
       // Re-assert the highest possible always-on-top level to punch through fullscreen apps
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -728,7 +728,7 @@ function createWindow() {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.destroy();
         }
-      } catch (e) {}
+      } catch (e) { }
       try {
         // Run silently (/S) and force-run after installation (--force-run)
         autoUpdater.quitAndInstall(true, true);
@@ -765,9 +765,9 @@ function createWindow() {
           } else if (entry.isFile()) {
             size += fs.statSync(fullPath).size;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
-    } catch (e) {}
+    } catch (e) { }
     return size;
   }
 
@@ -841,7 +841,7 @@ function createWindow() {
           if (fs.existsSync(p)) {
             fs.rmSync(p, { recursive: true, force: true });
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       return { success: true };
     } catch (err) {
@@ -854,33 +854,33 @@ function createWindow() {
   ipcMain.handle('start-snipping', async (event, sourceId) => {
     try {
       if (snipWindow) return; // Already snipping
-      
+
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const scaleFactor = primaryDisplay.scaleFactor;
       const { x, y, width, height } = primaryDisplay.bounds;
-      
+
       const physicalWidth = Math.round(width * scaleFactor);
       const physicalHeight = Math.round(height * scaleFactor);
-      
+
       // STEP 1: Capture screen FIRST, while everything looks normal.
       // This avoids any OS-level window focus change before capture.
-      const sources = await desktopCapturer.getSources({ 
-        types: ['screen'], 
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
         thumbnailSize: { width: physicalWidth, height: physicalHeight },
         fetchWindowIcons: false
       });
-      
+
       let targetSource = sources.find(s => s.id === sourceId) || sources[0];
       if (!targetSource) return null;
-      
+
       const base64Image = targetSource.thumbnail.toDataURL();
-      
+
       // STEP 2: NOW hide the main window — after capture is already done.
       if (mainWindow && !mainWindow.isMinimized()) {
         mainWindow.setOpacity(0);
       }
-      
+
       snipWindow = new BrowserWindow({
         x: x,
         y: y,
@@ -902,7 +902,7 @@ function createWindow() {
           contextIsolation: false
         }
       });
-      
+
       snipWindow.setAlwaysOnTop(true, 'screen-saver');
       // Critical: snip window must also be content-protected
       applyStealthProtection(snipWindow, isStealthMode);
@@ -916,13 +916,13 @@ function createWindow() {
           if (mainWindow) mainWindow.setOpacity(1);
         }
       });
-      
+
       snipWindow.webContents.once('did-finish-load', () => {
         snipWindow.show();
         snipWindow.focus();
         snipWindow.webContents.send('snip-image', base64Image);
       });
-      
+
       return new Promise((resolve) => {
         // Auto-abort after 15 seconds to prevent freezing
         const timeout = setTimeout(() => {
@@ -937,14 +937,14 @@ function createWindow() {
           if (mainWindow) mainWindow.setOpacity(1);
           resolve(b64);
         });
-        
+
         ipcMain.once('snip-cancel', () => {
           clearTimeout(timeout);
           if (snipWindow) { snipWindow.close(); snipWindow = null; }
           if (mainWindow) mainWindow.setOpacity(1);
           resolve(null);
         });
-        
+
         snipWindow.on('closed', () => {
           clearTimeout(timeout);
           snipWindow = null;
@@ -952,7 +952,7 @@ function createWindow() {
           resolve(null);
         });
       });
-      
+
     } catch (err) {
       console.error('Snipping error:', err);
       if (snipWindow) { snipWindow.close(); snipWindow = null; }
@@ -980,7 +980,7 @@ function createWindow() {
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     console.error('Failed to load URL:', errorCode, errorDescription, validatedURL);
     if (app.isPackaged) {
-      mainWindow.loadFile(path.join(app.getAppPath(), 'dist/index.html')).catch(() => {});
+      mainWindow.loadFile(path.join(app.getAppPath(), 'dist/index.html')).catch(() => { });
     }
   });
 
@@ -1005,7 +1005,7 @@ function terminateOtherInstances() {
           if (procName.includes('clueai') && pid && pid !== process.pid) {
             try {
               execSync('taskkill /F /T /PID ' + pid, { stdio: 'ignore' });
-            } catch (_) {}
+            } catch (_) { }
           }
         }
       }
@@ -1013,7 +1013,7 @@ function terminateOtherInstances() {
       try {
         const currentPid = process.pid;
         execSync(`pgrep -f "ClueAI" | grep -v "^${currentPid}$" | xargs kill -9 2>/dev/null || true`, { stdio: 'ignore' });
-      } catch (_) {}
+      } catch (_) { }
     }
   } catch (err) {
     console.warn('Process scan notice:', err.message);
@@ -1115,59 +1115,59 @@ if (!gotTheLock) {
       setTimeout(() => {
         try {
           autoUpdater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
-        } catch (e) {}
+        } catch (e) { }
       }, 1500);
     }
-  
-  globalShortcut.register('CommandOrControl+Shift+K', () => {
-    try {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        if (!mainWindow.isVisible() || mainWindow.isMinimized()) {
-          try {
-            if (mainWindow.isMinimized()) mainWindow.restore();
-          } catch(e) {}
-          mainWindow.show();
-          try { mainWindow.setIgnoreMouseEvents(false); } catch(e) {}
-          try { mainWindow.setAlwaysOnTop(true, 'screen-saver', 1); } catch(e) {}
-          applyStealthProtection(mainWindow, isStealthMode);
-          try { mainWindow.focus(); } catch(e) {}
-          try { mainWindow.webContents.send('window-shown'); } catch(e) {}
-          if (hotkeysActive) {
-            registerAllHotkeys();
+
+    globalShortcut.register('CommandOrControl+Shift+K', () => {
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          if (!mainWindow.isVisible() || mainWindow.isMinimized()) {
+            try {
+              if (mainWindow.isMinimized()) mainWindow.restore();
+            } catch (e) { }
+            mainWindow.show();
+            try { mainWindow.setIgnoreMouseEvents(false); } catch (e) { }
+            try { mainWindow.setAlwaysOnTop(true, 'screen-saver', 1); } catch (e) { }
+            applyStealthProtection(mainWindow, isStealthMode);
+            try { mainWindow.focus(); } catch (e) { }
+            try { mainWindow.webContents.send('window-shown'); } catch (e) { }
+            if (hotkeysActive) {
+              registerAllHotkeys();
+            }
+          } else {
+            mainWindow.hide();
           }
-        } else {
-          mainWindow.hide();
         }
+      } catch (err) {
+        console.warn('CommandOrControl+Shift+K handler non-fatal notice:', err.message);
       }
-    } catch (err) {
-      console.warn('CommandOrControl+Shift+K handler non-fatal notice:', err.message);
+    });
+
+    globalShortcut.register('CommandOrControl+Shift+R', () => {
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.destroy();
+        }
+      } catch (e) { }
+      app.relaunch();
+      app.exit(0);
+    });
+  });
+
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
     }
   });
 
-  globalShortcut.register('CommandOrControl+Shift+R', () => {
-    try {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.destroy();
-      }
-    } catch(e) {}
-    app.relaunch();
-    app.exit(0);
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
-});
-
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll();
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
 }
