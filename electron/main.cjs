@@ -107,17 +107,47 @@ function createWindow() {
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.setIgnoreMouseEvents(false);
 
+  function registerRestartShortcut() {
+    try {
+      globalShortcut.unregister('CommandOrControl+Shift+R');
+      globalShortcut.register('CommandOrControl+Shift+R', () => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            // Graceful reload preserving all localStorage & settings
+            mainWindow.webContents.reload();
+            return;
+          }
+        } catch (e) { }
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+        } catch (e) { }
+        app.relaunch();
+        app.quit();
+      });
+    } catch (e) {
+      console.warn('Failed to register CommandOrControl+Shift+R:', e.message);
+    }
+  }
+
+  function unregisterRestartShortcut() {
+    try {
+      globalShortcut.unregister('CommandOrControl+Shift+R');
+    } catch (e) { }
+  }
+
   mainWindow.on('minimize', () => {
     unregisterAllHotkeys();
+    unregisterRestartShortcut();
   });
 
   mainWindow.on('restore', () => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       applyStealthProtection(mainWindow, isStealthMode);
       mainWindow.setIgnoreMouseEvents(false);
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.webContents.send('window-shown');
     }
+    registerRestartShortcut();
     if (hotkeysActive) {
       registerAllHotkeys();
     }
@@ -125,15 +155,17 @@ function createWindow() {
 
   mainWindow.on('hide', () => {
     unregisterAllHotkeys();
+    unregisterRestartShortcut();
   });
 
   mainWindow.on('show', () => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       applyStealthProtection(mainWindow, isStealthMode);
       mainWindow.setIgnoreMouseEvents(false);
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       mainWindow.webContents.send('window-shown');
     }
+    registerRestartShortcut();
     if (hotkeysActive) {
       registerAllHotkeys();
     }
@@ -860,22 +892,27 @@ async function downloadReleaseAssetDirect(latestVersion) {
   });
 
   ipcMain.handle('quit-and-install-update', () => {
+    try {
+      if (snipWindow && !snipWindow.isDestroyed()) {
+        snipWindow.destroy();
+        snipWindow = null;
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+        mainWindow = null;
+      }
+    } catch (e) { }
+
     if (autoUpdater) {
       try {
         const fs = require('fs');
         const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
         fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
-      } catch (err) {
-        console.warn('Failed to write .in_app_update token:', err.message);
-      }
+      } catch (err) { }
+
       try {
-        if (snipWindow) { snipWindow.destroy(); snipWindow = null; }
-        // Keep mainWindow alive so the user sees the 100% complete screen
-        // instead of a blank desktop while the silent installer swaps binaries.
-      } catch (e) { }
-      try {
-        // Run with isSilent=false on Windows so NSIS installs and instantly force-runs Clue AI
-        autoUpdater.quitAndInstall(false, true);
+        // Run silent update and force relaunch to avoid process-lock prompt
+        autoUpdater.quitAndInstall(true, true);
       } catch (err) {
         console.error('quitAndInstall error:', err);
         app.relaunch();
@@ -892,8 +929,46 @@ async function downloadReleaseAssetDirect(latestVersion) {
   });
 
   ipcMain.handle('restart-app', () => {
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.close();
+      }
+    } catch (e) { }
     app.relaunch();
-    app.exit(0);
+    app.quit();
+  });
+
+  // --- DIRECT PDF EXPORT HANDLER (No System Print Window, Zero Freezing) ---
+  ipcMain.handle('generate-pdf-buffer', async (_event, htmlContent) => {
+    let pdfWin = null;
+    try {
+      pdfWin = new BrowserWindow({
+        show: false,
+        width: 800,
+        height: 1000,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+      await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+      // Brief pause to allow DOM styles to calculate before rendering PDF
+      await new Promise(r => setTimeout(r, 120));
+      const pdfBuffer = await pdfWin.webContents.printToPDF({
+        marginsType: 0,
+        printBackground: true,
+        landscape: false,
+        pageSize: 'A4'
+      });
+      return { success: true, base64: pdfBuffer.toString('base64') };
+    } catch (err) {
+      console.error('generate-pdf-buffer error:', err);
+      return { success: false, error: err.message };
+    } finally {
+      if (pdfWin && !pdfWin.isDestroyed()) {
+        try { pdfWin.destroy(); } catch (e) { }
+      }
+    }
   });
 
   // --- STORAGE INFORMATION & CLEANUP HANDLERS ---
@@ -1318,15 +1393,7 @@ if (!gotTheLock) {
       }
     });
 
-    globalShortcut.register('CommandOrControl+Shift+R', () => {
-      try {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.destroy();
-        }
-      } catch (e) { }
-      app.relaunch();
-      app.exit(0);
-    });
+    registerRestartShortcut();
   });
 
   app.on('will-quit', () => {

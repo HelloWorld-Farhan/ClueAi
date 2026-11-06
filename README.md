@@ -20,14 +20,15 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.8.8)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.8.9)
 
-### 🚀 What's New in v5.8.8
-- ☀️ **Clean White High-Contrast Email Theme**: All 9 email dispatches (OTP verification, welcome message, session exports, release updates, and reminders) transitioned from dark to a crisp, high-contrast white layout (`#ffffff` container on `#f1f5f9` canvas) with deep charcoal typography (`#0f172a` / `#1e293b`) for 100% text visibility in Gmail, Outlook, and mobile apps.
-- 🤖 **Automated GitHub Release Broadcasts**: Removed manual in-app broadcast button. New updates built on GitHub Actions automatically trigger Google Apps Script to notify all registered candidates with zero human intervention.
-- 🎨 **Modern Curved Architecture**: 24px container radii, 20px hero sections, 18px central verification boxes, and 999px pill status chips.
-- 📦 **Session Export Suite**: Blur-backdrop modal with 1-click local download (HTML / PDF) and verified cloud delivery with PDF attachment.
-- ⚡ **Turbocharged Startup**: Instant cold boot and resilient auto-updater with stage monitoring and zero-lag relaunch.
+### 🚀 What's New in v5.8.9
+- 📄 **Direct PDF Downloads (No Print Dialog)**: PDF export now renders cleanly and downloads directly as a `.pdf` file with live section generation and success animations, eliminating the blocking Windows Print dialog and freezing issues.
+- 🔄 **Safe Shortcut & Data Protection**: Pressing `Ctrl+Shift+R` gracefully refreshes the workspace without destroying your sessions, API keys, or profile data. Only the dedicated "Delete All User Data" button in Storage Settings will clear records.
+- 🔕 **Minimized Shortcut Isolation**: When Clue AI is minimized or hidden, all auxiliary shortcuts (including refresh and audio controls) are deactivated; only `Ctrl+Shift+K` stays active to restore your window.
+- ⚡ **Zero-Lock Updates**: The installer and in-app updater automatically terminate lingering previous processes, resolving the *"ClueAI cannot be closed"* retry prompt forever.
+- 🪟 **Unified Gentle Modal Blur**: Standardized all dialog overlays with subtle, elegant frosted glass (`backdrop-blur-sm`) and balanced lighting, keeping your dashboard visible without pitch-black void or neon glare.
+- ☀️ **Clean White High-Contrast Emails**: High-readability white email templates across all dispatches with deep charcoal typography.
 
 ### 🪟 1. For Windows
 

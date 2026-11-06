@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive, MessageSquareShare, Image as ImageIcon, Send, Mail, FileCode, Printer } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive, MessageSquareShare, Image as ImageIcon, Send, Mail, FileCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.8');
+  const [appVersion, setAppVersion] = useState('5.8.9');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -585,6 +585,10 @@ function App() {
   const [exportEmailStatus, setExportEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [exportEmailMsg, setExportEmailMsg] = useState('');
   const [showExportEmailSuggest, setShowExportEmailSuggest] = useState(false);
+  const [isExportingHtml, setIsExportingHtml] = useState(false);
+  const [htmlExportSuccess, setHtmlExportSuccess] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfExportSuccess, setPdfExportSuccess] = useState(false);
   const [otpError, setOtpError] = useState(false);
   const [otpSuccess, setOtpSuccess] = useState(false);
   const [otpIsSending, setOtpIsSending] = useState(false);
@@ -3784,28 +3788,33 @@ function App() {
   };
 
   const downloadSessionHtml = (session: any) => {
-    const sessionName = session.title || session.name || 'ClueAI_Session';
-    const htmlContent = generateSessionStandaloneHtml(session);
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sessionName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setIsExportingHtml(true);
+    setHtmlExportSuccess(false);
+    try {
+      const sessionName = session.title || session.name || 'ClueAI_Session';
+      const cleanName = sessionName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const htmlContent = generateSessionStandaloneHtml(session);
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${cleanName}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setHtmlExportSuccess(true);
+      setTimeout(() => setHtmlExportSuccess(false), 3000);
+    } catch (err) {
+      console.error('HTML export error:', err);
+    } finally {
+      setIsExportingHtml(false);
+    }
   };
 
-  const downloadSessionPdf = (session: any) => {
+  const buildSessionPdfHtml = (session: any) => {
     const { interactions } = parseSessionInteractions(session);
     const sessionTitle = session.title || session.name || 'ClueAI Session';
     const dateStr = session.date || new Date().toLocaleDateString();
     const timeStr = session.time || '';
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Pop-up was blocked. Please allow pop-ups for ClueAI to print or export PDF.');
-      return;
-    }
 
     const itemsHtml = interactions.map((item, index) => `
       <div class="interaction-block">
@@ -3821,9 +3830,10 @@ function App() {
       </div>
     `).join('');
 
-    printWindow.document.write(`<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8"/>
   <title>${sessionTitle} - Clue AI Report</title>
   <style>
     @page { margin: 15mm; size: A4; }
@@ -3914,16 +3924,56 @@ function App() {
   <div class="footer">
     Generated with Clue AI • Interview Intelligence System
   </div>
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 300);
-    };
-  </script>
 </body>
-</html>`);
-    printWindow.document.close();
+</html>`;
+  };
+
+  const downloadSessionPdf = async (session: any) => {
+    const sessionTitle = session.title || session.name || 'ClueAI_Session';
+    const cleanName = sessionTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const htmlContent = buildSessionPdfHtml(session);
+
+    setIsExportingPdf(true);
+    setPdfExportSuccess(false);
+
+    try {
+      if (typeof ipcRenderer !== 'undefined' && ipcRenderer.invoke) {
+        const res = await ipcRenderer.invoke('generate-pdf-buffer', htmlContent);
+        if (res && res.success && res.base64) {
+          const byteCharacters = atob(res.base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${cleanName}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setPdfExportSuccess(true);
+          setTimeout(() => setPdfExportSuccess(false), 3000);
+          return;
+        }
+      }
+
+      // Standalone browser fallback: direct file download without opening blocking print dialog
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${cleanName}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setPdfExportSuccess(true);
+      setTimeout(() => setPdfExportSuccess(false), 3000);
+    } catch (err) {
+      console.error('PDF export error:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const generateSessionEmailBody = (session: any, interactions: SessionExportInteraction[]) => {
@@ -5685,7 +5735,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[300] bg-black/45 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -6011,7 +6061,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[400] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -6243,7 +6293,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[350] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[350] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -6483,7 +6533,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[700] bg-black/65 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[700] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 10 }}
@@ -6564,7 +6614,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[800] bg-black/70 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 12 }}
@@ -6769,7 +6819,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[500] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[500] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -7077,7 +7127,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18 }}
-                    className="fixed inset-0 z-[1000] bg-black/65 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.92, opacity: 0, y: 15 }}
@@ -7222,7 +7272,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18 }}
-                    className="fixed inset-0 z-[450] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[450] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -7275,22 +7325,29 @@ function App() {
                           <button
                             type="button"
                             onClick={() => downloadSessionHtml(exportTargetSession)}
-                            className="group p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-cyan-500/50 flex flex-col items-start gap-2 text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                            disabled={isExportingHtml}
+                            className={`group p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border ${htmlExportSuccess ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-white/10 hover:border-cyan-500/50'} flex flex-col items-start gap-2 text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer`}
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                                <FileCode size={16} />
+                                {isExportingHtml ? (
+                                  <Loader2 size={16} className="animate-spin text-cyan-400" />
+                                ) : htmlExportSuccess ? (
+                                  <CheckCircle2 size={16} className="text-emerald-400" />
+                                ) : (
+                                  <FileCode size={16} />
+                                )}
                               </div>
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60">
-                                .HTML
+                                {htmlExportSuccess ? 'SAVED' : '.HTML'}
                               </span>
                             </div>
                             <div>
                               <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
-                                Download HTML Report
+                                {isExportingHtml ? 'Generating HTML Report...' : htmlExportSuccess ? 'HTML Downloaded Successfully!' : 'Download HTML Report'}
                               </div>
                               <div className="text-[11px] text-white/50 mt-0.5 leading-snug">
-                                Full dark-mode report with syntax highlights and expandable questions.
+                                Full interactive report with syntax highlights and expandable questions.
                               </div>
                             </div>
                           </button>
@@ -7299,22 +7356,29 @@ function App() {
                           <button
                             type="button"
                             onClick={() => downloadSessionPdf(exportTargetSession)}
-                            className="group p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-blue-500/50 flex flex-col items-start gap-2 text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                            disabled={isExportingPdf}
+                            className={`group p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border ${pdfExportSuccess ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-white/10 hover:border-blue-500/50'} flex flex-col items-start gap-2 text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer`}
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                                <Printer size={16} />
+                                {isExportingPdf ? (
+                                  <Loader2 size={16} className="animate-spin text-blue-400" />
+                                ) : pdfExportSuccess ? (
+                                  <CheckCircle2 size={16} className="text-emerald-400" />
+                                ) : (
+                                  <FileText size={16} />
+                                )}
                               </div>
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60">
-                                .PDF
+                                {pdfExportSuccess ? 'SAVED' : '.PDF'}
                               </span>
                             </div>
                             <div>
                               <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
-                                Print / Save to PDF
+                                {isExportingPdf ? 'Generating PDF Document...' : pdfExportSuccess ? 'PDF Downloaded Successfully!' : 'Download PDF Report'}
                               </div>
                               <div className="text-[11px] text-white/50 mt-0.5 leading-snug">
-                                Formatted document layout optimized for direct printing or PDF saving.
+                                Clean formatted A4 document layout directly saved to your computer.
                               </div>
                             </div>
                           </button>
@@ -7457,7 +7521,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[300] bg-black/45 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -9375,7 +9439,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-2xl p-4 pointer-events-auto"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 pointer-events-auto"
                   >
                     <motion.div
                       initial={{ scale: 0.92, opacity: 0, y: 15 }}
@@ -9608,7 +9672,7 @@ function App() {
               )}
 
               {itemToDelete && (
-                <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
                   <div className="w-full max-w-md bg-brand-secondary border border-rose-500/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
                     <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
                       <h2 className="text-xl font-bold text-white flex items-center gap-2"><Trash2 size={18} className="text-rose-400" /> Confirm Deletion</h2>
@@ -9657,7 +9721,7 @@ function App() {
 
               {/* Reminder Popup Editor */}
               {showReminderPopup && (
-                <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[300] bg-black/45 backdrop-blur-sm flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
                   <div className={`w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${!localReminderStealth ? 'stealth-exempt' : ''}`}>
                     <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
                       <div className="flex items-center gap-4">
@@ -9920,7 +9984,7 @@ function App() {
               )}
               {/* Notes Popup Editor */}
               {showNotesPopup && (
-                <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[300] bg-black/45 backdrop-blur-sm flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
                   <div className={`w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden ${!localNotesStealth ? 'stealth-exempt' : ''}`}>
                     <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
                       <div className="flex items-center gap-4">
@@ -10402,7 +10466,7 @@ function App() {
               )}
 
               {alertMessage && (
-                <div className="fixed inset-0 z-[400] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
                   <div className={`w-full max-w-md bg-brand-secondary border ${alertMessage.type === 'error' ? 'border-rose-500/50' : alertMessage.type === 'success' ? 'border-green-500/50' : 'border-brand-accent/50'} rounded-2xl shadow-2xl flex flex-col overflow-hidden`}>
                     <div className="px-6 py-4 flex flex-col gap-3 mt-2">
                       <h3 className={`font-black text-xl tracking-wide flex items-center gap-2 ${alertMessage.type === 'error' ? 'text-rose-500' : alertMessage.type === 'success' ? 'text-green-400' : 'text-brand-accent'}`}>
@@ -10432,14 +10496,14 @@ function App() {
                 </div>
               )}
 
-              {/* First-Time User Onboarding & Email Verification Modal (v5.8.8 - Horizontal Minimal Redesign) */}
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.9 - Horizontal Minimal Redesign) */}
               <AnimatePresence>
                 {showOnboardingModal && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[600] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 pointer-events-auto select-none stealth-exempt"
+                    className="fixed inset-0 z-[600] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 pointer-events-auto select-none stealth-exempt"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 16 }}
@@ -10856,7 +10920,7 @@ function App() {
                   Installing Clue AI Update
                 </h2>
                 <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.8'}
+                  Upgrading to Version {updateInfo.version || '5.8.9'}
                 </p>
 
                 {/* High-tech Progress Bar */}

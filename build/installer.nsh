@@ -2,9 +2,10 @@
 !include "LogicLib.nsh"
 
 !macro customInit
-  ; Safe initialization for fresh installs and in-app updates
-  ; Do NOT delete $LOCALAPPDATA\clueai-updater because in-app updates run directly from that folder
-  ; Do NOT delete user data/settings during installation
+  ; Automatically terminate any lingering ClueAI instances to prevent file locks or "ClueAI cannot be closed" prompts
+  nsExec::Exec 'taskkill /F /IM "ClueAI.exe" /T'
+  nsExec::Exec 'taskkill /F /IM "clueai.exe" /T'
+  Sleep 600
 !macroend
 
 !macro customUnInstall
