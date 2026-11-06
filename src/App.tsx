@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Streamlined Clean Emails & Redundant Button Removal",
-      desc: "Removed unneeded software launching and download buttons across all email templates for a clean, distraction-free reading experience on mobile phones and desktops."
+      title: "Live Dashboard Backdrop Blur & Glassmorphism",
+      desc: "All modals and dialogs now feature translucent frosted glass overlays that smoothly blur your active dashboard in the background instead of displaying a dark void."
     },
     {
-      title: "Official Clue AI Logo in Email Headers",
-      desc: "Replaced the previous placeholder letter badge with the official high-resolution Clue AI logo across all automated notifications, alerts, and dispatches."
+      title: "Instant OTP Dispatch & Verification Flow",
+      desc: "High-speed 6-digit confirmation codes are dispatched instantly to your Gmail inbox with optimized network delivery and real-time countdown."
     },
     {
-      title: "Interactive Session HTML & Direct PDF Attachments",
-      desc: "Session export emails now include direct PDF and HTML file attachments along with an intuitive button to view the full interactive session transcript."
+      title: "Optimized Layering & Responsive Verification",
+      desc: "Verification popups now open with top-level priority layering and immediate autofocus across onboarding, feedback dispatches, and session exports."
     },
     {
-      title: "Minimal Cyberpunk Email Aesthetic",
-      desc: "Refined all notification templates into a sleek, compact layout while maintaining the signature deep-space black and electric-cyan color scheme."
+      title: "Real-Time Email Verification Tick",
+      desc: "Verified email inboxes now immediately show a crisp green verification checkmark directly inside the input fields."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.5');
+  const [appVersion, setAppVersion] = useState('5.8.6');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -649,6 +649,7 @@ function App() {
     setOtpCountdown(60);
     setShowOtpModal(true);
     setOtpIsSending(true);
+    setOnboardingIsSubmitting(false);
 
     const activeName = (type === 'onboarding' ? onboardingName.trim() : feedbackForm.name.trim()) || username || 'ClueAI User';
 
@@ -5685,7 +5686,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -6011,7 +6012,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -6274,7 +6275,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[350] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -6514,7 +6515,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[700] bg-black/65 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 10 }}
@@ -6595,7 +6596,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[800] bg-black/70 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 12 }}
@@ -6800,7 +6801,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[500] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -6916,8 +6917,13 @@ function App() {
                                 if (saved.length > 0) setShowFeedbackEmailSuggest(true);
                               }}
                               onBlur={() => setTimeout(() => setShowFeedbackEmailSuggest(false), 200)}
-                              className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
+                              className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl pl-3.5 pr-9 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
                             />
+                            {feedbackForm.email.trim() && isEmailVerified(feedbackForm.email.trim()) && (
+                              <span className="absolute right-3 top-[34px] text-emerald-400 pointer-events-none" title="Verified Inbox">
+                                <CheckCircle2 size={16} className="text-emerald-400" />
+                              </span>
+                            )}
                             {showFeedbackEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
                               <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
                                 <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
@@ -7103,7 +7109,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18 }}
-                    className="fixed inset-0 z-[500] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[1000] bg-black/65 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.92, opacity: 0, y: 15 }}
@@ -7121,6 +7127,7 @@ function App() {
                           setShowOtpModal(false);
                           setOtpError(false);
                           setOtpSuccess(false);
+                          setOnboardingIsSubmitting(false);
                         }}
                         className="absolute top-4 right-4 p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                         title="Cancel Verification"
@@ -7247,7 +7254,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18 }}
-                    className="fixed inset-0 z-[75] bg-black/85 backdrop-blur-2xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[450] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -7482,7 +7489,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex items-center justify-center p-3 md:p-6 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -8576,7 +8583,7 @@ function App() {
               )}
 
               {/* Dashboard Empty State with Scroll-Collapsing Top Sections */}
-              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal && !showOnboardingModal && (
+              {!isRecording && (
                 <div className="flex-1 min-h-0 flex flex-col mt-2 px-2 pb-4 overflow-hidden">
                   {/* Upper Two Sections with Smooth Scroll-Collapse Transition */}
                   <motion.div 
@@ -9680,7 +9687,7 @@ function App() {
 
               {/* Reminder Popup Editor */}
               {showReminderPopup && (
-                <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
                   <div className={`w-full max-w-2xl bg-brand-secondary border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${!localReminderStealth ? 'stealth-exempt' : ''}`}>
                     <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-black/20">
                       <div className="flex items-center gap-4">
@@ -9943,7 +9950,7 @@ function App() {
               )}
               {/* Notes Popup Editor */}
               {showNotesPopup && (
-                <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-200">
                   <div className={`w-full max-w-md bg-brand-secondary border border-teal-500/30 rounded-2xl shadow-[0_0_80px_rgba(20,184,166,0.15)] flex flex-col overflow-hidden ${!localNotesStealth ? 'stealth-exempt' : ''}`}>
                     <div className="px-6 py-4 border-b border-teal-500/10 flex justify-between items-center bg-black/20">
                       <div className="flex items-center gap-4">
@@ -10455,14 +10462,14 @@ function App() {
                 </div>
               )}
 
-              {/* First-Time User Onboarding & Email Verification Modal (v5.8.5 - Horizontal Minimal Redesign) */}
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.6 - Horizontal Minimal Redesign) */}
               <AnimatePresence>
                 {showOnboardingModal && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[600] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 pointer-events-auto select-none stealth-exempt"
+                    className="fixed inset-0 z-[600] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 pointer-events-auto select-none stealth-exempt"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 16 }}
@@ -10594,6 +10601,11 @@ function App() {
                                   placeholder="e.g. farhan@example.com"
                                   className="w-full bg-white/[0.04] border border-white/10 focus:border-cyan-400 focus:bg-white/[0.07] rounded-xl pl-10 pr-24 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-all shadow-inner font-mono"
                                 />
+                                {isEmailVerified(onboardingEmail.trim().toLowerCase()) && (
+                                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-400 pointer-events-none flex items-center gap-1 font-bold text-[11px]" title="Email Verified">
+                                    <CheckCircle2 size={16} className="text-emerald-400" />
+                                  </span>
+                                )}
                               </div>
 
                               {/* Saved Email Auto-suggestions */}
@@ -10726,7 +10738,7 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[400] bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 md:p-8 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -10874,7 +10886,7 @@ function App() {
                   Installing Clue AI Update
                 </h2>
                 <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.5'}
+                  Upgrading to Version {updateInfo.version || '5.8.6'}
                 </p>
 
                 {/* High-tech Progress Bar */}
