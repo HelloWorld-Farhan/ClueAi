@@ -3,97 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClueAI - New User Feedback Report</title>
+  <title>ClueAI — New Feedback Report</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #05060b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #05060b; padding: 35px 15px;">
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 15px;">
     <tr>
       <td align="center">
-        <!-- Main Email Container -->
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #090a12; border-radius: 20px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
           
-          <!-- Top Neon Accent Header (Cyan/Blue) -->
+          <!-- Brand Header -->
           <tr>
-            <td style="background: linear-gradient(90deg, #3b82f6, #06b6d4, #10b981); height: 5px;"></td>
-          </tr>
-
-          <!-- Brand Logo Header -->
-          <tr>
-            <td style="padding: 35px 35px 20px 35px; text-align: center;">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 2px; color: #22d3ee; text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);">
-                CLUE AI
-              </h1>
-              <p style="margin: 6px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; color: #38bdf8; font-weight: bold;">
-                ★ User Feedback & Problem Dispatch
-              </p>
+            <td style="padding: 32px 36px 20px 36px; border-bottom: 1px solid #f1f5f9;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <span style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ClueAI</span>
+                    <span style="display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; color: #2563eb; background-color: #eff6ff; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase;">Feedback Report</span>
+                  </td>
+                  <td align="right" style="font-size: 12px; color: #64748b; font-family: monospace;">
+                    v{{appVersion}}
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
-          <!-- Main Report Box -->
+          <!-- Main Body -->
           <tr>
-            <td style="padding: 10px 35px 25px 35px;">
-              <div style="background-color: #121422; border-radius: 16px; border: 1px solid #1e2640; border-left: 4px solid #38bdf8; padding: 25px 25px 20px 25px;">
-                <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 800; color: #ffffff;">
-                  New Feedback Received 💬
-                </h2>
-                
-                <!-- Submitter Meta Table -->
-                <div style="background-color: #080911; border-radius: 12px; border: 1px solid #1e2640; padding: 16px; margin-bottom: 20px;">
-                  <table width="100%" border="0" cellspacing="0" cellpadding="4" style="font-size: 13.5px;">
-                    <tr>
-                      <td style="color: #64748b; width: 35%; font-size: 11.5px; text-transform: uppercase;">Category</td>
-                      <td>
-                        <span style="display: inline-block; background-color: rgba(56,189,248,0.15); border: 1px solid #38bdf8; color: #38bdf8; font-weight: bold; font-size: 11px; padding: 2px 10px; border-radius: 12px; text-transform: uppercase;">
-                          {{category}}
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="color: #64748b; font-size: 11.5px; text-transform: uppercase;">User Email</td>
-                      <td><a href="mailto:{{userEmail}}" style="color: #ffffff; font-weight: bold; text-decoration: none;">{{userEmail}}</a></td>
-                    </tr>
-                    <tr>
-                      <td style="color: #64748b; font-size: 11.5px; text-transform: uppercase;">App Version</td>
-                      <td style="color: #22d3ee; font-family: monospace; font-weight: bold;">v{{appVersion}}</td>
-                    </tr>
-                    <tr>
-                      <td style="color: #64748b; font-size: 11.5px; text-transform: uppercase;">Timestamp</td>
-                      <td style="color: #94a3b8; font-size: 12.5px;">{{timestamp}}</td>
-                    </tr>
-                  </table>
-                </div>
+            <td style="padding: 28px 36px;">
+              <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #0f172a;">
+                New User Feedback Received
+              </h2>
 
-                <!-- Problem / Feedback Description -->
-                <div style="margin-bottom: 20px;">
-                  <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 8px;">
-                    Reported Problem / Feedback:
-                  </div>
-                  <div style="background-color: #080911; border-radius: 12px; border: 1px solid #1e2640; padding: 18px; color: #f1f5f9; font-size: 14px; line-height: 1.7; white-space: pre-wrap;">{{description}}</div>
-                </div>
+              <!-- Details Grid -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px; font-size: 13px;">
+                <tr>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 30%;">User Email</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 600;">
+                    <a href="mailto:{{userEmail}}" style="color: #2563eb; text-decoration: none;">{{userEmail}}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b;">Category</td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 600;">
+                    {{category}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; color: #64748b;">Timestamp</td>
+                  <td style="padding: 12px 16px; color: #0f172a; font-size: 12px;">
+                    {{timestamp}}
+                  </td>
+                </tr>
+              </table>
 
-                <!-- Attached Screenshot Section (if present) -->
-                {{#hasImage}}
-                <div>
-                  <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 8px;">
-                    Attached Screenshot:
-                  </div>
-                  <div style="background-color: #080911; border-radius: 12px; border: 1px solid #1e2640; padding: 12px; text-align: center;">
-                    <img src="{{imageUrl}}" alt="Feedback Screenshot" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #1e293b; display: block; margin: 0 auto;" />
-                  </div>
+              <!-- Description / Message -->
+              <div style="margin-bottom: 24px;">
+                <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                  Problem Details & Feedback
                 </div>
-                {{/hasImage}}
+                <div style="background-color: #ffffff; border-left: 4px solid #2563eb; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; color: #1e293b; white-space: pre-wrap;">{{description}}</div>
               </div>
+
+              <!-- Screenshot (if present) -->
+              {{#hasImage}}
+              <div style="margin-bottom: 24px;">
+                <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                  Attached Screenshot
+                </div>
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center;">
+                  <img src="{{imageUrl}}" alt="Feedback Screenshot" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #cbd5e1; display: block; margin: 0 auto;" />
+                </div>
+              </div>
+              {{/hasImage}}
             </td>
           </tr>
 
-          <!-- Developer Info -->
+          <!-- Simple & Clean Footer -->
           <tr>
-            <td style="padding: 20px 35px 30px 35px; border-top: 1px solid #171b2d; text-align: center; background-color: #07080e;">
-              <p style="margin: 0 0 6px 0; font-size: 12px; color: #94a3b8;">
-                Dispatched directly to Farhan Khalid & ClueAI Support
+            <td style="padding: 24px 36px; border-top: 1px solid #f1f5f9; background-color: #fafafa; text-align: center; font-size: 12px; color: #64748b;">
+              <p style="margin: 0 0 8px 0;">
+                Developer: <strong>Farhan Khalid</strong> · <a href="https://farhan-khalid-portfolio.vercel.app/" style="color: #2563eb; text-decoration: none; font-weight: 600;">Portfolio</a>
               </p>
-              <p style="margin: 0; font-size: 11px; color: #475569;">
-                clueai.support@gmail.com | farhankhalid17968@gmail.com
+              <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                Support: <a href="mailto:clueai.support@gmail.com" style="color: #64748b; text-decoration: none;">clueai.support@gmail.com</a> · ClueAI System
               </p>
             </td>
           </tr>

@@ -728,20 +728,20 @@ function createWindow() {
       }
       try {
         if (snipWindow) { snipWindow.destroy(); snipWindow = null; }
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.destroy();
-        }
+        // Keep mainWindow alive so the user sees the 100% complete screen
+        // instead of a blank desktop while the silent installer swaps binaries.
       } catch (e) { }
       try {
         // Run silently (/S) and force-run after installation (--force-run)
         autoUpdater.quitAndInstall(true, true);
       } catch (err) {
         console.error('quitAndInstall error:', err);
-      }
-      // Force exit after short delay to ensure process doesn't lock executable files
-      setTimeout(() => {
+        app.relaunch();
         app.exit(0);
-      }, 500);
+      }
+    } else {
+      app.relaunch();
+      app.exit(0);
     }
   });
 

@@ -18,24 +18,24 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Universal 6-Digit Email OTP Verification",
-      desc: "Protects your email communications with instant 6-digit OTP codes, animated verification boxes, and automatic permanent cross-feature trust."
+      title: "Paced In-App Installation Animation",
+      desc: "Smooth, well-timed progress bar pacing across package extraction, core binary replacement, and instant launch preparation."
     },
     {
-      title: "Interactive Box Animations with Shake & Complete States",
-      desc: "Wrong codes trigger a high-visibility red shake animation while correct codes smoothly transform into dark emerald completed states."
+      title: "Instant Relaunch with Zero Blank Screen",
+      desc: "Keeps the application window visible through 100% completion until the new version launches, eliminating desktop flickering or blank screen downtime."
     },
     {
-      title: "Instant Delivery Cyberpunk OTP Templates",
-      desc: "One-time passwords arrive within seconds in high-contrast cyberpunk dark mode featuring a glowing code display and security alerts."
+      title: "Ergonomic Horizontal Feedback Center",
+      desc: "Spacious two-column redesign of the Feedback and Support window featuring clear configuration inputs on the left and full-height message editing on the right."
     },
     {
-      title: "Cross-Feature Verified Trust & Smart Suggestions",
-      desc: "Verifying your email once in Feedback, Reminders, or Notes unlocks instant permanent verification badges and auto-suggestions across all features."
+      title: "Clean, Simple & Modern Email Templates",
+      desc: "Replaced dark nested containers with minimalist, highly legible email designs optimized for all modern desktop and mobile email clients."
     },
     {
-      title: "Centered Command Ribbon Storage Breakdown",
-      desc: "Prominently displays real-time Software Storage footprint and User Data storage separated with clear visual breaks in the center of the secondary command ribbon."
+      title: "Universal 6-Digit Email OTP Verification & Trust",
+      desc: "Seamless 6-digit email security with permanent cross-feature trust across Feedback, Reminders, and Notes."
     }
   ];
 
@@ -496,7 +496,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.7');
+  const [appVersion, setAppVersion] = useState('5.7.8');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -2289,27 +2289,33 @@ function App() {
   const handleRestartToInstall = () => {
     setIsInstallingUpdate(true);
     setInstallProgress(1);
-    setInstallStageText("Extracting update packages...");
+    setInstallStageText("Extracting update packages & assets...");
 
     let current = 1;
-    const interval = setInterval(() => {
+    const tick = () => {
       current += 1;
       setInstallProgress(current);
 
-      if (current <= 30) {
-        setInstallStageText("Extracting update packages...");
+      let delay = 45;
+      if (current <= 25) {
+        setInstallStageText("Extracting update packages & assets...");
+        delay = 45;
       } else if (current <= 75) {
-        setInstallStageText("Verifying integrity & replacing files...");
+        setInstallStageText("Verifying integrity & replacing core files...");
+        delay = 60; // Visible, smooth pacing for core file replacement
       } else if (current < 100) {
-        setInstallStageText("Finalizing installation...");
+        setInstallStageText("Finalizing installation & preparing instant launch...");
+        delay = 45;
       } else {
-        clearInterval(interval);
-        setInstallStageText("Update complete! Relaunching Clue AI...");
-        setTimeout(() => {
-          ipcRenderer.invoke('quit-and-install-update');
-        }, 600);
+        setInstallStageText("Update 100% complete! Launching Clue AI...");
+        ipcRenderer.invoke('quit-and-install-update');
+        return;
       }
-    }, 40);
+
+      setTimeout(tick, delay);
+    };
+
+    setTimeout(tick, 45);
   };
 
   // Auto-scroll transcript box to bottom as words stream in
@@ -6379,7 +6385,7 @@ function App() {
                 )}
               </AnimatePresence>
 
-              {/* Animated User Feedback Modal with Blur Backdrop */}
+              {/* Animated User Feedback Modal with Horizontal Ergonomic Redesign */}
               <AnimatePresence>
                 {showFeedbackModal && (
                   <motion.div
@@ -6393,9 +6399,12 @@ function App() {
                       animate={{ scale: 1, opacity: 1, y: 0 }}
                       exit={{ scale: 0.94, opacity: 0, y: 15 }}
                       transition={{ type: "spring", stiffness: 380, damping: 28 }}
-                      className="bg-[#090b14] border border-cyan-500/40 w-full max-w-lg rounded-3xl p-6 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.25)] flex flex-col gap-4 text-left max-h-[92vh] overflow-y-auto custom-scrollbar"
+                      className="bg-[#090b14]/95 border border-cyan-500/40 w-full max-w-4xl rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] flex flex-col gap-4 text-left max-h-[92vh] overflow-y-auto custom-scrollbar relative stealth-exempt"
                       onPaste={handleFeedbackPaste}
                     >
+                      {/* Top Cyberpunk Ambient Glow Bar */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[1px]"></div>
+
                       {/* Hidden File Input for Image Upload */}
                       <input
                         ref={feedbackFileInputRef}
@@ -6406,27 +6415,27 @@ function App() {
                       />
 
                       {/* Header */}
-                      <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+                      <div className="flex items-center justify-between pb-3.5 border-b border-white/10 shrink-0">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
                             <MessageSquareShare size={20} className="text-white" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h3 className="text-base font-black text-white">Share Your Feedback</h3>
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                              <h3 className="text-lg font-black text-white tracking-tight">Share Your Feedback</h3>
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                                 Clue AI Support
                               </span>
                             </div>
                             <p className="text-xs text-white/50 mt-0.5">
-                              Report issues, suggest features, or reach out to our engineering team.
+                              Report issues, suggest improvements, or communicate directly with engineering.
                             </p>
                           </div>
                         </div>
 
                         <button
                           onClick={() => setShowFeedbackModal(false)}
-                          className="p-1.5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-colors cursor-pointer"
+                          className="p-2 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-colors cursor-pointer"
                         >
                           <X size={18} />
                         </button>
@@ -6453,177 +6462,184 @@ function App() {
                         </div>
                       )}
 
-                      {/* Form Body */}
-                      <div className="space-y-3.5">
-                        {/* Email Address with Autocomplete Suggestions */}
-                        <div className="relative">
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
-                              Your Email ID <span className="text-rose-400">*</span>
-                            </label>
-                            {feedbackForm.email.trim() && isEmailVerified(feedbackForm.email.trim()) && (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold animate-in fade-in duration-200">
-                                <ShieldCheck size={11} className="text-emerald-400" /> Verified Email
-                              </span>
+                      {/* Horizontal 2-Column Form Body */}
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+                        {/* Left Column: Email, Category & Screenshot */}
+                        <div className="md:col-span-5 flex flex-col gap-3.5">
+                          {/* Email Address with Autocomplete Suggestions */}
+                          <div className="relative">
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                                Your Email ID <span className="text-rose-400">*</span>
+                              </label>
+                              {feedbackForm.email.trim() && isEmailVerified(feedbackForm.email.trim()) && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold animate-in fade-in duration-200">
+                                  <ShieldCheck size={11} className="text-emerald-400" /> Verified
+                                </span>
+                              )}
+                            </div>
+                            <input
+                              type="email"
+                              placeholder="e.g. your.email@example.com"
+                              value={feedbackForm.email}
+                              onChange={(e) => {
+                                setFeedbackForm(prev => ({ ...prev, email: e.target.value }));
+                                if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
+                                const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                                setShowFeedbackEmailSuggest(matches.length > 0);
+                              }}
+                              onFocus={() => {
+                                const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                if (saved.length > 0) setShowFeedbackEmailSuggest(true);
+                              }}
+                              onBlur={() => setTimeout(() => setShowFeedbackEmailSuggest(false), 200)}
+                              className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
+                            />
+                            {showFeedbackEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                              <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
+                                <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
+                                  <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">Saved Emails</span>
+                                  <span className="text-[9px] text-white/40">Auto-verify</span>
+                                </div>
+                                {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                                  .filter(s => !feedbackForm.email || s.toLowerCase().includes(feedbackForm.email.toLowerCase()))
+                                  .map((email, idx) => {
+                                    const verified = isEmailVerified(email);
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0 flex items-center justify-between transition-colors"
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          setFeedbackForm(prev => ({ ...prev, email }));
+                                          setShowFeedbackEmailSuggest(false);
+                                          if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
+                                        }}
+                                      >
+                                        <span className="font-mono text-white/90">{email}</span>
+                                        {verified && (
+                                          <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                            <ShieldCheck size={10} className="text-emerald-400" /> Verified
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                            {feedbackErrors.email && (
+                              <p className="text-rose-400 text-[10px] font-bold mt-1 pl-1">
+                                {feedbackErrors.email}
+                              </p>
                             )}
                           </div>
-                          <input
-                            type="email"
-                            placeholder="e.g. your.email@example.com"
-                            value={feedbackForm.email}
-                            onChange={(e) => {
-                              setFeedbackForm(prev => ({ ...prev, email: e.target.value }));
-                              if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
-                              const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                              const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
-                              setShowFeedbackEmailSuggest(matches.length > 0);
-                            }}
-                            onFocus={() => {
-                              const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                              if (saved.length > 0) setShowFeedbackEmailSuggest(true);
-                            }}
-                            onBlur={() => setTimeout(() => setShowFeedbackEmailSuggest(false), 200)}
-                            className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
-                          />
-                          {showFeedbackEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
-                            <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
-                              <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">Suggested Saved Emails</span>
-                                <span className="text-[9px] text-white/40">Auto-verification</span>
+
+                          {/* Category Dropdown */}
+                          <div>
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                              Feedback Category
+                            </label>
+                            <select
+                              value={feedbackForm.category}
+                              onChange={(e) => setFeedbackForm(prev => ({ ...prev, category: e.target.value }))}
+                              className="w-full bg-[#121526] border border-white/10 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none transition-colors cursor-pointer"
+                            >
+                              <option value="Bug / Issue" className="bg-[#121526] text-white">Bug / Issue</option>
+                              <option value="Feature Request" className="bg-[#121526] text-white">Feature Request</option>
+                              <option value="Audio & Voice Scroll" className="bg-[#121526] text-white">Audio & Voice Scroll</option>
+                              <option value="UI & Controls" className="bg-[#121526] text-white">UI & Controls</option>
+                              <option value="Performance & Stability" className="bg-[#121526] text-white">Performance & Stability</option>
+                              <option value="General Feedback" className="bg-[#121526] text-white">General Feedback</option>
+                            </select>
+                          </div>
+
+                          {/* Screenshot / Image Attachment */}
+                          <div>
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                              Attach Screenshot / Image <span className="text-white/40 normal-case font-normal">(optional)</span>
+                            </label>
+
+                            {feedbackForm.imageBase64 ? (
+                              <div className="relative rounded-2xl border border-cyan-500/40 bg-black/40 p-2.5 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                  <img
+                                    src={feedbackForm.imageBase64}
+                                    alt="Screenshot Preview"
+                                    className="w-14 h-14 object-cover rounded-xl border border-cyan-400/30 shrink-0"
+                                  />
+                                  <div className="text-left overflow-hidden">
+                                    <div className="text-xs font-bold text-white truncate">Screenshot Attached</div>
+                                    <div className="text-[10px] text-cyan-300 font-mono">Ready for email upload</div>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setFeedbackForm(prev => ({ ...prev, imageBase64: '' }))}
+                                  className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Remove</span>
+                                </button>
                               </div>
-                              {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
-                                .filter(s => !feedbackForm.email || s.toLowerCase().includes(feedbackForm.email.toLowerCase()))
-                                .map((email, idx) => {
-                                  const verified = isEmailVerified(email);
-                                  return (
-                                    <div
-                                      key={idx}
-                                      className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0 flex items-center justify-between transition-colors"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        setFeedbackForm(prev => ({ ...prev, email }));
-                                        setShowFeedbackEmailSuggest(false);
-                                        if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
-                                      }}
-                                    >
-                                      <span className="font-mono text-white/90">{email}</span>
-                                      {verified && (
-                                        <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
-                                          <ShieldCheck size={10} className="text-emerald-400" /> Verified
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          )}
-                          {feedbackErrors.email && (
-                            <p className="text-rose-400 text-[10px] font-bold mt-1 pl-1">
-                              {feedbackErrors.email}
-                            </p>
-                          )}
+                            ) : (
+                              <div
+                                onClick={() => feedbackFileInputRef.current?.click()}
+                                className="border border-dashed border-white/20 hover:border-cyan-400/60 rounded-2xl p-3.5 bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer flex flex-col items-center justify-center gap-1 text-center group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+                                  <ImageIcon size={14} />
+                                </div>
+                                <span className="text-xs font-bold text-white/80 group-hover:text-cyan-300 transition-colors">
+                                  Browse image or press Ctrl+V to paste
+                                </span>
+                                <span className="text-[10px] text-white/40">
+                                  PNG, JPG, WebP up to 5 MB
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Category Dropdown */}
-                        <div>
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
-                            Feedback Category
-                          </label>
-                          <select
-                            value={feedbackForm.category}
-                            onChange={(e) => setFeedbackForm(prev => ({ ...prev, category: e.target.value }))}
-                            className="w-full bg-[#121526] border border-white/10 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white outline-none transition-colors cursor-pointer"
-                          >
-                            <option value="Bug / Issue" className="bg-[#121526] text-white">Bug / Issue</option>
-                            <option value="Feature Request" className="bg-[#121526] text-white">Feature Request</option>
-                            <option value="Audio & Voice Scroll" className="bg-[#121526] text-white">Audio & Voice Scroll</option>
-                            <option value="UI & Controls" className="bg-[#121526] text-white">UI & Controls</option>
-                            <option value="Performance & Stability" className="bg-[#121526] text-white">Performance & Stability</option>
-                            <option value="General Feedback" className="bg-[#121526] text-white">General Feedback</option>
-                          </select>
-                        </div>
-
-                        {/* Description Textarea */}
-                        <div>
+                        {/* Right Column: Problem Details / Description (Full Height) */}
+                        <div className="md:col-span-7 flex flex-col">
                           <div className="flex items-center justify-between mb-1">
                             <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
                               Problem Details / Feedback <span className="text-rose-400">*</span>
                             </label>
                             <span className="text-[10px] text-white/40 font-mono">
-                              {feedbackForm.description.length} chars (Ctrl+V to paste image)
+                              {feedbackForm.description.length} chars (min 8)
                             </span>
                           </div>
                           <textarea
-                            rows={4}
-                            placeholder="Please describe what happened, what you expected, or any improvements you'd like to see..."
+                            placeholder="Please describe what happened, what you expected, or any improvements you'd like to see in detail..."
                             value={feedbackForm.description}
                             onChange={(e) => {
                               setFeedbackForm(prev => ({ ...prev, description: e.target.value }));
                               if (feedbackErrors.description) setFeedbackErrors(prev => ({ ...prev, description: undefined }));
                             }}
-                            className={`w-full bg-white/5 border ${feedbackErrors.description ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl p-3 text-xs text-white placeholder-white/30 outline-none transition-colors resize-none shadow-inner`}
+                            className={`w-full flex-1 min-h-[190px] md:min-h-[220px] bg-white/5 border ${feedbackErrors.description ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-2xl p-3.5 text-xs text-white placeholder-white/30 outline-none transition-colors resize-none shadow-inner custom-scrollbar leading-relaxed`}
                           />
                           {feedbackErrors.description && (
                             <p className="text-rose-400 text-[10px] font-bold mt-1 pl-1">
                               {feedbackErrors.description}
                             </p>
                           )}
-                        </div>
 
-                        {/* Image / Screenshot Upload & Preview Area */}
-                        <div>
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
-                            Attach Screenshot / Image <span className="text-white/40 normal-case font-normal">(optional)</span>
-                          </label>
-
-                          {feedbackForm.imageBase64 ? (
-                            <div className="relative rounded-2xl border border-cyan-500/40 bg-black/40 p-2.5 flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-3 overflow-hidden">
-                                <img
-                                  src={feedbackForm.imageBase64}
-                                  alt="Screenshot Preview"
-                                  className="w-14 h-14 object-cover rounded-xl border border-cyan-400/30 shrink-0"
-                                />
-                                <div className="text-left overflow-hidden">
-                                  <div className="text-xs font-bold text-white truncate">Screenshot Attached</div>
-                                  <div className="text-[10px] text-cyan-300 font-mono">Ready for email upload</div>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setFeedbackForm(prev => ({ ...prev, imageBase64: '' }))}
-                                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                              >
-                                <Trash2 size={12} />
-                                <span>Remove</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              onClick={() => feedbackFileInputRef.current?.click()}
-                              className="border border-dashed border-white/20 hover:border-cyan-400/60 rounded-2xl p-4 bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 text-center group"
-                            >
-                              <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
-                                <ImageIcon size={16} />
-                              </div>
-                              <span className="text-xs font-bold text-white/80 group-hover:text-cyan-300 transition-colors">
-                                Click to browse image or press Ctrl+V to paste screenshot
-                              </span>
-                              <span className="text-[10px] text-white/40">
-                                Supports PNG, JPG, WebP up to 5 MB
-                              </span>
-                            </div>
-                          )}
+                          <div className="mt-2.5 p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center gap-2 text-[11px] text-white/50">
+                            <Info size={14} className="text-cyan-400 shrink-0" />
+                            <span>Your submission will be delivered directly to the engineers with your app diagnostic state.</span>
+                          </div>
                         </div>
                       </div>
 
                       {/* Footer Actions */}
-                      <div className="flex items-center justify-between pt-3 border-t border-white/10 shrink-0 mt-1">
-                        <div className="text-[10px] text-white/40">
-                          Routed to <span className="text-cyan-400 font-mono">farhankhalid17968@gmail.com</span> & support
+                      <div className="flex items-center justify-between pt-3.5 border-t border-white/10 shrink-0 mt-1">
+                        <div className="text-[11px] text-white/40">
+                          Support Email: <span className="text-cyan-400 font-mono">clueai.support@gmail.com</span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <button
                             type="button"
                             onClick={() => setShowFeedbackModal(false)}
@@ -6636,16 +6652,16 @@ function App() {
                             type="button"
                             disabled={feedbackStatus === 'sending'}
                             onClick={handleSendFeedback}
-                            className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:border-cyan-300 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+                            className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_18px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:border-cyan-300 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
                           >
                             {feedbackStatus === 'sending' ? (
                               <>
-                                <Loader2 size={13} className="animate-spin text-white" />
+                                <Loader2 size={14} className="animate-spin text-white" />
                                 <span>Sending Feedback...</span>
                               </>
                             ) : (
                               <>
-                                <Send size={13} className="text-white" />
+                                <Send size={14} className="text-white" />
                                 <span>Submit Feedback</span>
                               </>
                             )}

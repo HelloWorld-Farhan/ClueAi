@@ -3,103 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClueAI - Email Verification Code</title>
+  <title>ClueAI — Verification Code</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #05060b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #05060b; padding: 35px 15px;">
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 15px;">
     <tr>
       <td align="center">
-        <!-- Main Email Container -->
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #090a12; border-radius: 20px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
           
-          <!-- Top Neon Accent Header -->
+          <!-- Brand Header -->
           <tr>
-            <td style="background: linear-gradient(90deg, #06b6d4, #3b82f6, #10b981); height: 5px;"></td>
-          </tr>
-
-          <!-- Brand Logo Header -->
-          <tr>
-            <td style="padding: 35px 35px 20px 35px; text-align: center;">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 2px; color: #22d3ee; text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);">
-                CLUE AI
-              </h1>
-              <p style="margin: 6px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; color: #94a3b8; font-weight: bold;">
-                Email Security & Verification
+            <td style="padding: 32px 36px 20px 36px; border-bottom: 1px solid #f1f5f9; text-align: center;">
+              <span style="font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ClueAI</span>
+              <p style="margin: 4px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 600;">
+                Email Verification Code
               </p>
             </td>
           </tr>
 
-          <!-- Hero Message Box -->
+          <!-- Main Body -->
           <tr>
-            <td style="padding: 10px 35px 25px 35px;">
-              <div style="background-color: #121422; border-radius: 16px; border: 1px solid #1e2640; border-left: 4px solid #06b6d4; padding: 25px 25px 20px 25px; text-align: center;">
-                <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 800; color: #ffffff;">
-                  Your Verification Code 🔐
-                </h2>
-                <p style="margin: 0 0 16px 0; font-size: 14.5px; line-height: 1.6; color: #cbd5e1;">
-                  Hello <strong style="color: #ffffff;">{{userName}}</strong>, use the 6-digit verification code below to verify your email address in Clue AI:
-                </p>
+            <td style="padding: 32px 36px; text-align: center;">
+              <p style="margin: 0 0 16px 0; font-size: 14px; color: #475569; line-height: 1.6;">
+                Hello <strong>{{userName}}</strong>,<br>Use the 6-digit verification code below to verify your email address in ClueAI:
+              </p>
 
-                <!-- High-Tech 6-Digit OTP Box -->
-                <div style="background-color: #05060b; border: 2px solid #22d3ee; border-radius: 16px; padding: 20px 10px; margin: 25px auto; max-width: 380px; box-shadow: 0 0 35px rgba(34, 211, 238, 0.25);">
-                  <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #38bdf8; margin-bottom: 8px;">
-                    One-Time Passcode
-                  </div>
-                  <div style="font-size: 40px; font-weight: 900; letter-spacing: 12px; color: #ffffff; font-family: 'Courier New', Courier, monospace; text-shadow: 0 0 15px rgba(34, 211, 238, 0.6); padding-left: 12px;">
-                    {{otp}}
-                  </div>
-                  <div style="font-size: 11px; color: #94a3b8; margin-top: 8px; font-weight: 600;">
-                    ⏱️ Valid for 10 minutes
-                  </div>
-                </div>
+              <!-- 6 Digit Code Box -->
+              <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px 16px; margin: 24px 0;">
+                <span style="font-family: Menlo, Monaco, Consolas, 'Courier New', monospace; font-size: 36px; font-weight: 900; letter-spacing: 10px; color: #0f172a; display: inline-block;">
+                  {{otpCode}}
+                </span>
+              </div>
 
-                <!-- Trust Guarantee Notice -->
-                <div style="background-color: #090b14; border-radius: 12px; border: 1px solid #1e2640; padding: 14px 18px; margin-top: 15px; text-align: left;">
-                  <div style="font-size: 12px; font-weight: bold; color: #10b981; margin-bottom: 4px;">
-                    🛡️ Permanent Cross-Feature Trust
-                  </div>
-                  <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-                    Once this email is verified, you will <strong>never be prompted for an OTP again</strong> when submitting feedback, scheduling interview reminders, or receiving interview notes.
-                  </div>
-                </div>
+              <!-- Security Advisory -->
+              <p style="margin: 0 0 20px 0; font-size: 12px; color: #64748b; line-height: 1.6;">
+                This code is valid for <strong>10 minutes</strong>. Never share this code with anyone. If you did not request this, please disregard this email.
+              </p>
+
+              <div style="font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                Once verified, your email is permanently trusted across Feedback, Reminders, and Notes in ClueAI.
               </div>
             </td>
           </tr>
 
-          <!-- Security Warning -->
+          <!-- Clean Footer -->
           <tr>
-            <td style="padding: 0 35px 25px 35px; text-align: center;">
-              <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
-                Never share this code with anyone. ClueAI will never ask you for this code outside of the official desktop application. If you did not request this, please disregard this email.
+            <td style="padding: 24px 36px; border-top: 1px solid #f1f5f9; background-color: #fafafa; text-align: center; font-size: 12px; color: #64748b;">
+              <p style="margin: 0 0 8px 0;">
+                Developer: <strong>Farhan Khalid</strong> · <a href="https://farhan-khalid-portfolio.vercel.app/" style="color: #2563eb; text-decoration: none; font-weight: 600;">Portfolio</a>
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                Support: <a href="mailto:clueai.support@gmail.com" style="color: #64748b; text-decoration: none;">clueai.support@gmail.com</a> · ClueAI Security
               </p>
             </td>
           </tr>
 
-          <!-- Official Support & Developer Section -->
-          <tr>
-            <td style="padding: 0 35px 30px 35px; text-align: center;">
-              <div style="background-color: #0b0d18; border-radius: 12px; border: 1px solid #1e2640; padding: 16px;">
-                <p style="margin: 0 0 8px 0; font-size: 12px; color: #94a3b8;">
-                  Have questions, issues, or feedback?
-                </p>
-                <a href="mailto:clueai.support@gmail.com" style="display: inline-block; background-color: rgba(34,211,238,0.1); border: 1px solid #22d3ee; color: #22d3ee; font-weight: bold; font-size: 13px; text-decoration: none; padding: 7px 18px; border-radius: 20px;">
-                  ✉️ clueai.support@gmail.com
-                </a>
-                <div style="margin-top: 14px; font-size: 11px; color: #64748b;">
-                  Engineered with ❤️ by <a href="https://farhan-khalid-portfolio.vercel.app/" style="color: #38bdf8; text-decoration: none; font-weight: bold;">Farhan Khalid</a>
-                </div>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #05060b; padding: 20px; text-align: center; border-top: 1px solid #1e293b;">
-              <p style="margin: 0; font-size: 11px; color: #475569;">
-                &copy; 2026 ClueAI. Intelligent Desktop Interview Assistant. All rights reserved.
-              </p>
-            </td>
-          </tr>
         </table>
       </td>
     </tr>
