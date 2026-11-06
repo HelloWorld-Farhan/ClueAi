@@ -20,7 +20,7 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.7.8)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.7.9)
 
 ### 🪟 1. For Windows
 

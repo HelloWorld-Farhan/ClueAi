@@ -18,24 +18,24 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Paced In-App Installation Animation",
-      desc: "Smooth, well-timed progress bar pacing across package extraction, core binary replacement, and instant launch preparation."
+      title: "Empty Default Email & Fresh Input",
+      desc: "The email field in the Feedback modal now starts completely blank, preventing accidental pre-fills and ensuring your chosen email is entered accurately."
     },
     {
-      title: "Instant Relaunch with Zero Blank Screen",
-      desc: "Keeps the application window visible through 100% completion until the new version launches, eliminating desktop flickering or blank screen downtime."
+      title: "Guaranteed Instant OTP Delivery",
+      desc: "Updated communication protocol with Google Apps Script backend ensures 6-digit security verification codes arrive reliably in your Gmail inbox."
     },
     {
-      title: "Ergonomic Horizontal Feedback Center",
-      desc: "Spacious two-column redesign of the Feedback and Support window featuring clear configuration inputs on the left and full-height message editing on the right."
+      title: "Green Tick Verified Badges",
+      desc: "Successfully verified emails display a prominent green checkmark badge, and unverified emails are strictly kept unverified until OTP confirmation."
     },
     {
-      title: "Clean, Simple & Modern Email Templates",
-      desc: "Replaced dark nested containers with minimalist, highly legible email designs optimized for all modern desktop and mobile email clients."
+      title: "Personalized Feedback Name Field",
+      desc: "Added a dedicated Name field in Feedback so team replies and confirmation messages address you directly by your name."
     },
     {
-      title: "Universal 6-Digit Email OTP Verification & Trust",
-      desc: "Seamless 6-digit email security with permanent cross-feature trust across Feedback, Reminders, and Notes."
+      title: "Clean & Private User Acknowledgment",
+      desc: "Confirmation emails sent to users are personalized with your name while omitting sensitive submission details for maximum privacy, with technical logs sent exclusively to support."
     }
   ];
 
@@ -496,7 +496,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.8');
+  const [appVersion, setAppVersion] = useState('5.7.9');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -561,6 +561,7 @@ function App() {
   // --- FEEDBACK & SUPPORT MODAL STATE ---
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({
+    name: '',
     email: '',
     category: 'Bug / Issue',
     description: '',
@@ -649,9 +650,11 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'send_otp',
+        email: targetEmail.trim(),
         to_email: targetEmail.trim(),
+        user_email: targetEmail.trim(),
         otp: generatedOtp,
-        user_name: username || 'ClueAI User'
+        user_name: feedbackForm.name.trim() || username || 'ClueAI User'
       })
     })
       .catch(console.error)
@@ -679,9 +682,11 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'send_otp',
+        email: otpTargetEmail.trim(),
         to_email: otpTargetEmail.trim(),
+        user_email: otpTargetEmail.trim(),
         otp: generatedOtp,
-        user_name: username || 'ClueAI User'
+        user_name: feedbackForm.name.trim() || username || 'ClueAI User'
       })
     })
       .catch(console.error)
@@ -950,8 +955,10 @@ function App() {
 
         const payload = {
           type: 'feedback',
+          user_name: feedbackForm.name.trim() || username || 'ClueAI User',
           user_email: emailTrimmed,
-          user_name: username || 'ClueAI User',
+          email: emailTrimmed,
+          to_email: emailTrimmed,
           category: feedbackForm.category,
           description: descTrimmed,
           image_base64: feedbackForm.imageBase64 || '',
@@ -975,7 +982,8 @@ function App() {
           setShowFeedbackModal(false);
           setFeedbackStatus('idle');
           setFeedbackForm({
-            email: emailTrimmed,
+            name: '',
+            email: '',
             category: 'Bug / Issue',
             description: '',
             imageBase64: ''
@@ -5095,10 +5103,11 @@ function App() {
                           onClick={() => {
                             setFeedbackErrors({});
                             setFeedbackStatus('idle');
-                            const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                            if (saved.length > 0 && !feedbackForm.email) {
-                              setFeedbackForm(prev => ({ ...prev, email: saved[0] }));
-                            }
+                            setFeedbackForm(prev => ({
+                              ...prev,
+                              name: prev.name || username || '',
+                              email: '' // Never prefill email by default
+                            }));
                             setShowFeedbackModal(true);
                           }}
                           className="px-2.5 py-1 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:border-cyan-300 flex items-center gap-1.5 transition-all cursor-pointer ml-2 hover:scale-[1.03] active:scale-[0.98]"
@@ -6464,8 +6473,22 @@ function App() {
 
                       {/* Horizontal 2-Column Form Body */}
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
-                        {/* Left Column: Email, Category & Screenshot */}
+                        {/* Left Column: Name, Email, Category & Screenshot */}
                         <div className="md:col-span-5 flex flex-col gap-3.5">
+                          {/* User Name */}
+                          <div>
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                              Your Name <span className="text-white/40 normal-case font-normal">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Farhan Khalid"
+                              value={feedbackForm.name}
+                              onChange={(e) => setFeedbackForm(prev => ({ ...prev, name: e.target.value }))}
+                              className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner"
+                            />
+                          </div>
+
                           {/* Email Address with Autocomplete Suggestions */}
                           <div className="relative">
                             <div className="flex items-center justify-between mb-1">
@@ -6474,7 +6497,7 @@ function App() {
                               </label>
                               {feedbackForm.email.trim() && isEmailVerified(feedbackForm.email.trim()) && (
                                 <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold animate-in fade-in duration-200">
-                                  <ShieldCheck size={11} className="text-emerald-400" /> Verified
+                                  <CheckCircle2 size={12} className="text-emerald-400" /> Verified
                                 </span>
                               )}
                             </div>
@@ -6520,7 +6543,7 @@ function App() {
                                         <span className="font-mono text-white/90">{email}</span>
                                         {verified && (
                                           <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
-                                            <ShieldCheck size={10} className="text-emerald-400" /> Verified
+                                            <CheckCircle2 size={10} className="text-emerald-400" /> Verified
                                           </span>
                                         )}
                                       </div>

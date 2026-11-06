@@ -93,10 +93,10 @@ function parseTargetDate(dateStr, timeStr) {
   const timeParts = timeVal.split(':');
   let hours = parseInt(timeParts[0], 10);
   const minutes = parseInt(timeParts[1], 10);
-  
+
   if (ampm === 'PM' && hours < 12) hours += 12;
   if (ampm === 'AM' && hours === 12) hours = 0;
-  
+
   return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], hours, minutes, 0);
 }
 
@@ -146,9 +146,9 @@ function doPost(e) {
     // ACTION: SEND OTP VERIFICATION CODE
     // ----------------------------------------------------
     if (type === 'send_otp' || type === 'otp') {
-      const email = (data.email || data.user_email || '').trim();
+      const email = (data.to_email || data.email || data.user_email || '').trim();
       const otp = (data.otp || '').toString().trim();
-      const userName = data.user_name || 'ClueAI User';
+      const userName = (data.user_name || data.name || '').trim() || 'ClueAI User';
 
       if (!email || !otp) {
         return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing email or OTP" }))
@@ -190,10 +190,11 @@ function doPost(e) {
     // TYPE 1: USER FEEDBACK & PROBLEM REPORT
     // ----------------------------------------------------
     if (type === 'feedback') {
-      const userEmail = data.user_email || data.email || "Anonymous";
+      const userEmail = (data.user_email || data.email || data.to_email || "Anonymous").trim();
+      const userName = (data.user_name || data.name || "").trim() || "User";
       const category = data.category || "General Feedback";
       const description = data.description || "No description provided.";
-      const appVersion = data.app_version || "5.7.8";
+      const appVersion = data.app_version || "5.7.9";
       const timestamp = new Date().toLocaleString();
       const hasImage = Boolean(data.image_base64);
 
@@ -221,11 +222,15 @@ function doPost(e) {
         }
       }
 
-      // 1. Admin Email (Sent to Farhan Khalid & ClueAI Support)
+      // 1. Admin Email (Sent ONLY to Farhan Khalid & ClueAI Support with full details and image)
       const adminContent = `
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px; font-size: 13px;">
           <tr>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 30%;">User Email</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 30%;">User Name</td>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #0f172a;">${userName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b;">User Email</td>
             <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;"><a href="mailto:${userEmail}" style="color: #2563eb; text-decoration: none;">${userEmail}</a></td>
           </tr>
           <tr>
@@ -259,7 +264,7 @@ function doPost(e) {
 
       const adminEmailOptions = {
         to: `${DEVELOPER_EMAIL}, ${SUPPORT_EMAIL}`,
-        subject: `[ClueAI Feedback] ${category} - from ${userEmail}`,
+        subject: `[ClueAI Feedback] ${category} - from ${userName} (${userEmail})`,
         htmlBody: adminHtml,
         name: "ClueAI Feedback System"
       };
@@ -268,28 +273,25 @@ function doPost(e) {
       }
       MailApp.sendEmail(adminEmailOptions);
 
-      // 2. User Confirmation Email
+      // 2. User Confirmation Email (Sent ONLY to user with their name, WITHOUT their problem details)
       if (userEmail && userEmail.includes("@")) {
         const userContent = `
-          <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-            Thank you for helping us improve ClueAI. Your feedback has been received and forwarded directly to our engineering team.
+          <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #334155;">
+            Hello <strong>${userName}</strong>,
           </p>
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin: 16px 0;">
-            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 8px;">
-              Your Submission:
-            </div>
-            <div style="color: #64748b; font-size: 11px; margin-bottom: 2px;">Category:</div>
-            <div style="color: #0f172a; font-weight: 600; font-size: 13px; margin-bottom: 8px;">${category}</div>
-            <div style="color: #64748b; font-size: 11px; margin-bottom: 2px;">Details:</div>
-            <div style="color: #334155; font-size: 13px; line-height: 1.6; white-space: pre-wrap; background-color: #ffffff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">${description}</div>
+          <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+            Thank you for reaching out and sharing your feedback with us! We have successfully received your report and forwarded it directly to our engineering and support team.
+          </p>
+          <div style="background-color: #f8fafc; border-left: 4px solid #059669; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 14px; margin: 18px 0; font-size: 13px; color: #065f46; line-height: 1.6;">
+            <strong>Ticket Logged (${category}):</strong> Our team reviews every report to rapidly fix bugs and continuously refine the ClueAI interview experience.
           </div>
           <p style="margin: 0; font-size: 12.5px; line-height: 1.6; color: #64748b;">
-            If your submission requires technical troubleshooting, our team will review the log and reach back out to you.
+            If we require additional information or have an update regarding your report, we will reach out directly to this email address.
           </p>
         `;
 
         const userHtml = getEmailLayout(
-          "Thank You for Your Feedback",
+          "We Received Your Feedback!",
           "Feedback Confirmation",
           userContent,
           "#059669"
@@ -297,11 +299,15 @@ function doPost(e) {
 
         MailApp.sendEmail({
           to: userEmail,
-          subject: `ClueAI: We've received your feedback (${category})`,
+          subject: `ClueAI: Thank you for your feedback, ${userName}!`,
           htmlBody: userHtml,
           name: "ClueAI Support"
         });
       }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Feedback sent' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
       return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Feedback sent' }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -314,14 +320,14 @@ function doPost(e) {
       const targetDate = parseTargetDate(data.date, data.time);
       const triggerId = data.id || Utilities.getUuid();
       PropertiesService.getUserProperties().setProperty(triggerId, JSON.stringify(data));
-      
+
       const newTrigger = ScriptApp.newTrigger('sendScheduledNote')
         .timeBased()
         .at(targetDate)
         .create();
-        
+
       PropertiesService.getUserProperties().setProperty('trigger_' + newTrigger.getUniqueId(), triggerId);
-      
+
       return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Note scheduled for ' + targetDate }))
         .setMimeType(ContentService.MimeType.JSON);
     }
