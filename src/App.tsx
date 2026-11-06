@@ -18,24 +18,24 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Empty Default Email & Fresh Input",
-      desc: "The email field in the Feedback modal now starts completely blank, preventing accidental pre-fills and ensuring your chosen email is entered accurately."
+      title: "Claude Dark-Mode Email Architecture",
+      desc: "Re-engineered all system email notifications into a unified, responsive dark-mode layout matching Clue AI's desktop interface with dynamic version branding and developer portfolio links."
     },
     {
-      title: "Guaranteed Instant OTP Delivery",
-      desc: "Updated communication protocol with Google Apps Script backend ensures 6-digit security verification codes arrive reliably in your Gmail inbox."
+      title: "First-Time Candidate Onboarding & Email Verification",
+      desc: "Smooth first-time setup capturing candidate name and email with instantaneous 6-digit OTP authentication before entering the dashboard."
     },
     {
-      title: "Green Tick Verified Badges",
-      desc: "Successfully verified emails display a prominent green checkmark badge, and unverified emails are strictly kept unverified until OTP confirmation."
+      title: "Automated Welcome Email Delivery",
+      desc: "Newly verified candidates receive an official dark-mode Welcome Email detailing stealth shortcuts, real-time AI streaming, and voice-gated teleprompter features."
     },
     {
-      title: "Personalized Feedback Name Field",
-      desc: "Added a dedicated Name field in Feedback so team replies and confirmation messages address you directly by your name."
+      title: "Cross-Feature Verified Email Pre-Selection",
+      desc: "Verified email is permanently trusted and automatically pre-filled across Feedback, Interview Reminders, Notes, and Settings with green checkmark security status."
     },
     {
-      title: "Clean & Private User Acknowledgment",
-      desc: "Confirmation emails sent to users are personalized with your name while omitting sensitive submission details for maximum privacy, with technical logs sent exclusively to support."
+      title: "Release Announcement Email Broadcasting",
+      desc: "Built-in release broadcast engine enables all registered candidates to receive dark-mode update notifications whenever a new version of Clue AI is launched."
     }
   ];
 
@@ -496,7 +496,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.9');
+  const [appVersion, setAppVersion] = useState('5.8.0');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -578,7 +578,7 @@ function App() {
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [expectedOtp, setExpectedOtp] = useState<string>('');
   const [otpTargetEmail, setOtpTargetEmail] = useState<string>('');
-  const [otpPendingType, setOtpPendingType] = useState<'feedback' | 'reminder' | 'note' | null>(null);
+  const [otpPendingType, setOtpPendingType] = useState<'feedback' | 'reminder' | 'note' | 'onboarding' | 'settings' | null>(null);
   const [otpError, setOtpError] = useState(false);
   const [otpSuccess, setOtpSuccess] = useState(false);
   const [otpIsSending, setOtpIsSending] = useState(false);
@@ -628,14 +628,14 @@ function App() {
   }, [showOtpModal, otpCountdown]);
 
   const triggerOtpVerification = (
-    type: 'feedback' | 'reminder' | 'note',
+    type: 'feedback' | 'reminder' | 'note' | 'onboarding' | 'settings',
     targetEmail: string,
     onVerifiedCallback: () => void
   ) => {
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     setExpectedOtp(generatedOtp);
     setOtpTargetEmail(targetEmail.trim());
-    setOtpPendingType(type);
+    setOtpPendingType(type as any);
     pendingOtpCallbackRef.current = onVerifiedCallback;
     setOtpDigits(['', '', '', '', '', '']);
     setOtpError(false);
@@ -643,6 +643,8 @@ function App() {
     setOtpCountdown(60);
     setShowOtpModal(true);
     setOtpIsSending(true);
+
+    const activeName = (type === 'onboarding' ? onboardingName.trim() : feedbackForm.name.trim()) || username || 'ClueAI User';
 
     fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
@@ -654,7 +656,8 @@ function App() {
         to_email: targetEmail.trim(),
         user_email: targetEmail.trim(),
         otp: generatedOtp,
-        user_name: feedbackForm.name.trim() || username || 'ClueAI User'
+        user_name: activeName,
+        app_version: appVersion
       })
     })
       .catch(console.error)
@@ -676,6 +679,8 @@ function App() {
     setOtpCountdown(60);
     setOtpIsSending(true);
 
+    const activeName = (otpPendingType === 'onboarding' ? onboardingName.trim() : feedbackForm.name.trim()) || username || 'ClueAI User';
+
     fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -686,7 +691,8 @@ function App() {
         to_email: otpTargetEmail.trim(),
         user_email: otpTargetEmail.trim(),
         otp: generatedOtp,
-        user_name: feedbackForm.name.trim() || username || 'ClueAI User'
+        user_name: activeName,
+        app_version: appVersion
       })
     })
       .catch(console.error)
@@ -1013,10 +1019,80 @@ function App() {
   const [username, setUsername] = useState(() => {
     try { return localStorage.getItem('clueai_username') || ''; } catch { return ''; }
   });
-  const [showUsernamePrompt, setShowUsernamePrompt] = useState(() => {
-    try { return !localStorage.getItem('clueai_username'); } catch { return true; }
+  const [userEmail, setUserEmail] = useState(() => {
+    try { return localStorage.getItem('clueai_user_email') || ''; } catch { return ''; }
   });
+  const [showOnboardingModal, setShowOnboardingModal] = useState(() => {
+    try {
+      const onboarded = localStorage.getItem('clueai_onboarded_v580');
+      const hasEmail = localStorage.getItem('clueai_user_email');
+      return !onboarded || !hasEmail;
+    } catch {
+      return true;
+    }
+  });
+  const [onboardingName, setOnboardingName] = useState(() => {
+    try { return localStorage.getItem('clueai_username') || ''; } catch { return ''; }
+  });
+  const [onboardingEmail, setOnboardingEmail] = useState(() => {
+    try { return localStorage.getItem('clueai_user_email') || ''; } catch { return ''; }
+  });
+  const [onboardingError, setOnboardingError] = useState('');
+  const [onboardingIsSubmitting, setOnboardingIsSubmitting] = useState(false);
+  const [isBroadcastingUpdate, setIsBroadcastingUpdate] = useState(false);
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
   const [tempUsername, setTempUsername] = useState(username);
+
+  const handleCompleteOnboarding = () => {
+    setOnboardingError('');
+    const nameTrimmed = onboardingName.trim();
+    const emailTrimmed = onboardingEmail.trim().toLowerCase();
+
+    if (!nameTrimmed || nameTrimmed.length < 2) {
+      setOnboardingError('Please enter your full name (minimum 2 characters).');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailTrimmed || !emailRegex.test(emailTrimmed)) {
+      setOnboardingError('Please enter a valid email address.');
+      return;
+    }
+
+    setOnboardingIsSubmitting(true);
+    triggerOtpVerification('onboarding', emailTrimmed, () => {
+      setUsername(nameTrimmed);
+      setUserEmail(emailTrimmed);
+      localStorage.setItem('clueai_username', nameTrimmed);
+      localStorage.setItem('clueai_user_email', emailTrimmed);
+      localStorage.setItem('clueai_onboarded_v580', 'true');
+      markEmailVerified(emailTrimmed);
+
+      const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+      if (!saved.includes(emailTrimmed)) {
+        saved.unshift(emailTrimmed);
+        localStorage.setItem('clueai_saved_emails', JSON.stringify(saved));
+      }
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'welcome',
+          user_name: nameTrimmed,
+          user_email: emailTrimmed,
+          email: emailTrimmed,
+          to_email: emailTrimmed,
+          app_version: appVersion
+        })
+      }).catch(console.error);
+
+      setShowOnboardingModal(false);
+      setOnboardingIsSubmitting(false);
+      setModelChangeMsg(`Welcome to Clue AI, ${nameTrimmed}!`);
+      setTimeout(() => setModelChangeMsg(''), 4000);
+    });
+  };
 
   // Reminders
   // The old reminders state is completely removed in favor of reminderProfiles
@@ -5838,6 +5914,37 @@ function App() {
                               </button>
 
                               <button
+                                onClick={async () => {
+                                  setIsBroadcastingUpdate(true);
+                                  try {
+                                    const defaultNotes = `• Premium Claude Dark Email System with dynamic V${appVersion} branding\n• First-Time User Onboarding & Email Verification\n• Cross-Feature Verified Email Pre-selection & Settings Profile\n• Automated Release Announcement Delivery to all users`;
+                                    await fetch(GOOGLE_SCRIPT_URL, {
+                                      method: 'POST',
+                                      mode: 'no-cors',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        type: 'broadcast_update',
+                                        app_version: appVersion,
+                                        highlights: defaultNotes
+                                      })
+                                    });
+                                    setModelChangeMsg(`Release update email broadcast dispatched to all registered users!`);
+                                    setTimeout(() => setModelChangeMsg(''), 4000);
+                                  } catch (e) {
+                                    console.error(e);
+                                  } finally {
+                                    setIsBroadcastingUpdate(false);
+                                  }
+                                }}
+                                disabled={isBroadcastingUpdate}
+                                className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                                title="Broadcast update notification email to all users"
+                              >
+                                <Send size={12} className={isBroadcastingUpdate ? 'animate-pulse' : ''} />
+                                <span>{isBroadcastingUpdate ? 'Broadcasting...' : 'Broadcast Email'}</span>
+                              </button>
+
+                              <button
                                 onClick={() => setShowUpdateModal(false)}
                                 className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white bg-white/[0.02] hover:bg-white/10 border border-white/5 transition-colors cursor-pointer"
                               >
@@ -6740,7 +6847,7 @@ function App() {
                         </h3>
                         {otpPendingType && (
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                            {otpPendingType === 'feedback' ? 'Feedback' : otpPendingType === 'reminder' ? 'Reminder' : 'Notes'}
+                            {otpPendingType === 'feedback' ? 'Feedback' : otpPendingType === 'reminder' ? 'Reminder' : otpPendingType === 'note' ? 'Notes' : otpPendingType === 'onboarding' ? 'Onboarding' : 'Settings'}
                           </span>
                         )}
                       </div>
@@ -6880,6 +6987,72 @@ function App() {
                       </div>
                       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-black/[0.02]">
                         <div className="max-w-3xl w-full mx-auto space-y-8 pb-10 select-none cursor-default">
+
+                          {/* User Profile & Verified Email Settings */}
+                          <section>
+                            <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                              <User size={16} /> User Profile & Verified Email
+                            </h3>
+                            <div className="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5">Candidate Name</label>
+                                  <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setUsername(val);
+                                      localStorage.setItem('clueai_username', val);
+                                    }}
+                                    placeholder="e.g. Farhan Khalid"
+                                    className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5 flex items-center justify-between">
+                                    <span>Primary Email ID</span>
+                                    {userEmail && isEmailVerified(userEmail) && (
+                                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                                        <CheckCircle2 size={11} /> Verified
+                                      </span>
+                                    )}
+                                  </label>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="email"
+                                      value={userEmail}
+                                      onChange={(e) => {
+                                        setUserEmail(e.target.value);
+                                        localStorage.setItem('clueai_user_email', e.target.value);
+                                      }}
+                                      placeholder="e.g. farhan@example.com"
+                                      className="flex-1 bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 font-mono"
+                                    />
+                                    {(!userEmail || !isEmailVerified(userEmail)) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (!userEmail || !userEmail.includes('@')) return;
+                                          triggerOtpVerification('settings', userEmail, () => {
+                                            localStorage.setItem('clueai_user_email', userEmail);
+                                            setModelChangeMsg('Email verified and saved to profile!');
+                                            setTimeout(() => setModelChangeMsg(''), 3000);
+                                          });
+                                        }}
+                                        className="px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-lg text-xs font-bold transition-all shadow-md shrink-0 cursor-pointer"
+                                      >
+                                        Verify Email
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-white/40 leading-relaxed">
+                                This verified email is automatically pre-filled across your interview reminders, feedback reports, and saved notes.
+                              </p>
+                            </div>
+                          </section>
 
 
                           <section>
@@ -7924,7 +8097,7 @@ function App() {
                             <div className="flex justify-center items-center gap-3 w-full px-2">
                               <button
                                 onClick={() => {
-                                  setReminderForm({ id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM' });
+                                  setReminderForm({ id: '', name: '', jobTitle: '', email: userEmail || '', phone: '', date: '', time: '', ampm: 'AM' });
                                   setLocalReminderStealth(stealthMode);
                                   setReminderPopupMode('create');
                                   setShowReminderPopup(true);
@@ -7935,7 +8108,7 @@ function App() {
                               </button>
                               <button
                                 onClick={() => {
-                                  setNotesForm({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
+                                  setNotesForm({ id: '', notes: '', email: userEmail || '', date: '', time: '', ampm: 'AM' });
                                   setLocalNotesStealth(stealthMode);
                                   setNotesPopupMode('create');
                                   setShowNotesPopup(true);
@@ -8033,7 +8206,7 @@ function App() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => {
-                                setReminderForm({ id: '', name: '', jobTitle: '', email: '', phone: '', date: '', time: '', ampm: 'AM' });
+                                setReminderForm({ id: '', name: '', jobTitle: '', email: userEmail || '', phone: '', date: '', time: '', ampm: 'AM' });
                                 setLocalReminderStealth(stealthMode);
                                 setReminderPopupMode('create');
                                 setShowReminderPopup(true);
@@ -8044,7 +8217,7 @@ function App() {
                             </button>
                             <button
                               onClick={() => {
-                                setNotesForm({ id: '', notes: '', email: '', date: '', time: '', ampm: 'AM' });
+                                setNotesForm({ id: '', notes: '', email: userEmail || '', date: '', time: '', ampm: 'AM' });
                                 setLocalNotesStealth(stealthMode);
                                 setNotesPopupMode('create');
                                 setShowNotesPopup(true);
@@ -9754,6 +9927,101 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.0) */}
+              <AnimatePresence>
+                {showOnboardingModal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[600] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                      className="relative w-full max-w-lg bg-[#0a0c16]/98 border border-cyan-500/40 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.25)] overflow-hidden"
+                    >
+                      {/* Top Accent Gradient Bar */}
+                      <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600" />
+
+                      <div className="p-8 flex flex-col items-center text-center">
+                        {/* Glowing Emblem */}
+                        <div className="relative mb-6">
+                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-cyan-500/20 via-blue-500/30 to-indigo-500/20 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.4)] animate-pulse">
+                            <Sparkles size={38} className="text-cyan-400" />
+                          </div>
+                          <div className="absolute -inset-1 rounded-3xl border border-cyan-500/20 animate-ping pointer-events-none" style={{ animationDuration: '3s' }} />
+                        </div>
+
+                        <h2 className="text-2xl font-black text-white tracking-tight mb-2">
+                          Welcome to Clue AI
+                        </h2>
+                        <p className="text-xs text-white/60 leading-relaxed max-w-sm mb-6">
+                          Set up your candidate profile and verify your email to unlock live stealth assistance, automated reminders, and instant note dispatches.
+                        </p>
+
+                        <div className="w-full space-y-4 text-left">
+                          <div>
+                            <label className="block text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1.5">
+                              Your Full Name <span className="text-rose-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={onboardingName}
+                              onChange={(e) => {
+                                setOnboardingName(e.target.value);
+                                if (onboardingError) setOnboardingError('');
+                              }}
+                              placeholder="e.g. Farhan Khalid"
+                              autoFocus
+                              className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all shadow-inner"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1.5">
+                              Your Email Address <span className="text-rose-400">*</span>
+                            </label>
+                            <input
+                              type="email"
+                              value={onboardingEmail}
+                              onChange={(e) => {
+                                setOnboardingEmail(e.target.value);
+                                if (onboardingError) setOnboardingError('');
+                              }}
+                              placeholder="e.g. farhan@example.com"
+                              className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all shadow-inner font-mono"
+                            />
+                          </div>
+
+                          {onboardingError && (
+                            <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3 flex items-center gap-2 text-rose-300 text-xs font-bold">
+                              <AlertTriangle size={14} className="shrink-0 text-rose-400" />
+                              <span>{onboardingError}</span>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={handleCompleteOnboarding}
+                            disabled={onboardingIsSubmitting}
+                            className="w-full mt-2 py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_25px_rgba(6,182,212,0.5)] border border-cyan-300/60 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                          >
+                            <ShieldCheck size={16} />
+                            <span>{onboardingIsSubmitting ? 'Verifying...' : 'Verify & Launch Clue AI'}</span>
+                          </button>
+
+                          <p className="text-[10px] text-white/40 text-center leading-normal pt-1">
+                            A quick 6-digit verification code will be dispatched to your inbox.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {showUsernamePrompt && (
                 <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-200">

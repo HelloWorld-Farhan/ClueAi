@@ -1,12 +1,14 @@
 /**
  * =========================================================================
- * CLUE AI - Google Apps Script Backend (v5.7.8)
+ * CLUE AI - Google Apps Script Backend (v5.8.0)
  * =========================================================================
  * Handles:
- *  1. Interview Reminders (Confirmation & scheduled alert)
- *  2. Interview Notes (Scheduled notes delivery)
- *  3. User Feedback & Bug Reports (Sent to Farhan Khalid & ClueAI Support)
- *  4. Universal 6-Digit Email OTP Verification
+ *  1. Universal 6-Digit Email OTP Verification (Dark Mode)
+ *  2. First-Time Welcome Email Delivery
+ *  3. Interview Reminders (Confirmation & scheduled live alerts)
+ *  4. Interview Notes (Scheduled notes delivery)
+ *  5. User Feedback & Bug Reports (Admin report + User thanks)
+ *  6. User Registration & Release Update Broadcast Notifications
  *
  * Support Email: clueai.support@gmail.com
  * Developer: Farhan Khalid (https://farhan-khalid-portfolio.vercel.app/)
@@ -16,72 +18,235 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
+const DEFAULT_VERSION = "5.8.0";
 
 /**
- * Clean, Simple & Modern ClueAI Email Layout Generator
+ * Register User in Persistent Properties Storage for Update Broadcasts
  */
-function getEmailLayout(title, subtitle, contentHtml, badgeColor) {
-  const badge = badgeColor || "#2563eb";
-  const year = new Date().getFullYear();
+function registerUserEmail(email, userName) {
+  try {
+    if (!email || !email.includes("@")) return;
+    const cleanEmail = email.trim().toLowerCase();
+    const props = PropertiesService.getScriptProperties();
+    let users = [];
+    try {
+      users = JSON.parse(props.getProperty("clueai_registered_users") || "[]");
+    } catch (e) {
+      users = [];
+    }
 
-  return `
-<!DOCTYPE html>
-<html lang="en">
+    const exists = users.some(u => {
+      const uEmail = (typeof u === "string" ? u : u.email || "").toLowerCase();
+      return uEmail === cleanEmail;
+    });
+
+    if (!exists) {
+      users.push({
+        email: cleanEmail,
+        name: userName || "ClueAI User",
+        registeredAt: new Date().toISOString()
+      });
+      props.setProperty("clueai_registered_users", JSON.stringify(users));
+    }
+  } catch (err) {
+    console.warn("User registration logging warning:", err);
+  }
+}
+
+/**
+ * Get All Registered User Emails
+ */
+function getRegisteredUsers() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const users = JSON.parse(props.getProperty("clueai_registered_users") || "[]");
+    const emailList = [];
+    users.forEach(u => {
+      const e = typeof u === "string" ? u : u.email;
+      if (e && !emailList.includes(e.toLowerCase())) emailList.push(e.toLowerCase());
+    });
+    if (!emailList.includes(SUPPORT_EMAIL.toLowerCase())) emailList.push(SUPPORT_EMAIL.toLowerCase());
+    if (!emailList.includes(DEVELOPER_EMAIL.toLowerCase())) emailList.push(DEVELOPER_EMAIL.toLowerCase());
+    return emailList;
+  } catch (err) {
+    return [DEVELOPER_EMAIL, SUPPORT_EMAIL];
+  }
+}
+
+/**
+ * Premium Dark-Mode Clue AI Master Layout Generator (Matching User's Claude System)
+ */
+function getEmailLayout(opts) {
+  const version = opts.appVersion || DEFAULT_VERSION;
+  const year = new Date().getFullYear();
+  const heroGradient = opts.heroGradient || "linear-gradient(135deg,#3b82f6 0%,#2563eb 50%,#1d4ed8 100%)";
+  const accentGradient = opts.accentGradient || "linear-gradient(90deg,#22d3ee 0%,#3b82f6 55%,#2563eb 100%)";
+  const heroChipBg = opts.heroChipBg || "rgba(255,255,255,.18)";
+  const heroChip = opts.heroChip || "● Clue AI Notification";
+  const headline = opts.headline || "Clue AI";
+  const subheadline = opts.subheadline || "";
+  const previewText = opts.previewText || headline;
+  const centralBoxHtml = opts.centralBoxHtml || "";
+  const messageCardHtml = opts.messageCardHtml || "";
+  const detailsRowsHtml = opts.detailsRowsHtml || "";
+  const extraHtml = opts.extraHtml || "";
+  const buttonText = opts.buttonText || "Open Clue AI";
+  const buttonUrl = opts.buttonUrl || PORTFOLIO_URL;
+  const footerNote = opts.footerNote || "You received this email because of your Clue AI account settings.";
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClueAI Notification</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>${headline} - Clue AI</title>
+<style>
+  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
+  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none}
+  body{margin:0!important;padding:0!important;width:100%!important;background:#070a10}
+  a{text-decoration:none}
+  @media only screen and (max-width:620px){
+    .container{width:100%!important}
+    .px{padding-left:18px!important;padding-right:18px!important}
+    .h1{font-size:25px!important;line-height:32px!important}
+    .stack{display:block!important;width:100%!important}
+    .btn-full{width:100%!important}
+  }
+</style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 15px;">
+<body style="margin:0;padding:0;background-color:#070a10;">
+ 
+<!-- hidden preview text -->
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#070a10;">
+  ${previewText}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+</div>
+ 
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#070a10" style="background-color:#070a10;">
+<tr><td align="center" style="padding:28px 12px;">
+ 
+  <!-- ============ CONTAINER ============ -->
+  <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#0d1117" style="width:600px;max-width:600px;background-color:#0d1117;border:1px solid #1c2433;border-radius:20px;overflow:hidden;">
+ 
+    <!-- accent line -->
+    <tr><td height="4" bgcolor="#22d3ee" style="height:4px;line-height:4px;font-size:0;background-color:#22d3ee;background-image:${accentGradient};">&nbsp;</td></tr>
+ 
+    <!-- ============ HEADER ============ -->
     <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-          
-          <!-- Brand Header -->
+      <td class="px" style="padding:22px 28px 18px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
-            <td style="padding: 30px 36px 18px 36px; border-bottom: 1px solid #f1f5f9;">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <td align="left" valign="middle">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td>
-                    <span style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ClueAI</span>
-                    ${subtitle ? `<span style="display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; color: ${badge}; background-color: #f1f5f9; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase;">${subtitle}</span>` : ''}
+                  <td width="38" height="38" align="center" valign="middle" bgcolor="#0b1626" style="width:38px;height:38px;background-color:#0b1626;border:1px solid #155e75;border-radius:11px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:17px;font-weight:700;color:#22d3ee;">C</td>
+                  <td style="padding-left:11px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#ffffff;letter-spacing:.2px;">Clue <span style="color:#22d3ee;">AI</span></td>
+                </tr>
+              </table>
+            </td>
+            <td align="right" valign="middle">
+              <span style="display:inline-block;padding:5px 11px;border:1px solid #155e75;border-radius:999px;background-color:#08202b;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.6px;color:#22d3ee;">V${version}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr><td style="padding:0 28px;" class="px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#1c2433" style="height:1px;line-height:1px;font-size:0;background-color:#1c2433;">&nbsp;</td></tr></table></td></tr>
+ 
+    <!-- ============ HERO CARD ============ -->
+    <tr>
+      <td class="px" style="padding:24px 28px 8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#2563eb" style="background-color:#2563eb;background-image:${heroGradient};border-radius:18px;">
+          <tr>
+            <td align="center" style="padding:30px 24px 30px 24px;">
+ 
+              <!-- type chip -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                <tr>
+                  <td bgcolor="#3f74e8" style="background-color:${heroChipBg};border-radius:999px;padding:6px 14px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#ffffff;">
+                    ${heroChip}
                   </td>
-                  <td align="right" style="font-size: 12px; color: #64748b;">
-                    Official Alert
+                </tr>
+              </table>
+ 
+              <h1 class="h1" style="margin:18px 0 8px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:30px;line-height:38px;font-weight:800;color:#ffffff;">${headline}</h1>
+              ${subheadline ? `<p style="margin:0 0 20px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#dbe7ff;">${subheadline}</p>` : ''}
+ 
+              <!-- central block -->
+              ${centralBoxHtml}
+ 
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+ 
+    <!-- ============ MESSAGE CARD ============ -->
+    ${messageCardHtml}
+ 
+    <!-- ============ DETAILS CARD ============ -->
+    ${detailsRowsHtml}
+
+    <!-- ============ EXTRA HTML (e.g. Screenshot) ============ -->
+    ${extraHtml}
+ 
+    <!-- ============ BUTTON ============ -->
+    <tr>
+      <td align="center" class="px" style="padding:22px 28px 6px 28px;">
+        <table role="presentation" class="btn-full" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+          <tr>
+            <td align="center" bgcolor="#0ea5e9" style="border-radius:12px;background-color:#0ea5e9;background-image:linear-gradient(90deg,#06b6d4 0%,#0ea5e9 55%,#2563eb 100%);">
+              <a href="${buttonUrl}" target="_blank" style="display:block;padding:15px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ffffff;border-radius:12px;">&#9654;&nbsp;&nbsp;${buttonText}</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+ 
+    <!-- ============ MADE BY CARD ============ -->
+    <tr>
+      <td class="px" style="padding:22px 28px 8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td align="center" style="padding:24px 20px;">
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#ffffff;">Made by Farhan Khalid</div>
+              <div style="margin-top:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:21px;color:#94a3b8;">Developer &amp; Engineer<br>Development driven by real users &bull; Faster iteration on features</div>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:16px;">
+                <tr>
+                  <td align="center" bgcolor="#fcd34d" style="background-color:#fcd34d;border-radius:999px;">
+                    <a href="${PORTFOLIO_URL}" target="_blank" style="display:inline-block;padding:11px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:800;color:#3b2a00;border-radius:999px;">&#10024; View Portfolio &rarr;</a>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
-
-          <!-- Main Content Card -->
-          <tr>
-            <td style="padding: 28px 36px;">
-              ${title ? `<h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #0f172a;">${title}</h2>` : ''}
-              ${contentHtml}
-            </td>
-          </tr>
-
-          <!-- Simple & Clean Developer Footer -->
-          <tr>
-            <td style="padding: 24px 36px; border-top: 1px solid #f1f5f9; background-color: #fafafa; text-align: center; font-size: 12px; color: #64748b;">
-              <p style="margin: 0 0 6px 0;">
-                Developer: <strong>Farhan Khalid</strong> · <a href="${PORTFOLIO_URL}" style="color: #2563eb; text-decoration: none; font-weight: 600;">Portfolio</a>
-              </p>
-              <p style="margin: 0; font-size: 11px; color: #94a3b8;">
-                Support: <a href="mailto:${SUPPORT_EMAIL}" style="color: #64748b; text-decoration: none;">${SUPPORT_EMAIL}</a> · ClueAI System © ${year}
-              </p>
-            </td>
-          </tr>
-
         </table>
       </td>
     </tr>
+ 
+    <!-- ============ FOOTER ============ -->
+    <tr>
+      <td class="px" align="center" style="padding:20px 28px 28px 28px;">
+        <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;line-height:19px;letter-spacing:.4px;color:#64748b;">
+          ${footerNote}<br>
+          If this wasn't you, you can safely ignore this message.
+        </div>
+        <div style="margin-top:12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:#475569;">
+          &copy; ${year} Clue AI &nbsp;&bull;&nbsp; V${version}
+        </div>
+      </td>
+    </tr>
+ 
   </table>
+  <!-- ============ /CONTAINER ============ -->
+ 
+</td></tr>
+</table>
 </body>
-</html>
-  `;
+</html>`;
 }
 
 /**
@@ -101,37 +266,233 @@ function parseTargetDate(dateStr, timeStr) {
 }
 
 /**
- * Render Clean 6-Digit OTP Verification Email Layout
+ * Render Dark-Mode 6-Digit OTP Verification Email
  */
-function getOtpEmailHtml(otp, userName) {
-  const content = `
-    <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #475569; text-align: center;">
-      Hello <strong>${userName || 'ClueAI User'}</strong>,<br>Use the 6-digit verification code below to verify your email address in ClueAI:
-    </p>
-
-    <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 18px 10px; margin: 20px auto; max-width: 360px; text-align: center;">
-      <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 6px;">
-        Verification Code
-      </div>
-      <div style="font-size: 36px; font-weight: 900; letter-spacing: 10px; color: #0f172a; font-family: monospace; padding-left: 10px;">
-        ${otp}
-      </div>
-      <div style="font-size: 11px; color: #64748b; margin-top: 6px;">
-        ⏱️ Valid for 10 minutes
-      </div>
-    </div>
-
-    <div style="background-color: #f0fdf4; border-radius: 10px; border: 1px solid #bbf7d0; padding: 12px 16px; margin-top: 15px; text-align: left; font-size: 12.5px; color: #166534; line-height: 1.5;">
-      <strong>Permanent Trust:</strong> Once verified, this email will never require OTP verification again across ClueAI feedback, interview reminders, and saved session notes.
-    </div>
+function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
+  const centralBox = `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:16px;">
+      <tr>
+        <td align="center" style="padding:16px 32px;">
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:38px;line-height:42px;font-weight:900;letter-spacing:12px;color:#ffffff;padding-left:12px;">${otp}</div>
+          <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#bcd2ff;text-transform:uppercase;">⏱ Valid for 10 minutes</div>
+        </td>
+      </tr>
+    </table>
   `;
 
-  return getEmailLayout(
-    "Your Security Verification Code",
-    "Security Verification",
-    content,
-    "#0284c7"
-  );
+  const messageCard = `
+    <tr>
+      <td class="px" style="padding:16px 28px 4px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td width="4" bgcolor="#10b981" style="width:4px;background-color:#10b981;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="padding:18px 20px;">
+              <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Permanent Cross-Feature Trust</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">Once verified, this email is automatically trusted across your profile, interview reminders, feedback submissions, and saved notes with zero redundant verification.</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  const detailsRows = `
+    <tr>
+      <td class="px" style="padding:12px 28px 4px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td style="padding:6px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Target Email</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#22d3ee;">${targetEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Action</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">Account &amp; Security Verification</td>
+                </tr>
+                <tr>
+                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Security Status</td>
+                  <td align="right" style="padding:13px 0;">
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ENCRYPTED</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  return getEmailLayout({
+    appVersion: appVersion,
+    heroChip: "● Security Verification",
+    headline: "Email Verification Code",
+    subheadline: `Hi ${userName || 'ClueAI User'}, enter this 6-digit code in Clue AI to verify your address.`,
+    previewText: `Your 6-digit Clue AI security verification code is ${otp}.`,
+    centralBoxHtml: centralBox,
+    messageCardHtml: messageCard,
+    detailsRowsHtml: detailsRows,
+    buttonText: "Open Clue AI",
+    footerNote: "You received this code because your email address was entered in Clue AI."
+  });
+}
+
+/**
+ * Render Dark-Mode Welcome Email for Newly Onboarded Users
+ */
+function getWelcomeEmailHtml(userName, email, appVersion) {
+  const centralBox = `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.22);border-radius:14px;">
+      <tr>
+        <td align="center" style="padding:12px 28px;">
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#ffffff;">ACTIVE PRO PROFILE</div>
+          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#bcd2ff;text-transform:uppercase;">Verified Address: ${email}</div>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const messageCard = `
+    <tr>
+      <td class="px" style="padding:16px 28px 4px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="padding:18px 20px;">
+              <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What You Can Do With Clue AI</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+                &bull; <strong>Stealth Mode:</strong> Undetectable interview copilot with zero window capture.<br>
+                &bull; <strong>Real-Time AI Streaming:</strong> Instant code solutions &amp; algorithmic explanations.<br>
+                &bull; <strong>Offline Voice-Gated Teleprompter:</strong> Hands-free scrolling triggered by your voice.<br>
+                &bull; <strong>Automated Reminders &amp; Notes:</strong> Timely dispatch to your verified inbox.
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  const detailsRows = `
+    <tr>
+      <td class="px" style="padding:12px 28px 4px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td style="padding:6px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Candidate Name</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                </tr>
+                <tr>
+                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Verified Email</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">${email}</td>
+                </tr>
+                <tr>
+                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Account Status</td>
+                  <td align="right" style="padding:13px 0;">
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">VERIFIED &amp; READY</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  return getEmailLayout({
+    appVersion: appVersion,
+    heroChip: "● Welcome to the Future",
+    headline: `Welcome, ${userName}!`,
+    subheadline: "Your stealth AI interview assistant is fully configured and ready.",
+    previewText: `Welcome to Clue AI, ${userName}! Your profile is verified.`,
+    centralBoxHtml: centralBox,
+    messageCardHtml: messageCard,
+    detailsRowsHtml: detailsRows,
+    buttonText: "Launch Clue AI Dashboard",
+    footerNote: "You received this welcome message because you verified your email in Clue AI."
+  });
+}
+
+/**
+ * Render Dark-Mode Update Announcement Broadcast Email
+ */
+function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
+  const centralBox = `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+      <tr>
+        <td align="center" style="padding:12px 28px;">
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#ffffff;">VERSION ${appVersion}</div>
+          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#bcd2ff;text-transform:uppercase;">Latest Stable Build</div>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const messageCard = `
+    <tr>
+      <td class="px" style="padding:16px 28px 4px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="padding:18px 20px;">
+              <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What's New in V${appVersion}</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+                ${releaseHighlights || 'Performance optimizations, enhanced voice-gated teleprompter scrolling, and improved dark-mode email layouts.'}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  const detailsRows = `
+    <tr>
+      <td class="px" style="padding:12px 28px 4px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <tr>
+            <td style="padding:6px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Platforms</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">Windows &bull; macOS</td>
+                </tr>
+                <tr>
+                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Availability</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">Instant In-App / GitHub Release</td>
+                </tr>
+                <tr>
+                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                  <td align="right" style="padding:13px 0;">
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">RELEASE PUBLISHED</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  return getEmailLayout({
+    appVersion: appVersion,
+    heroChip: "● Official Release Update",
+    headline: `Clue AI V${appVersion} Released!`,
+    subheadline: `Hello ${userName || 'ClueAI User'}, a powerful new release of Clue AI is now ready to download.`,
+    previewText: `Clue AI V${appVersion} is here! Discover what's new.`,
+    centralBoxHtml: centralBox,
+    messageCardHtml: messageCard,
+    detailsRowsHtml: detailsRows,
+    buttonText: "Download & Upgrade Clue AI",
+    buttonUrl: "https://github.com/HelloWorld-Farhan/ClueAi/releases",
+    footerNote: "You received this email because you are a registered user of Clue AI."
+  });
 }
 
 /**
@@ -141,9 +502,10 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const type = data.type || (data.action === 'delete' ? 'delete' : 'reminder');
+    const appVersion = data.app_version || DEFAULT_VERSION;
 
     // ----------------------------------------------------
-    // ACTION: SEND OTP VERIFICATION CODE
+    // ACTION 1: SEND OTP VERIFICATION CODE
     // ----------------------------------------------------
     if (type === 'send_otp' || type === 'otp') {
       const email = (data.to_email || data.email || data.user_email || '').trim();
@@ -155,7 +517,9 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      const otpHtml = getOtpEmailHtml(otp, userName);
+      registerUserEmail(email, userName);
+
+      const otpHtml = getOtpEmailHtml(otp, userName, email, appVersion);
       MailApp.sendEmail({
         to: email,
         subject: `ClueAI: Your Verification Code is ${otp}`,
@@ -168,7 +532,56 @@ function doPost(e) {
     }
 
     // ----------------------------------------------------
-    // ACTION: DELETE SCHEDULED ITEM
+    // ACTION 2: SEND WELCOME EMAIL (ONBOARDING)
+    // ----------------------------------------------------
+    if (type === 'welcome') {
+      const email = (data.to_email || data.email || data.user_email || '').trim();
+      const userName = (data.user_name || data.name || '').trim() || 'ClueAI User';
+
+      if (email && email.includes('@')) {
+        registerUserEmail(email, userName);
+        const welcomeHtml = getWelcomeEmailHtml(userName, email, appVersion);
+        MailApp.sendEmail({
+          to: email,
+          subject: `Welcome to Clue AI, ${userName}! 🚀`,
+          htmlBody: welcomeHtml,
+          name: "ClueAI Team"
+        });
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Welcome email sent" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ----------------------------------------------------
+    // ACTION 3: BROADCAST UPDATE NOTIFICATION TO ALL USERS
+    // ----------------------------------------------------
+    if (type === 'broadcast_update') {
+      const users = getRegisteredUsers();
+      const highlights = data.highlights || data.release_notes || "Performance optimizations, refreshed dark-mode email layouts, and new onboarding experience.";
+      let sentCount = 0;
+
+      users.forEach(uEmail => {
+        try {
+          const bodyHtml = getUpdateBroadcastEmailHtml("ClueAI User", appVersion, highlights);
+          MailApp.sendEmail({
+            to: uEmail,
+            subject: `Clue AI V${appVersion} is Here! 🚀 Upgrade Your Copilot`,
+            htmlBody: bodyHtml,
+            name: "ClueAI Releases"
+          });
+          sentCount++;
+        } catch(broadcastErr) {
+          console.warn("Failed broadcast to:", uEmail, broadcastErr);
+        }
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: `Broadcast sent to ${sentCount} users`, count: sentCount }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ----------------------------------------------------
+    // ACTION 4: DELETE SCHEDULED ITEM
     // ----------------------------------------------------
     if (data.action === 'delete' && data.id) {
       const triggers = ScriptApp.getProjectTriggers();
@@ -187,18 +600,21 @@ function doPost(e) {
     }
 
     // ----------------------------------------------------
-    // TYPE 1: USER FEEDBACK & PROBLEM REPORT
+    // ACTION 5: USER FEEDBACK & PROBLEM REPORT
     // ----------------------------------------------------
     if (type === 'feedback') {
       const userEmail = (data.user_email || data.email || data.to_email || "Anonymous").trim();
       const userName = (data.user_name || data.name || "").trim() || "User";
       const category = data.category || "General Feedback";
       const description = data.description || "No description provided.";
-      const appVersion = data.app_version || "5.7.9";
       const timestamp = new Date().toLocaleString();
       const hasImage = Boolean(data.image_base64);
 
-      let imageHtml = "";
+      if (userEmail && userEmail.includes("@")) {
+        registerUserEmail(userEmail, userName);
+      }
+
+      let screenshotSection = "";
       let inlineImages = {};
 
       if (hasImage) {
@@ -207,15 +623,21 @@ function doPost(e) {
           const decoded = Utilities.base64Decode(base64Data);
           const blob = Utilities.newBlob(decoded, "image/png", "screenshot.png");
           inlineImages["feedback_screenshot"] = blob;
-          imageHtml = `
-            <div style="margin-top: 20px;">
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 8px;">
-                Attached Screenshot:
-              </div>
-              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center;">
-                <img src="cid:feedback_screenshot" alt="Screenshot" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #cbd5e1;" />
-              </div>
-            </div>
+          screenshotSection = `
+            <tr>
+              <td class="px" style="padding:16px 28px 4px 28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+                  <tr>
+                    <td style="padding:18px 20px;">
+                      <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f59e0b;">Attached Screenshot</div>
+                      <div style="background-color:#0b1626;border:1px solid #1c2433;border-radius:12px;padding:10px;text-align:center;">
+                        <img src="cid:feedback_screenshot" alt="Screenshot" style="max-width:100%;height:auto;border-radius:8px;border:1px solid #155e75;" />
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
           `;
         } catch (imgErr) {
           console.warn("Failed to attach inline screenshot:", imgErr);
@@ -223,44 +645,82 @@ function doPost(e) {
       }
 
       // 1. Admin Email (Sent ONLY to Farhan Khalid & ClueAI Support with full details and image)
-      const adminContent = `
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px; font-size: 13px;">
-          <tr>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 30%;">User Name</td>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #0f172a;">${userName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b;">User Email</td>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;"><a href="mailto:${userEmail}" style="color: #2563eb; text-decoration: none;">${userEmail}</a></td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b;">Category</td>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #0f172a;">${category}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b;">Version</td>
-            <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: 600; color: #2563eb;">v${appVersion}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 14px; color: #64748b;">Timestamp</td>
-            <td style="padding: 10px 14px; font-size: 12px; color: #64748b;">${timestamp}</td>
-          </tr>
-        </table>
-
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 8px;">
-          Reported Problem / Message:
-        </div>
-        <div style="background-color: #ffffff; border-left: 4px solid #2563eb; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 14px; color: #1e293b; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap;">${description}</div>
-
-        ${imageHtml}
+      const adminDetailsRows = `
+        <tr>
+          <td class="px" style="padding:12px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td style="padding:6px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Candidate Name</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">User Email</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#22d3ee;"><a href="mailto:${userEmail}" style="color:#22d3ee;text-decoration:none;">${userEmail}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Category</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${category}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Timestamp</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;color:#94a3b8;">${timestamp}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">App Version</td>
+                      <td align="right" style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;color:#34d399;font-weight:700;">V${appVersion}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
       `;
 
-      const adminHtml = getEmailLayout(
-        "New Feedback Report Received",
-        "Feedback Report",
-        adminContent,
-        "#2563eb"
-      );
+      const adminMessageCard = `
+        <tr>
+          <td class="px" style="padding:16px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td width="4" bgcolor="#3b82f6" style="width:4px;background-color:#3b82f6;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:18px 20px;">
+                  <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#60a5fa;">Reported Problem / Message:</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;white-space:pre-wrap;">${description}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const adminCentralBox = `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;">
+          <tr>
+            <td align="center" style="padding:10px 24px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:#ffffff;">${category}</div>
+              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#bcd2ff;text-transform:uppercase;">App Version: v${appVersion}</div>
+            </td>
+          </tr>
+        </table>
+      `;
+
+      const adminHtml = getEmailLayout({
+        appVersion: appVersion,
+        heroChip: "● Engineering Diagnostic Report",
+        headline: "New User Feedback Received",
+        subheadline: `From ${userName} (${userEmail})`,
+        previewText: `[Clue AI Admin] New ${category} report from ${userName}.`,
+        centralBoxHtml: adminCentralBox,
+        detailsRowsHtml: adminDetailsRows,
+        messageCardHtml: adminMessageCard,
+        extraHtml: screenshotSection,
+        buttonText: `Reply to ${userName}`,
+        buttonUrl: `mailto:${userEmail}`,
+        footerNote: "Clue AI Automated System Alert • Restricted to Authorized Engineers"
+      });
 
       const adminEmailOptions = {
         to: `${DEVELOPER_EMAIL}, ${SUPPORT_EMAIL}`,
@@ -275,27 +735,76 @@ function doPost(e) {
 
       // 2. User Confirmation Email (Sent ONLY to user with their name, WITHOUT their problem details)
       if (userEmail && userEmail.includes("@")) {
-        const userContent = `
-          <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #334155;">
-            Hello <strong>${userName}</strong>,
-          </p>
-          <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-            Thank you for reaching out and sharing your feedback with us! We have successfully received your report and forwarded it directly to our engineering and support team.
-          </p>
-          <div style="background-color: #f8fafc; border-left: 4px solid #059669; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 14px; margin: 18px 0; font-size: 13px; color: #065f46; line-height: 1.6;">
-            <strong>Ticket Logged (${category}):</strong> Our team reviews every report to rapidly fix bugs and continuously refine the ClueAI interview experience.
-          </div>
-          <p style="margin: 0; font-size: 12.5px; line-height: 1.6; color: #64748b;">
-            If we require additional information or have an update regarding your report, we will reach out directly to this email address.
-          </p>
+        const userCentralBox = `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+            <tr>
+              <td align="center" style="padding:12px 26px;">
+                <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:26px;line-height:32px;font-weight:700;letter-spacing:1px;color:#ffffff;">TICKET LOGGED</div>
+                <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#a7f3d0;text-transform:uppercase;">Category: ${category}</div>
+              </td>
+            </tr>
+          </table>
         `;
 
-        const userHtml = getEmailLayout(
-          "We Received Your Feedback!",
-          "Feedback Confirmation",
-          userContent,
-          "#059669"
-        );
+        const userMessageCard = `
+          <tr>
+            <td class="px" style="padding:16px 28px 4px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+                <tr>
+                  <td width="4" bgcolor="#10b981" style="width:4px;background-color:#10b981;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="padding:18px 20px;">
+                    <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Direct Engineering Routing</div>
+                    <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+                      Your report has been forwarded directly to our engineering and support leads. Every submission directly influences upcoming feature rollouts and rapid patches. If additional troubleshooting is needed, our team will reach out directly to your verified email.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+
+        const userDetailsRows = `
+          <tr>
+            <td class="px" style="padding:12px 28px 4px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+                <tr>
+                  <td style="padding:6px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Submitted By</td>
+                        <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Category</td>
+                        <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#22d3ee;">${category}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Routing Status</td>
+                        <td align="right" style="padding:13px 0;">
+                          <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">DELIVERED TO ENGINEERING</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+
+        const userHtml = getEmailLayout({
+          appVersion: appVersion,
+          heroChip: "● Feedback Acknowledgment",
+          headline: "We Received Your Feedback!",
+          subheadline: `Hello ${userName}, thank you for helping us improve Clue AI.`,
+          previewText: `Thank you for your feedback, ${userName}!`,
+          centralBoxHtml: userCentralBox,
+          messageCardHtml: userMessageCard,
+          detailsRowsHtml: userDetailsRows,
+          buttonText: "Return to Clue AI",
+          footerNote: "You received this email because you submitted feedback in Clue AI."
+        });
 
         MailApp.sendEmail({
           to: userEmail,
@@ -309,12 +818,8 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Feedback sent' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
     // ----------------------------------------------------
-    // TYPE 2: INTERVIEW NOTES
+    // ACTION 6: INTERVIEW NOTES
     // ----------------------------------------------------
     if (type === 'note') {
       const targetDate = parseTargetDate(data.date, data.time);
@@ -333,51 +838,94 @@ function doPost(e) {
     }
 
     // ----------------------------------------------------
-    // TYPE 3: INTERVIEW REMINDER
+    // ACTION 7: INTERVIEW REMINDER
     // ----------------------------------------------------
     const toName = data.to_name || "Candidate";
     const company = data.company_name || "Upcoming Interview";
     const role = data.job_title || "Technical Role";
 
-    const thanksContent = `
-      <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-        Hello <strong>${toName}</strong>, your automated interview reminder has been confirmed and scheduled in ClueAI.
-      </p>
-
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin: 16px 0; font-size: 13px;">
+    const reminderCentralBox = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.35);border:1px solid rgba(255,255,255,.18);border-radius:14px;">
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 35%;">Company</td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 700;">${company}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #64748b;">Role</td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 600;">${role}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px 14px; color: #64748b;">Scheduled Time</td>
-          <td style="padding: 10px 14px; color: #2563eb; font-weight: 700;">${data.date} at ${data.time}</td>
+          <td align="center" style="padding:12px 26px;">
+            <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time}</div>
+            <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#bcd2ff;">${data.date}</div>
+          </td>
         </tr>
       </table>
-
-      <div style="font-size: 12.5px; color: #64748b; line-height: 1.6;">
-        Ensure ClueAI is configured with your resumes and preferred AI model prior to the session.
-      </div>
     `;
 
-    const thanksHtml = getEmailLayout(
-      "Interview Reminder Scheduled",
-      "Reminder Confirmation",
-      thanksContent,
-      "#2563eb"
-    );
+    const reminderMessageCard = `
+      <tr>
+        <td class="px" style="padding:16px 28px 4px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <tr>
+              <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+              <td style="padding:18px 20px;">
+                <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">Reminder Message</div>
+                <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;">Scheduled interview reminder for ${company} (${role}).</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `;
 
-    // Send Immediate Confirmation
-    MailApp.sendEmail({
-      to: data.to_email,
-      subject: `ClueAI: Your interview setup for ${company} is confirmed!`,
-      htmlBody: thanksHtml,
-      name: "ClueAI System"
+    const reminderDetailsRows = `
+      <tr>
+        <td class="px" style="padding:12px 28px 4px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <tr>
+              <td style="padding:6px 20px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Company</td>
+                    <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${company}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Role</td>
+                    <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${role}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Date &amp; Time</td>
+                    <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;font-weight:600;color:#22d3ee;">${data.date} &nbsp;&bull;&nbsp; ${data.time}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                    <td align="right" style="padding:13px 0;">
+                      <span style="display:inline-block;padding:4px 11px;border:1px solid #155e75;border-radius:6px;background-color:#08202b;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#22d3ee;">SCHEDULED</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `;
+
+    const thanksHtml = getEmailLayout({
+      appVersion: appVersion,
+      heroChip: "● Interview & Notes Reminder",
+      headline: company,
+      subheadline: `Hi ${toName}, your interview reminder has been confirmed in Clue AI.`,
+      previewText: `Your interview reminder for ${company} is scheduled for ${data.time} on ${data.date}.`,
+      centralBoxHtml: reminderCentralBox,
+      messageCardHtml: reminderMessageCard,
+      detailsRowsHtml: reminderDetailsRows,
+      buttonText: "Open Clue AI",
+      footerNote: "You received this email because a reminder was created in Clue AI."
     });
+
+    if (data.to_email && data.to_email.includes("@")) {
+      registerUserEmail(data.to_email, toName);
+      MailApp.sendEmail({
+        to: data.to_email,
+        subject: `ClueAI: Your interview setup for ${company} is confirmed!`,
+        htmlBody: thanksHtml,
+        name: "ClueAI System"
+      });
+    }
 
     // Schedule Future Trigger
     const targetDate = parseTargetDate(data.date, data.time);
@@ -414,35 +962,83 @@ function sendScheduledReminder(e) {
       const data = JSON.parse(dataStr);
       const toName = data.to_name || "Candidate";
       const company = data.company_name || "Your Interview";
+      const appVersion = data.app_version || DEFAULT_VERSION;
 
-      const reminderContent = `
-        <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-          Hello <strong>${toName}</strong>, your interview with <strong>${company}</strong> is starting now!
-        </p>
-
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin: 16px 0;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #2563eb; margin-bottom: 8px;">
-            Pre-Interview Checklist:
-          </div>
-          <div style="font-size: 13px; color: #334155; line-height: 1.7;">
-            ✓ Launch ClueAI desktop application<br>
-            ✓ Verify microphone & speaker audio active<br>
-            ✓ Press <code>Ctrl + Shift + Enter</code> or Start AI Interview for live assistance
-          </div>
-        </div>
+      const alertCentralBox = `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#7f1d1d" style="background-color:rgba(50,10,10,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+          <tr>
+            <td align="center" style="padding:12px 26px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time || 'NOW'}</div>
+              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#fca5a5;">${data.date || 'TODAY'}</div>
+            </td>
+          </tr>
+        </table>
       `;
 
-      const reminderHtml = getEmailLayout(
-        "Time for Your Interview!",
-        "Interview Alert",
-        reminderContent,
-        "#dc2626"
-      );
+      const alertMessageCard = `
+        <tr>
+          <td class="px" style="padding:16px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td width="4" bgcolor="#ef4444" style="width:4px;background-color:#ef4444;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:18px 20px;">
+                  <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f87171;">Pre-Interview Checklist</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+                    &bull; Launch ClueAI desktop application<br>
+                    &bull; Verify microphone &amp; audio source active<br>
+                    &bull; Press <code>Ctrl + Shift + Enter</code> or Start AI Interview for live assistance
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const alertDetailsRows = `
+        <tr>
+          <td class="px" style="padding:12px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td style="padding:6px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Company</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${company}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                      <td align="right" style="padding:13px 0;">
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">STARTING NOW</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const alertHtml = getEmailLayout({
+        appVersion: appVersion,
+        heroChip: "● Live Interview Alert",
+        headline: company,
+        subheadline: `Hi ${toName}, your scheduled interview is starting now!`,
+        previewText: `ALERT: Your interview session ${company} is starting now!`,
+        centralBoxHtml: alertCentralBox,
+        messageCardHtml: alertMessageCard,
+        detailsRowsHtml: alertDetailsRows,
+        buttonText: "Launch Clue AI Copilot",
+        heroGradient: "linear-gradient(135deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%)",
+        accentGradient: "linear-gradient(90deg,#ef4444 0%,#f59e0b 55%,#10b981 100%)",
+        footerNote: "Good luck on your interview!"
+      });
 
       MailApp.sendEmail({
         to: data.to_email,
         subject: `ClueAI Alert: It's time for your interview with ${company}!`,
-        htmlBody: reminderHtml,
+        htmlBody: alertHtml,
         name: "ClueAI System"
       });
 
@@ -473,20 +1069,74 @@ function sendScheduledNote(e) {
     const dataStr = PropertiesService.getUserProperties().getProperty(payloadId);
     if (dataStr) {
       const data = JSON.parse(dataStr);
+      const appVersion = data.app_version || DEFAULT_VERSION;
 
-      const noteContent = `
-        <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-          Here are your scheduled interview notes for <strong>${data.date} at ${data.time}</strong>:
-        </p>
-        <div style="background-color: #f8fafc; border-left: 4px solid #0d9488; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 8px; padding: 16px; color: #0f172a; font-size: 13.5px; line-height: 1.7; white-space: pre-wrap;">${data.notes}</div>
+      const noteCentralBox = `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+          <tr>
+            <td align="center" style="padding:12px 26px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time}</div>
+              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#a7f3d0;">${data.date}</div>
+            </td>
+          </tr>
+        </table>
       `;
 
-      const noteHtml = getEmailLayout(
-        "Your Scheduled Notes",
-        "Saved Notes",
-        noteContent,
-        "#0d9488"
-      );
+      const noteMessageCard = `
+        <tr>
+          <td class="px" style="padding:16px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td width="4" bgcolor="#10b981" style="width:4px;background-color:#10b981;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:18px 20px;">
+                  <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Interview Notes &amp; Highlights</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;white-space:pre-wrap;">${data.notes}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const noteDetailsRows = `
+        <tr>
+          <td class="px" style="padding:12px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td style="padding:6px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Saved At</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;font-weight:600;color:#22d3ee;">${data.date} &nbsp;&bull;&nbsp; ${data.time}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                      <td align="right" style="padding:13px 0;">
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ARCHIVED</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const noteHtml = getEmailLayout({
+        appVersion: appVersion,
+        heroChip: "● Saved Interview Notes",
+        headline: "Your Interview Notes",
+        subheadline: "Here are your saved interview notes and revision points.",
+        previewText: "Your saved interview notes from Clue AI.",
+        centralBoxHtml: noteCentralBox,
+        messageCardHtml: noteMessageCard,
+        detailsRowsHtml: noteDetailsRows,
+        buttonText: "Open Clue AI Notes",
+        heroGradient: "linear-gradient(135deg,#10b981 0%,#059669 50%,#047857 100%)",
+        accentGradient: "linear-gradient(90deg,#10b981 0%,#06b6d4 55%,#3b82f6 100%)",
+        footerNote: "You received this email because you saved notes in Clue AI."
+      });
 
       MailApp.sendEmail({
         to: data.email,
