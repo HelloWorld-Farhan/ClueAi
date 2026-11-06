@@ -454,7 +454,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.1');
+  const [appVersion, setAppVersion] = useState('5.7.2');
   const [showVoiceKeysWarning, setShowVoiceKeysWarning] = useState(false);
   const [sessionModalMode, setSessionModalMode] = useState<'new' | 'resume'>('new');
   const [sessionSearchTerm, setSessionSearchTerm] = useState('');
@@ -1527,7 +1527,12 @@ function App() {
 
   useEffect(() => {
     ipcRenderer.send('set-window-maximized', isAiFullscreen);
-    if (!isAiFullscreen) {
+    if (isAiFullscreen) {
+      currentIgnoreRef.current = false;
+      ipcRenderer.send('set-ignore-mouse-events', false);
+      ipcRenderer.invoke('set-ignore-mouse-events', false);
+      ipcRenderer.invoke('focus-window').catch(() => {});
+    } else {
       setIsVoiceScroll(false);
       setScrollSpeed(0);
       setActiveReadIndex(0);
@@ -1693,6 +1698,10 @@ function App() {
       window.removeEventListener('pointermove', handlePointerMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseenter', handleMouseEnter);
+      if (isAiFullscreen) {
+        currentIgnoreRef.current = false;
+        ipcRenderer.send('set-ignore-mouse-events', false);
+      }
     };
   }, [isAiFullscreen, isRecording, globalHotkeysEnabled, stealthMode]);
 
@@ -2528,11 +2537,11 @@ function App() {
       }
       const rms = Math.sqrt(sumSquares / (recentAudio.length || 1));
 
-      // Noise Gate: Room noise, fan hum, and static produce low RMS (< 0.008) and peak (< 0.025).
-      // Vocal speech produces strong RMS (> 0.010) and peak (> 0.030).
+      // Noise Gate: Room noise, fan hum, and static produce low RMS (< 0.009) and peak (< 0.030).
+      // Vocal speech produces strong RMS (> 0.012) and peak (> 0.035).
       const isVoiceActive = isVoiceScrollRef.current
         ? (rms >= 0.010 && maxVal >= 0.030)
-        : (rms >= 0.006 && maxVal >= 0.020);
+        : (rms >= 0.012 && maxVal >= 0.035);
 
       if (!isVoiceActive) {
         silenceFramesRef.current += 1;
@@ -2689,7 +2698,7 @@ function App() {
 
       const currentSessionId = listeningSessionIdRef.current;
       const sttStart = Date.now();
-      let text = await transcribeAudioChunk(currentAudio, resumeText + ' ' + personalContextText);
+      let text = await transcribeAudioChunk(currentAudio);
       const latency = Date.now() - sttStart;
 
       // If the user clicked Next Question or Clear while we were awaiting STT, discard the stale result
@@ -3968,23 +3977,27 @@ function App() {
                       {/* Font Size */}
                       <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10 shrink-0">
                         <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => {
                             const next = Math.max(10, aiAnswerTextSize - 1);
                             setAiAnswerTextSize(next);
                             localStorage.setItem('clueai_answer_size', next.toString());
                           }}
-                          className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs"
+                          className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs cursor-pointer"
                         >
                           A-
                         </button>
                         <span className="text-[11px] text-white/70 font-mono w-4 text-center select-none font-bold">{aiAnswerTextSize}</span>
                         <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => {
                             const next = Math.min(40, aiAnswerTextSize + 1);
                             setAiAnswerTextSize(next);
                             localStorage.setItem('clueai_answer_size', next.toString());
                           }}
-                          className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs"
+                          className="px-2 py-1 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors font-bold text-xs cursor-pointer"
                         >
                           A+
                         </button>
@@ -3993,11 +4006,13 @@ function App() {
                       {/* Auto Scroll with User-Managed Speed Controls */}
                       <div className={`flex items-center rounded-xl p-0.5 border transition-all ${scrollSpeed > 0 ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400 shadow-sm' : 'bg-white/5 border-white/10 text-white/70'}`}>
                         <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => {
                             setIsVoiceScroll(false); // Mutual exclusion: turn off Voice Scroll
                             setScrollSpeed(prev => (prev === 0 ? 1 : 0));
                           }}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors ${scrollSpeed > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'hover:text-white'}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${scrollSpeed > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'hover:text-white'}`}
                           title={scrollSpeed > 0 ? "Pause Auto Scroll" : "Start Auto Scroll"}
                         >
                           {scrollSpeed > 0 ? <Pause size={12} /> : <ArrowDown size={12} />}
@@ -4007,22 +4022,28 @@ function App() {
                         {scrollSpeed > 0 && (
                           <div className="flex items-center gap-0.5 pl-1 pr-1 border-l border-white/10">
                             <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
                               onClick={() => setScrollSpeed(prev => Math.max(1, prev - 1))}
-                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-white/60 hover:text-white"
+                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-white/60 hover:text-white cursor-pointer"
                               title="Decrease speed"
                             >
                               -
                             </button>
                             <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
                               onClick={() => setScrollSpeed(prev => (prev >= 5 ? 1 : prev + 1))}
-                              className="px-1 text-[10px] font-mono font-black text-emerald-300 hover:text-emerald-200"
+                              className="px-1 text-[10px] font-mono font-black text-emerald-300 hover:text-emerald-200 cursor-pointer"
                               title="Click to cycle speed (1x - 5x)"
                             >
                               {scrollSpeed}x
                             </button>
                             <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
                               onClick={() => setScrollSpeed(prev => Math.min(5, prev + 1))}
-                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-white/60 hover:text-white"
+                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-white/60 hover:text-white cursor-pointer"
                               title="Increase speed"
                             >
                               +
@@ -4033,6 +4054,8 @@ function App() {
 
                       {/* Voice Scroll (Teleprompter Speech-Follow Mode) */}
                       <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           const validGroq = groqKeys.filter(k => k.trim()).length;
                           const validGemini = geminiKeys.filter(k => k.trim()).length;
@@ -4058,7 +4081,7 @@ function App() {
                             return next;
                           });
                         }}
-                        className={`px-2.5 py-1 rounded-xl transition-all font-bold text-xs flex items-center gap-1.5 border shadow-sm ${
+                        className={`px-2.5 py-1 rounded-xl transition-all font-bold text-xs flex items-center gap-1.5 border shadow-sm cursor-pointer ${
                           isVoiceScroll 
                             ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.25)]' 
                             : 'bg-white/5 text-white/70 hover:text-white border-white/10 hover:border-white/20'
@@ -4071,13 +4094,15 @@ function App() {
 
                       {/* Copy Button */}
                       <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           if (!aiAnswer) return;
                           clipboard.writeText(aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim());
                           setAiCopied(true);
                           setTimeout(() => setAiCopied(false), 2000);
                         }}
-                        className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5"
+                        className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         {aiCopied ? (
                           <><CheckCircle2 size={13} className="text-emerald-400" /> <span className="text-emerald-400">COPIED</span></>
@@ -4088,6 +4113,8 @@ function App() {
 
                       {/* Next Question Button */}
                       <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
                           setIsGenerating(false);
@@ -4111,13 +4138,15 @@ function App() {
                           setReadWordIndex(0);
                           readWordProgressRef.current = 0;
                         }}
-                        className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95"
+                        className="px-3.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.35)] transition-all shrink-0 active:scale-95 cursor-pointer"
                       >
                         <Play size={12} fill="currentColor" /> NEXT Q. <span className="text-[9px] bg-black/20 px-1 rounded ml-0.5">1</span>
                       </button>
 
                       {/* Close Button */}
                       <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           if (aiAbortControllerRef.current) aiAbortControllerRef.current.abort();
                           setIsGenerating(false);
@@ -4141,7 +4170,7 @@ function App() {
                           setCurrentSnapshots([]);
                           listeningSessionIdRef.current++;
                         }}
-                        className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
+                        className="px-3 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
                       >
                         <X size={13} /> CLOSE <span className="text-[9px] bg-white/10 px-1 rounded ml-0.5">3</span>
                       </button>

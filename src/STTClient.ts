@@ -149,13 +149,11 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       formData.append('language', 'en'); 
       formData.append('temperature', '0.0');
       
-      // Build a targeted prompt using context words to prime Whisper without hallucinations
-      let promptString = "JavaScript, React, Node, Python, SQL, REST API, Frontend, Backend, Engineer, Developer";
-      if (contextText) {
-        const cleanWords = contextText.replace(/[^a-zA-Z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 40).join(', ');
-        if (cleanWords) {
-          promptString = cleanWords;
-        }
+      // Neutral prompt to avoid conditioning hallucinations on quiet/background room audio
+      let promptString = "Verbatim speech transcription with natural punctuation.";
+      if (contextText && contextText.trim().length > 0 && contextText.length < 250) {
+        // Only use context if it's a specific, targeted short snippet (e.g. from Voice Scroll teleprompter)
+        promptString = contextText.trim().slice(0, 120);
       }
       
       formData.append('prompt', promptString);
@@ -211,6 +209,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       "thanks for watching", 
       "thank you for watching", 
       "please subscribe",
+      "like and subscribe",
       "amira", 
       "mbc",
       "bbc",
@@ -218,12 +217,21 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       "transcribed by",
       "subtitles by",
       "captions by",
+      "translated by",
       "silence",
       "you",
       "huh",
       "um",
+      "uh",
       "thank you",
-      "bye"
+      "thanks",
+      "bye",
+      "goodbye",
+      "the end",
+      "music",
+      "applause",
+      "laughter",
+      "laughter and applause"
     ];
     
     // Check if the string matches a known hallucination
@@ -232,7 +240,7 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
     }
 
     // Check for purely non-alphanumeric or bracketed/asterisk hallucinations (e.g. *sigh*, [music], ., !)
-    if (/^[\*\(\[].*[\*\)\]]$/.test(text) || !/[a-zA-Z0-9]/.test(text)) {
+    if (/^[\*\(\[].*[\*\)\]]$/.test(text) || !/[a-zA-Z0-9]/.test(text) || lowerText.length <= 1) {
       return '';
     }
     

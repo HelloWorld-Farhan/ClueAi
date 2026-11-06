@@ -27,6 +27,8 @@ try {
 
 let mainWindow;
 let isStealthMode = true;
+let isCustomMaximized = false;
+let preMaximizeBounds = { width: 1000, height: 600, x: 0, y: 0 };
 
 function applyStealthProtection(win, enabled) {
   if (!win || win.isDestroyed()) return;
@@ -237,8 +239,8 @@ function createWindow() {
 
   ipcMain.handle('set-ignore-mouse-events', (event, ignore) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      // If stealth mode is OFF, NEVER ignore mouse events - window must be 100% clickable!
-      if (!isStealthMode) {
+      // If stealth mode is OFF or window is in fullscreen answer mode, NEVER ignore mouse events - window must be 100% clickable!
+      if (!isStealthMode || isCustomMaximized) {
         mainWindow.setIgnoreMouseEvents(false);
         return;
       }
@@ -253,8 +255,8 @@ function createWindow() {
   // Also support ipcRenderer.send (fire-and-forget variant)
   ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      // If stealth mode is OFF, NEVER ignore mouse events - window must be 100% clickable!
-      if (!isStealthMode) {
+      // If stealth mode is OFF or window is in fullscreen answer mode, NEVER ignore mouse events - window must be 100% clickable!
+      if (!isStealthMode || isCustomMaximized) {
         mainWindow.setIgnoreMouseEvents(false);
         return;
       }
@@ -403,33 +405,34 @@ function createWindow() {
     app.quit();
   });
 
-  let isCustomMaximized = false;
-  let preMaximizeBounds = { width: 1000, height: 600, x: 0, y: 0 };
-
   ipcMain.on('toggle-fullscreen', () => {
-    if (isCustomMaximized) {
-      isCustomMaximized = false;
-      mainWindow.setBounds(preMaximizeBounds);
-      mainWindow.setResizable(false);
-    } else {
-      isCustomMaximized = true;
-      preMaximizeBounds = mainWindow.getBounds();
-      const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
-      mainWindow.setResizable(true);
-      mainWindow.setBounds(currentDisplay.bounds);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (isCustomMaximized) {
+        isCustomMaximized = false;
+        mainWindow.setBounds(preMaximizeBounds);
+        mainWindow.setResizable(false);
+      } else {
+        isCustomMaximized = true;
+        mainWindow.setIgnoreMouseEvents(false);
+        try { mainWindow.focus(); } catch (e) {}
+        preMaximizeBounds = mainWindow.getBounds();
+        const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
+        mainWindow.setResizable(true);
+        mainWindow.setBounds(currentDisplay.bounds);
+      }
     }
   });
 
   ipcMain.on('set-window-maximized', (event, maximize) => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (maximize) {
-        if (!isCustomMaximized) {
-          isCustomMaximized = true;
-          preMaximizeBounds = mainWindow.getBounds();
-          const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
-          mainWindow.setResizable(true);
-          mainWindow.setBounds(currentDisplay.bounds);
-        }
+        isCustomMaximized = true;
+        mainWindow.setIgnoreMouseEvents(false);
+        try { mainWindow.focus(); } catch (e) {}
+        preMaximizeBounds = mainWindow.getBounds();
+        const currentDisplay = screen.getDisplayNearestPoint(preMaximizeBounds);
+        mainWindow.setResizable(true);
+        mainWindow.setBounds(currentDisplay.bounds);
       } else {
         if (isCustomMaximized) {
           isCustomMaximized = false;
