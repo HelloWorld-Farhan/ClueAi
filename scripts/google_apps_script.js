@@ -122,12 +122,76 @@ function parseTargetDate(dateStr, timeStr) {
 }
 
 /**
+ * Render 6-Digit OTP Verification Email Layout
+ */
+function getOtpEmailHtml(otp, userName) {
+  const content = `
+    <p style="margin: 0 0 16px 0; font-size: 14.5px; line-height: 1.6; color: #cbd5e1; text-align: center;">
+      Hello <strong style="color: #ffffff;">${userName || 'ClueAI User'}</strong>, use the 6-digit verification code below to verify your email address:
+    </p>
+
+    <div style="background-color: #05060b; border: 2px solid #22d3ee; border-radius: 16px; padding: 20px 10px; margin: 25px auto; max-width: 360px; text-align: center; box-shadow: 0 0 35px rgba(34, 211, 238, 0.25);">
+      <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #38bdf8; margin-bottom: 8px;">
+        One-Time Passcode
+      </div>
+      <div style="font-size: 38px; font-weight: 900; letter-spacing: 10px; color: #ffffff; font-family: 'Courier New', Courier, monospace; text-shadow: 0 0 15px rgba(34, 211, 238, 0.6); padding-left: 10px;">
+        ${otp}
+      </div>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 8px; font-weight: 600;">
+        ⏱️ Valid for 10 minutes
+      </div>
+    </div>
+
+    <div style="background-color: #090b14; border-radius: 12px; border: 1px solid #1e2640; padding: 14px 18px; margin-top: 15px; text-align: left;">
+      <div style="font-size: 12px; font-weight: bold; color: #10b981; margin-bottom: 4px;">
+        🛡️ Permanent Cross-Feature Trust
+      </div>
+      <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
+        Once verified, this email will never require OTP verification again across Clue AI feedback, interview reminders, and saved session notes.
+      </div>
+    </div>
+  `;
+
+  return getEmailLayout(
+    "Your Verification Code 🔐",
+    "Email Security & Trust",
+    content,
+    "#06b6d4"
+  );
+}
+
+/**
  * Main Webhook Handler (HTTP POST)
  */
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const type = data.type || (data.action === 'delete' ? 'delete' : 'reminder');
+
+    // ----------------------------------------------------
+    // ACTION: SEND OTP VERIFICATION CODE
+    // ----------------------------------------------------
+    if (type === 'send_otp' || type === 'otp') {
+      const email = (data.email || data.user_email || '').trim();
+      const otp = (data.otp || '').toString().trim();
+      const userName = data.user_name || 'ClueAI User';
+
+      if (!email || !otp) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing email or OTP" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const otpHtml = getOtpEmailHtml(otp, userName);
+      MailApp.sendEmail({
+        to: email,
+        subject: `ClueAI: Your Verification Code is ${otp}`,
+        htmlBody: otpHtml,
+        name: "ClueAI Verification"
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "OTP sent successfully" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
     // ----------------------------------------------------
     // ACTION: DELETE SCHEDULED ITEM

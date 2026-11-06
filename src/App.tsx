@@ -18,24 +18,24 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
+      title: "Universal 6-Digit Email OTP Verification",
+      desc: "Protects your email communications with instant 6-digit OTP codes, animated verification boxes, and automatic permanent cross-feature trust."
+    },
+    {
+      title: "Interactive Box Animations with Shake & Complete States",
+      desc: "Wrong codes trigger a high-visibility red shake animation while correct codes smoothly transform into dark emerald completed states."
+    },
+    {
+      title: "Instant Delivery Cyberpunk OTP Templates",
+      desc: "One-time passwords arrive within seconds in high-contrast cyberpunk dark mode featuring a glowing code display and security alerts."
+    },
+    {
+      title: "Cross-Feature Verified Trust & Smart Suggestions",
+      desc: "Verifying your email once in Feedback, Reminders, or Notes unlocks instant permanent verification badges and auto-suggestions across all features."
+    },
+    {
       title: "Centered Command Ribbon Storage Breakdown",
       desc: "Prominently displays real-time Software Storage footprint and User Data storage separated with clear visual breaks in the center of the secondary command ribbon."
-    },
-    {
-      title: "Safe User Data Purge with Typed Confirmation",
-      desc: "Protects your core Clue AI software installation while allowing safe deletion of session logs, audio caches, and transcripts after typing DELETE."
-    },
-    {
-      title: "Multi-Stage Animated Data Cleanup",
-      desc: "Smooth multi-stage animation visually confirms audio cache removal, transcript deletion, and clean storage reclamation in real time."
-    },
-    {
-      title: "Interactive Feedback & Support Center",
-      desc: "Instantly share your thoughts, report issues, or suggest improvements directly from the header with one-click screenshot attachment and live email delivery."
-    },
-    {
-      title: "Cyberpunk Email Engine & Confirmation System",
-      desc: "All interview alerts, notes, reminders, and feedback notifications now utilize high-contrast cyberpunk dark and neon electric-blue templates with instant automated confirmations."
     }
   ];
 
@@ -496,7 +496,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.6');
+  const [appVersion, setAppVersion] = useState('5.7.7');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -571,6 +571,201 @@ function App() {
   const [feedbackStatusMsg, setFeedbackStatusMsg] = useState('');
   const [showFeedbackEmailSuggest, setShowFeedbackEmailSuggest] = useState(false);
   const feedbackFileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- UNIVERSAL 6-DIGIT EMAIL OTP VERIFICATION STATE ---
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [expectedOtp, setExpectedOtp] = useState<string>('');
+  const [otpTargetEmail, setOtpTargetEmail] = useState<string>('');
+  const [otpPendingType, setOtpPendingType] = useState<'feedback' | 'reminder' | 'note' | null>(null);
+  const [otpError, setOtpError] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState(false);
+  const [otpIsSending, setOtpIsSending] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(60);
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const pendingOtpCallbackRef = useRef<(() => void) | null>(null);
+
+  // Email Verification Helpers
+  const isEmailVerified = useCallback((email: string): boolean => {
+    if (!email || !email.trim()) return false;
+    try {
+      const verifiedList: string[] = JSON.parse(localStorage.getItem('clueai_verified_emails') || '[]');
+      return verifiedList.some(e => e.toLowerCase() === email.trim().toLowerCase());
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const markEmailVerified = useCallback((email: string) => {
+    if (!email || !email.trim()) return;
+    const clean = email.trim().toLowerCase();
+    try {
+      const verifiedList: string[] = JSON.parse(localStorage.getItem('clueai_verified_emails') || '[]');
+      if (!verifiedList.some(e => e.toLowerCase() === clean)) {
+        verifiedList.push(clean);
+        localStorage.setItem('clueai_verified_emails', JSON.stringify(verifiedList));
+      }
+      const savedList: string[] = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+      if (!savedList.some(e => e.toLowerCase() === clean)) {
+        savedList.unshift(email.trim());
+        localStorage.setItem('clueai_saved_emails', JSON.stringify(savedList));
+      }
+      localStorage.setItem('clueai_saved_email', email.trim());
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    let timer: any = null;
+    if (showOtpModal && otpCountdown > 0) {
+      timer = setInterval(() => {
+        setOtpCountdown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showOtpModal, otpCountdown]);
+
+  const triggerOtpVerification = (
+    type: 'feedback' | 'reminder' | 'note',
+    targetEmail: string,
+    onVerifiedCallback: () => void
+  ) => {
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    setExpectedOtp(generatedOtp);
+    setOtpTargetEmail(targetEmail.trim());
+    setOtpPendingType(type);
+    pendingOtpCallbackRef.current = onVerifiedCallback;
+    setOtpDigits(['', '', '', '', '', '']);
+    setOtpError(false);
+    setOtpSuccess(false);
+    setOtpCountdown(60);
+    setShowOtpModal(true);
+    setOtpIsSending(true);
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'send_otp',
+        to_email: targetEmail.trim(),
+        otp: generatedOtp,
+        user_name: username || 'ClueAI User'
+      })
+    })
+      .catch(console.error)
+      .finally(() => {
+        setOtpIsSending(false);
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 150);
+      });
+  };
+
+  const handleResendOtp = () => {
+    if (otpCountdown > 0 || !otpTargetEmail) return;
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    setExpectedOtp(generatedOtp);
+    setOtpDigits(['', '', '', '', '', '']);
+    setOtpError(false);
+    setOtpSuccess(false);
+    setOtpCountdown(60);
+    setOtpIsSending(true);
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'send_otp',
+        to_email: otpTargetEmail.trim(),
+        otp: generatedOtp,
+        user_name: username || 'ClueAI User'
+      })
+    })
+      .catch(console.error)
+      .finally(() => {
+        setOtpIsSending(false);
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 150);
+      });
+  };
+
+  const validateOtpCode = (enteredCode: string) => {
+    if (enteredCode === expectedOtp) {
+      setOtpError(false);
+      setOtpSuccess(true);
+      markEmailVerified(otpTargetEmail);
+
+      setTimeout(() => {
+        setShowOtpModal(false);
+        setOtpSuccess(false);
+        if (pendingOtpCallbackRef.current) {
+          pendingOtpCallbackRef.current();
+          pendingOtpCallbackRef.current = null;
+        }
+      }, 1000);
+    } else {
+      setOtpError(true);
+    }
+  };
+
+  const handleOtpDigitChange = (index: number, value: string) => {
+    const cleanVal = value.replace(/\D/g, '');
+    if (!cleanVal) {
+      const newDigits = [...otpDigits];
+      newDigits[index] = '';
+      setOtpDigits(newDigits);
+      setOtpError(false);
+      return;
+    }
+    const digit = cleanVal.slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+    setOtpError(false);
+
+    if (index < 5 && digit) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+
+    const fullCode = newDigits.join('');
+    if (fullCode.length === 6 && !newDigits.includes('')) {
+      validateOtpCode(fullCode);
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        otpInputsRef.current[index - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const newDigits = [...otpDigits];
+    for (let i = 0; i < 6; i++) {
+      newDigits[i] = pasted[i] || '';
+    }
+    setOtpDigits(newDigits);
+    setOtpError(false);
+    if (pasted.length === 6) {
+      validateOtpCode(pasted);
+      otpInputsRef.current[5]?.focus();
+    } else {
+      otpInputsRef.current[pasted.length]?.focus();
+    }
+  };
 
   // Semver comparison helper
   const isNewerVersion = (latest: string, current: string): boolean => {
@@ -745,54 +940,57 @@ function App() {
     }
 
     setFeedbackErrors({});
-    setFeedbackStatus('sending');
-    setFeedbackStatusMsg('Routing feedback report to Clue AI engineers...');
 
-    try {
+    const executeFeedbackSend = async () => {
+      setFeedbackStatus('sending');
+      setFeedbackStatusMsg('Routing feedback report to Clue AI engineers...');
+
       try {
-        const savedEmails: string[] = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-        if (!savedEmails.includes(emailTrimmed)) {
-          savedEmails.push(emailTrimmed);
-          localStorage.setItem('clueai_saved_emails', JSON.stringify(savedEmails));
-        }
-      } catch (err) {}
+        markEmailVerified(emailTrimmed);
 
-      const payload = {
-        type: 'feedback',
-        user_email: emailTrimmed,
-        user_name: username || 'ClueAI User',
-        category: feedbackForm.category,
-        description: descTrimmed,
-        image_base64: feedbackForm.imageBase64 || '',
-        app_version: appVersion,
-        timestamp: new Date().toISOString()
-      };
+        const payload = {
+          type: 'feedback',
+          user_email: emailTrimmed,
+          user_name: username || 'ClueAI User',
+          category: feedbackForm.category,
+          description: descTrimmed,
+          image_base64: feedbackForm.imageBase64 || '',
+          app_version: appVersion,
+          timestamp: new Date().toISOString()
+        };
 
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      setFeedbackStatus('success');
-      setFeedbackStatusMsg('Feedback successfully dispatched! Dispatched to farhankhalid17968@gmail.com and clueai.support@gmail.com. A confirmation email has also been sent to your inbox.');
-
-      setTimeout(() => {
-        setShowFeedbackModal(false);
-        setFeedbackStatus('idle');
-        setFeedbackForm({
-          email: emailTrimmed,
-          category: 'Bug / Issue',
-          description: '',
-          imageBase64: ''
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
         });
-      }, 2500);
-    } catch (err) {
-      setFeedbackStatus('error');
-      setFeedbackStatusMsg('Failed to dispatch feedback. Please check your internet connection or email clueai.support@gmail.com.');
+
+        setFeedbackStatus('success');
+        setFeedbackStatusMsg('Feedback successfully dispatched! Dispatched to farhankhalid17968@gmail.com and clueai.support@gmail.com. A confirmation email has also been sent to your inbox.');
+
+        setTimeout(() => {
+          setShowFeedbackModal(false);
+          setFeedbackStatus('idle');
+          setFeedbackForm({
+            email: emailTrimmed,
+            category: 'Bug / Issue',
+            description: '',
+            imageBase64: ''
+          });
+        }, 2500);
+      } catch (err) {
+        setFeedbackStatus('error');
+        setFeedbackStatusMsg('Failed to dispatch feedback. Please check your internet connection or email clueai.support@gmail.com.');
+      }
+    };
+
+    if (isEmailVerified(emailTrimmed)) {
+      executeFeedbackSend();
+    } else {
+      triggerOtpVerification('feedback', emailTrimmed, executeFeedbackSend);
     }
   };
 
@@ -1866,7 +2064,7 @@ function App() {
 
       // 2. If AI fullscreen is open, or any modal dialog is active, or app is on the dashboard:
       // ALWAYS ensure the window is 100% interactive so the answer screen never gets stuck or locks out clicks!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAiFullscreen || isAnyModalActive || (!isRecording && !isAiFullscreen)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -1905,7 +2103,7 @@ function App() {
 
     const handleMouseLeave = () => {
       // If stealth mode is off, or AI answer is fullscreen, or any modal is open, or dashboard is visible: NEVER ignore mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (!stealthMode || isAiFullscreen || isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -4818,7 +5016,7 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
+            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
           >
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
@@ -6259,9 +6457,16 @@ function App() {
                       <div className="space-y-3.5">
                         {/* Email Address with Autocomplete Suggestions */}
                         <div className="relative">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
-                            Your Email ID <span className="text-rose-400">*</span>
-                          </label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                              Your Email ID <span className="text-rose-400">*</span>
+                            </label>
+                            {feedbackForm.email.trim() && isEmailVerified(feedbackForm.email.trim()) && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold animate-in fade-in duration-200">
+                                <ShieldCheck size={11} className="text-emerald-400" /> Verified Email
+                              </span>
+                            )}
+                          </div>
                           <input
                             type="email"
                             placeholder="e.g. your.email@example.com"
@@ -6282,25 +6487,34 @@ function App() {
                           />
                           {showFeedbackEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
                             <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
-                              <div className="px-3 py-1.5 bg-black/40 border-b border-white/10">
+                              <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
                                 <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">Suggested Saved Emails</span>
+                                <span className="text-[9px] text-white/40">Auto-verification</span>
                               </div>
                               {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
                                 .filter(s => !feedbackForm.email || s.toLowerCase().includes(feedbackForm.email.toLowerCase()))
-                                .map((email, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      setFeedbackForm(prev => ({ ...prev, email }));
-                                      setShowFeedbackEmailSuggest(false);
-                                      if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
-                                    }}
-                                  >
-                                    {email}
-                                  </div>
-                                ))}
+                                .map((email, idx) => {
+                                  const verified = isEmailVerified(email);
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0 flex items-center justify-between transition-colors"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setFeedbackForm(prev => ({ ...prev, email }));
+                                        setShowFeedbackEmailSuggest(false);
+                                        if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
+                                      }}
+                                    >
+                                      <span className="font-mono text-white/90">{email}</span>
+                                      {verified && (
+                                        <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                          <ShieldCheck size={10} className="text-emerald-400" /> Verified
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                             </div>
                           )}
                           {feedbackErrors.email && (
@@ -6436,6 +6650,150 @@ function App() {
                               </>
                             )}
                           </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Universal 6-Digit Email OTP Verification Modal with Blur Backdrop & Animations */}
+              <AnimatePresence>
+                {showOtpModal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 z-[500] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto select-none"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.92, opacity: 0, y: 15 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.92, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                      className="w-full max-w-md bg-[#080911]/95 border border-cyan-500/35 rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.2)] flex flex-col items-center text-center relative overflow-hidden stealth-exempt"
+                    >
+                      {/* Top Cyberpunk Ambient Glow Bar */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[1px]"></div>
+
+                      {/* Close button */}
+                      <button
+                        onClick={() => {
+                          setShowOtpModal(false);
+                          setOtpError(false);
+                          setOtpSuccess(false);
+                        }}
+                        className="absolute top-4 right-4 p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Cancel Verification"
+                      >
+                        <X size={18} />
+                      </button>
+
+                      {/* Header Icon */}
+                      <div className="w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center mb-3.5 text-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.25)]">
+                        <ShieldCheck size={28} />
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-black text-white tracking-tight">
+                          Email Security Verification
+                        </h3>
+                        {otpPendingType && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                            {otpPendingType === 'feedback' ? 'Feedback' : otpPendingType === 'reminder' ? 'Reminder' : 'Notes'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/60 mb-2 leading-relaxed max-w-xs">
+                        Enter the 6-digit verification code dispatched to:
+                      </p>
+                      <div className="px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-cyan-300 font-mono text-xs font-bold mb-5 flex items-center gap-2 shadow-inner">
+                        <span>{otpTargetEmail}</span>
+                      </div>
+
+                      {/* 6 Digit Input Boxes */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-2.5 mb-4 w-full">
+                        {otpDigits.map((digit, index) => (
+                          <input
+                            key={index}
+                            ref={(el) => { otpInputsRef.current[index] = el; }}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            disabled={otpSuccess || otpIsSending}
+                            value={digit}
+                            onChange={(e) => handleOtpDigitChange(index, e.target.value)}
+                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                            onPaste={handleOtpPaste}
+                            className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl font-mono outline-none transition-all duration-200 select-none ${
+                              otpSuccess
+                                ? 'bg-black/90 border-2 border-emerald-400 text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.4)] scale-105'
+                                : otpError
+                                ? 'animate-shake bg-rose-500/20 border-2 border-rose-500 text-rose-300 shadow-[0_0_18px_rgba(244,63,94,0.4)]'
+                                : digit
+                                ? 'bg-black/70 border-2 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
+                                : 'bg-white/5 border border-white/15 text-white focus:border-cyan-400 focus:bg-cyan-500/10 focus:shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                            }`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Status Messages */}
+                      <div className="min-h-[34px] flex items-center justify-center mb-4">
+                        {otpSuccess && (
+                          <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs bg-emerald-500/15 border border-emerald-500/35 px-4 py-2 rounded-xl animate-in zoom-in-95 duration-200">
+                            <CheckCircle2 size={16} className="text-emerald-400" />
+                            <span>Code Verified! Completing your request...</span>
+                          </div>
+                        )}
+                        {otpError && !otpSuccess && (
+                          <div className="flex items-center gap-2 text-rose-400 font-bold text-xs bg-rose-500/15 border border-rose-500/35 px-4 py-2 rounded-xl animate-in zoom-in-95 duration-200">
+                            <AlertTriangle size={16} className="text-rose-400" />
+                            <span>Invalid code. Please check your inbox and try again.</span>
+                          </div>
+                        )}
+                        {otpIsSending && (
+                          <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>Dispatching secure 6-digit code...</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Verify Button & Resend Option */}
+                      <div className="w-full space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => validateOtpCode(otpDigits.join(''))}
+                          disabled={otpDigits.some((d) => !d) || otpSuccess || otpIsSending}
+                          className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          {otpSuccess ? (
+                            <>
+                              <CheckCircle2 size={16} /> Verified Successfully
+                            </>
+                          ) : (
+                            'Verify & Continue'
+                          )}
+                        </button>
+
+                        <div className="flex items-center justify-between text-xs text-white/50 px-1 pt-1">
+                          <span>Didn&apos;t receive code?</span>
+                          {otpCountdown > 0 ? (
+                            <span className="text-cyan-400 font-mono font-medium">
+                              Resend in {otpCountdown}s
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleResendOtp}
+                              disabled={otpIsSending}
+                              className="text-cyan-400 hover:text-cyan-300 font-bold underline underline-offset-2 transition-colors cursor-pointer"
+                            >
+                              Resend Code
+                            </button>
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -7479,7 +7837,7 @@ function App() {
               )}
 
               {/* Dashboard Empty State with Scroll-Collapsing Top Sections */}
-              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && (
+              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && (
                 <div className="flex-1 min-h-0 flex flex-col mt-2 px-2 pb-4 overflow-hidden">
                   {/* Upper Two Sections with Smooth Scroll-Collapse Transition */}
                   <motion.div 
@@ -8606,7 +8964,14 @@ function App() {
                         {showReminderErrors && !reminderForm.jobTitle && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                       </div>
                       <div className="relative">
-                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-brand-subtext uppercase">Email ID</label>
+                          {reminderForm.email.trim() && isEmailVerified(reminderForm.email.trim()) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold animate-in fade-in duration-200">
+                              <ShieldCheck size={11} className="text-emerald-400" /> Verified
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="email"
                           disabled={reminderPopupMode !== 'create'}
@@ -8629,24 +8994,33 @@ function App() {
                         />
                         {showReminderEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
                           <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
-                            <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
+                            <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50 flex items-center justify-between">
                               <span className="text-[10px] font-bold text-brand-accent uppercase tracking-wider mb-0.5">Suggested Emails</span>
+                              <span className="text-[9px] text-white/40">Verified Status</span>
                             </div>
                             {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
                               .filter(s => !reminderForm.email || s.toLowerCase().includes(reminderForm.email.toLowerCase()))
-                              .map((email, idx) => (
-                                <div
-                                  key={idx}
-                                  className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setReminderForm({ ...reminderForm, email });
-                                    setShowReminderEmailSuggest(false);
-                                  }}
-                                >
-                                  <span className="text-sm text-white font-medium">{email}</span>
-                                </div>
-                              ))}
+                              .map((email, idx) => {
+                                const verified = isEmailVerified(email);
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="px-4 py-2 hover:bg-white/10 cursor-pointer flex items-center justify-between transition-colors border-b border-brand-border/30 last:border-0"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setReminderForm({ ...reminderForm, email });
+                                      setShowReminderEmailSuggest(false);
+                                    }}
+                                  >
+                                    <span className="text-sm text-white font-mono">{email}</span>
+                                    {verified && (
+                                      <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                        <ShieldCheck size={10} className="text-emerald-400" /> Verified
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                           </div>
                         )}
                         {showReminderErrors && !reminderForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
@@ -8723,61 +9097,66 @@ function App() {
                                   return;
                                 }
                                 setShowReminderErrors(false);
-                                const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                                if (!currentEmails.includes(reminderForm.email)) {
-                                  currentEmails.unshift(reminderForm.email);
-                                  localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
-                                }
 
-                                const currentId = reminderForm.id || Date.now().toString();
-                                const templateParams = {
-                                  id: currentId,
-                                  type: 'reminder',
-                                  to_name: reminderForm.name,
-                                  to_email: reminderForm.email,
-                                  company_name: reminderForm.name,
-                                  job_title: reminderForm.jobTitle,
-                                  date: reminderForm.date,
-                                  time: `${reminderForm.time} ${reminderForm.ampm}`,
-                                };
+                                const emailTrimmed = reminderForm.email.trim();
+                                const executeSchedule = () => {
+                                  markEmailVerified(emailTrimmed);
+                                  const currentId = reminderForm.id || Date.now().toString();
+                                  const templateParams = {
+                                    id: currentId,
+                                    type: 'reminder',
+                                    to_name: reminderForm.name,
+                                    to_email: emailTrimmed,
+                                    company_name: reminderForm.name,
+                                    job_title: reminderForm.jobTitle,
+                                    date: reminderForm.date,
+                                    time: `${reminderForm.time} ${reminderForm.ampm}`,
+                                  };
 
-                                setEmailSendStatus('sending');
-                                const doSchedule = () => {
-                                  fetch(GOOGLE_SCRIPT_URL, {
-                                    method: 'POST',
-                                    mode: 'no-cors',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(templateParams)
-                                  })
-                                    .then(() => {
-                                      setEmailSendStatus('success');
-                                      setReminderProfiles(prev => {
-                                        if (prev.some(p => p.id === currentId)) {
-                                          return prev.map(p => p.id === currentId ? { ...reminderForm, id: currentId } : p);
-                                        }
-                                        return [{ ...reminderForm, id: currentId }, ...prev];
-                                      });
-
-                                      setTimeout(() => {
-                                        setShowReminderPopup(false);
-                                        setEmailSendStatus('idle');
-                                      }, 1500);
+                                  setEmailSendStatus('sending');
+                                  const doSchedule = () => {
+                                    fetch(GOOGLE_SCRIPT_URL, {
+                                      method: 'POST',
+                                      mode: 'no-cors',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(templateParams)
                                     })
-                                    .catch(err => {
-                                      setEmailSendStatus('idle');
-                                      console.error('Google Script Error:', err);
-                                      setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Error: ${err.message}`, type: 'error' });
-                                    });
+                                      .then(() => {
+                                        setEmailSendStatus('success');
+                                        setReminderProfiles(prev => {
+                                          if (prev.some(p => p.id === currentId)) {
+                                            return prev.map(p => p.id === currentId ? { ...reminderForm, id: currentId } : p);
+                                          }
+                                          return [{ ...reminderForm, id: currentId }, ...prev];
+                                        });
+
+                                        setTimeout(() => {
+                                          setShowReminderPopup(false);
+                                          setEmailSendStatus('idle');
+                                        }, 1500);
+                                      })
+                                      .catch(err => {
+                                        setEmailSendStatus('idle');
+                                        console.error('Google Script Error:', err);
+                                        setAlertMessage({ title: 'Email Error', message: `Failed to schedule. Error: ${err.message}`, type: 'error' });
+                                      });
+                                  };
+
+                                  if (reminderForm.id) {
+                                    fetch(GOOGLE_SCRIPT_URL, {
+                                      method: 'POST', mode: 'no-cors',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ action: 'delete', id: reminderForm.id })
+                                    }).then(doSchedule).catch(doSchedule);
+                                  } else {
+                                    doSchedule();
+                                  }
                                 };
 
-                                if (reminderForm.id) {
-                                  fetch(GOOGLE_SCRIPT_URL, {
-                                    method: 'POST', mode: 'no-cors',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ action: 'delete', id: reminderForm.id })
-                                  }).then(doSchedule).catch(doSchedule);
+                                if (isEmailVerified(emailTrimmed)) {
+                                  executeSchedule();
                                 } else {
-                                  doSchedule();
+                                  triggerOtpVerification('reminder', emailTrimmed, executeSchedule);
                                 }
                               }}
                               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
@@ -8850,7 +9229,14 @@ function App() {
                         {showNotesErrors && !notesForm.notes && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
                       </div>
                       <div className="relative">
-                        <label className="block text-xs font-bold text-brand-subtext uppercase mb-1">Email ID</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-brand-subtext uppercase">Email ID</label>
+                          {notesForm.email.trim() && isEmailVerified(notesForm.email.trim()) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold animate-in fade-in duration-200">
+                              <ShieldCheck size={11} className="text-emerald-400" /> Verified
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="email"
                           disabled={notesPopupMode !== 'create'}
@@ -8873,24 +9259,33 @@ function App() {
                         />
                         {showNotesEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
                           <div className="absolute top-full left-0 w-full mt-2 bg-brand-bg/95 backdrop-blur-xl border border-brand-border rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 max-h-40 overflow-y-auto custom-scrollbar">
-                            <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50">
+                            <div className="px-4 py-2 bg-black/20 border-b border-brand-border/50 flex items-center justify-between">
                               <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-0.5">Suggested Emails</span>
+                              <span className="text-[9px] text-white/40">Verified Status</span>
                             </div>
                             {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
                               .filter(s => !notesForm.email || s.toLowerCase().includes(notesForm.email.toLowerCase()))
-                              .map((email, idx) => (
-                                <div
-                                  key={idx}
-                                  className="px-4 py-2 hover:bg-white/10 cursor-pointer flex flex-col transition-colors border-b border-brand-border/30 last:border-0"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setNotesForm({ ...notesForm, email });
-                                    setShowNotesEmailSuggest(false);
-                                  }}
-                                >
-                                  <span className="text-sm text-white font-medium">{email}</span>
-                                </div>
-                              ))}
+                              .map((email, idx) => {
+                                const verified = isEmailVerified(email);
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="px-4 py-2 hover:bg-white/10 cursor-pointer flex items-center justify-between transition-colors border-b border-brand-border/30 last:border-0"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setNotesForm({ ...notesForm, email });
+                                      setShowNotesEmailSuggest(false);
+                                    }}
+                                  >
+                                    <span className="text-sm text-white font-mono">{email}</span>
+                                    {verified && (
+                                      <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                        <ShieldCheck size={10} className="text-emerald-400" /> Verified
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                           </div>
                         )}
                         {showNotesErrors && !notesForm.email && <p className="text-rose-500 text-[10px] mt-1 font-bold">This field is required.</p>}
@@ -8970,60 +9365,64 @@ function App() {
                                   return;
                                 }
                                 setShowNotesErrors(false);
-                                const currentEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
-                                if (!currentEmails.includes(notesForm.email)) {
-                                  currentEmails.unshift(notesForm.email);
-                                  localStorage.setItem('clueai_saved_emails', JSON.stringify(currentEmails));
-                                }
-                                localStorage.setItem('clueai_saved_email', notesForm.email);
 
-                                const currentId = notesForm.id || Date.now().toString();
-                                const templateParams = {
-                                  id: currentId,
-                                  type: 'note',
-                                  email: notesForm.email,
-                                  date: notesForm.date,
-                                  time: `${notesForm.time} ${notesForm.ampm}`,
-                                  notes: notesForm.notes,
-                                };
+                                const emailTrimmed = notesForm.email.trim();
+                                const executeNotesSchedule = () => {
+                                  markEmailVerified(emailTrimmed);
+                                  const currentId = notesForm.id || Date.now().toString();
+                                  const templateParams = {
+                                    id: currentId,
+                                    type: 'note',
+                                    email: emailTrimmed,
+                                    date: notesForm.date,
+                                    time: `${notesForm.time} ${notesForm.ampm}`,
+                                    notes: notesForm.notes,
+                                  };
 
-                                setEmailSendStatus('sending');
-                                const doSchedule = () => {
-                                  fetch(GOOGLE_SCRIPT_URL, {
-                                    method: 'POST',
-                                    mode: 'no-cors',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(templateParams)
-                                  })
-                                    .then(() => {
-                                      setEmailSendStatus('success');
-                                      setNotesProfiles(prev => {
-                                        if (prev.some(p => p.id === currentId)) {
-                                          return prev.map(p => p.id === currentId ? { ...notesForm, id: currentId } : p);
-                                        }
-                                        return [{ ...notesForm, id: currentId }, ...prev];
-                                      });
-
-                                      setTimeout(() => {
-                                        setShowNotesPopup(false);
-                                        setEmailSendStatus('idle');
-                                      }, 1500);
+                                  setEmailSendStatus('sending');
+                                  const doSchedule = () => {
+                                    fetch(GOOGLE_SCRIPT_URL, {
+                                      method: 'POST',
+                                      mode: 'no-cors',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(templateParams)
                                     })
-                                    .catch(err => {
-                                      setEmailSendStatus('idle');
-                                      console.error('Google Script Error:', err);
-                                      setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
-                                    });
+                                      .then(() => {
+                                        setEmailSendStatus('success');
+                                        setNotesProfiles(prev => {
+                                          if (prev.some(p => p.id === currentId)) {
+                                            return prev.map(p => p.id === currentId ? { ...notesForm, id: currentId } : p);
+                                          }
+                                          return [{ ...notesForm, id: currentId }, ...prev];
+                                        });
+
+                                        setTimeout(() => {
+                                          setShowNotesPopup(false);
+                                          setEmailSendStatus('idle');
+                                        }, 1500);
+                                      })
+                                      .catch(err => {
+                                        setEmailSendStatus('idle');
+                                        console.error('Google Script Error:', err);
+                                        setAlertMessage({ title: 'Email Error', message: `Failed to send. Error: ${err.message}`, type: 'error' });
+                                      });
+                                  };
+
+                                  if (notesForm.id) {
+                                    fetch(GOOGLE_SCRIPT_URL, {
+                                      method: 'POST', mode: 'no-cors',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ action: 'delete', id: notesForm.id })
+                                    }).then(doSchedule).catch(doSchedule);
+                                  } else {
+                                    doSchedule();
+                                  }
                                 };
 
-                                if (notesForm.id) {
-                                  fetch(GOOGLE_SCRIPT_URL, {
-                                    method: 'POST', mode: 'no-cors',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ action: 'delete', id: notesForm.id })
-                                  }).then(doSchedule).catch(doSchedule);
+                                if (isEmailVerified(emailTrimmed)) {
+                                  executeNotesSchedule();
                                 } else {
-                                  doSchedule();
+                                  triggerOtpVerification('note', emailTrimmed, executeNotesSchedule);
                                 }
                               }}
                               className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg"
