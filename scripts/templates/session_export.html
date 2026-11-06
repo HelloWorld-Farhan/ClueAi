@@ -82,11 +82,11 @@
               <p style="margin:0 0 20px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#e0f2fe;">Hi {{userName}}, here is your exported session report with AI solutions &amp; code.</p>
  
               <!-- metric block -->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:18px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#090d16" style="background-color:#090d16;border:2px solid #38bdf8;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.4);">
                 <tr>
-                  <td align="center" style="padding:10px 24px;">
-                    <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#1d4ed8;">{{questionCount}} Questions &amp; Solutions</div>
-                    <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">Date: {{sessionDate}} &bull; {{sessionTime}}</div>
+                  <td align="center" style="padding:16px 32px;background-color:#090d16;">
+                    <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:20px;font-weight:900;letter-spacing:1px;color:#38bdf8;text-transform:uppercase;">{{questionCount}} Questions &amp; Solutions</div>
+                    <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;font-weight:700;letter-spacing:1.4px;color:#ffffff;text-transform:uppercase;">Date: {{sessionDate}} &bull; {{sessionTime}}</div>
                   </td>
                 </tr>
               </table>
@@ -129,16 +129,16 @@
       </td>
     </tr>
  
-    <!-- ============ SESSION TRANSCRIPT BODY ============ -->
+    <!-- ============ EXPORT SUMMARY NOTICE ============ -->
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;">
           <tr>
-            <td width="5" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
-            <td style="padding:18px 20px;">
-              <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">Questions &amp; AI Solutions:</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:25px;color:#1e293b;">
-                {{sessionContentHtml}}
+            <td width="5" style="width:5px;background-color:#0284c7;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="padding:16px 20px;">
+              <div style="margin:0 0 6px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#0284c7;">Session Export Complete</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#334155;">
+                Your interview session report has been generated. You can review your questions, AI solutions, and code snippets in the interactive HTML and PDF documents.
               </div>
             </td>
           </tr>

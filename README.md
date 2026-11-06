@@ -20,14 +20,14 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.2)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.3)
 
-### 🚀 What's New in v5.9.2
-- 🔄 **Direct In-App Installer Upgrade**: In-app updates now directly execute the downloaded installer binary detached with automated relaunch, guaranteeing you upgrade to the new version without getting stuck or restarting into the old build.
-- 📦 **Distinct Versioned Release Binaries**: GitHub Releases and download targets now feature distinct versioned installer files (e.g. `ClueAI-v5.9.2.exe` & `ClueAI-v5.9.2.dmg`) alongside evergreen links (`ClueAI.exe` & `ClueAI.dmg`), allowing users to download any specific release version reliably.
-- ✉️ **Automated Broadcast Recipient Transparency**: GitHub Actions release workflows and Google Apps Script now report and display the exact recipient email addresses that receive update broadcast announcements.
-- 🚀 **Rock-solid Process Lifecycle & Instant Cold Boot**: Enhanced NSIS installer routines cleanly terminate previous application processes without installer conflicts or file locks.
-- 🪟 **Centered Storage Modal with Balanced Padding**: Storage & Disk Center modal is centered and fitted with balanced horizontal padding for optimal focus and layout harmony.
+### 🚀 What's New in v5.9.3
+- 🌐 **Interactive HTML Session Exports with Favicon & Branding**: Exported session HTML files now feature clickable question accordions, embedded session screenshots, brand logo header, and custom Clue AI atom favicon.
+- 🎨 **High-Contrast Clean Email Notifications**: All 9 email notification templates and Google Apps Script handlers feature high-contrast central badges, readable text, balanced padding, and direct developer website redirection.
+- 🔄 **Smart Multi-Session Continuation & Merge**: Resuming past sessions now appends clear continuation banners with exact timestamps and preserves all past interaction history without overwriting.
+- ✉️ **Dynamic Verified Email Suggestions**: Reminder, Settings, Notes, and Feedback modals show verified email suggestions on click/focus with properly padded, non-overlapping status badges.
+- 📸 **Feedback Image Upload Animation & Dual Dispatch**: Feedback attachments strictly enforce image formats with upload pulse animation and dual routing to `clueai.support@gmail.com` and `farhankhalid17968@gmail.com`.
 
 ### 🪟 1. For Windows
 

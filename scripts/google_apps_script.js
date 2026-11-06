@@ -18,7 +18,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.9.2";
+const DEFAULT_VERSION = "5.9.3";
 
 /**
  * Zero-argument Test Runner for Google Apps Script IDE
@@ -325,11 +325,11 @@ function parseTargetDate(dateStr, timeStr) {
  */
 function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1.5px solid rgba(255,255,255,0.25);border-radius:18px;">
       <tr>
         <td align="center" style="padding:16px 32px;">
-          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:38px;line-height:42px;font-weight:900;letter-spacing:12px;color:#1d4ed8;padding-left:12px;">${otp}</div>
-          <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#475569;text-transform:uppercase;">⏱ Valid for 10 minutes</div>
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:38px;line-height:42px;font-weight:900;letter-spacing:12px;color:#38bdf8;padding-left:12px;">${otp}</div>
+          <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#ffffff;text-transform:uppercase;">⏱ Valid for 10 minutes</div>
         </td>
       </tr>
     </table>
@@ -399,11 +399,11 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
  */
 function getWelcomeEmailHtml(userName, email, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1.5px solid rgba(255,255,255,0.25);border-radius:18px;">
       <tr>
-        <td align="center" style="padding:12px 28px;">
-          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#1d4ed8;">ACTIVE PRO PROFILE</div>
-          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">Verified Address: ${email}</div>
+        <td align="center" style="padding:14px 28px;">
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:800;letter-spacing:1px;color:#38bdf8;">ACTIVE PRO PROFILE</div>
+          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#ffffff;text-transform:uppercase;">Verified Address: ${email}</div>
         </td>
       </tr>
     </table>
@@ -478,11 +478,11 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
  */
 function getUpdateBroadcastEmailHtml(userName, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1.5px solid rgba(255,255,255,0.25);border-radius:18px;">
       <tr>
-        <td align="center" style="padding:12px 28px;">
-          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#1d4ed8;">VERSION ${appVersion}</div>
-          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#475569;text-transform:uppercase;">Latest Stable Build</div>
+        <td align="center" style="padding:14px 28px;">
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#38bdf8;">VERSION ${appVersion}</div>
+          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#ffffff;text-transform:uppercase;">Latest Stable Build</div>
         </td>
       </tr>
     </table>
@@ -645,11 +645,11 @@ function doPost(e) {
       }
 
       const centralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#090d16" style="background-color:#090d16;border:2px solid #38bdf8;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.4);">
           <tr>
-            <td align="center" style="padding:10px 24px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#1d4ed8;">${questionCount} Questions &amp; Solutions</div>
-              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">Date: ${sessionDate} &bull; ${sessionTime}</div>
+            <td align="center" style="padding:16px 32px;background-color:#090d16;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:20px;font-weight:900;letter-spacing:1.5px;color:#38bdf8;text-transform:uppercase;">${questionCount} Questions &amp; Solutions</div>
+              <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;font-weight:700;letter-spacing:1.4px;color:#ffffff;text-transform:uppercase;">Date: ${sessionDate} &bull; ${sessionTime}</div>
             </td>
           </tr>
         </table>
@@ -695,13 +695,13 @@ function doPost(e) {
       const messageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;">
               <tr>
-                <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
-                <td style="padding:18px 20px;">
-                  <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">Questions &amp; AI Solutions:</div>
-                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:24px;color:#1e293b;">
-                    ${sessionContentHtml}
+                <td width="5" bgcolor="#0284c7" style="width:5px;background-color:#0284c7;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:16px 20px;">
+                  <div style="margin:0 0 6px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#0284c7;">Session Export Complete</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#334155;">
+                    Your interview session report has been generated. You can review your questions, AI solutions, and code snippets in the attached interactive HTML and PDF documents.
                   </div>
                 </td>
               </tr>
@@ -854,11 +854,11 @@ function doPost(e) {
       `;
 
       const adminCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1px solid rgba(255,255,255,.25);border-radius:18px;">
           <tr>
-            <td align="center" style="padding:10px 24px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:#ffffff;">${category}</div>
-              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">App Version: v${appVersion}</div>
+            <td align="center" style="padding:12px 28px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:#38bdf8;">${category}</div>
+              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#ffffff;text-transform:uppercase;">App Version: v${appVersion}</div>
             </td>
           </tr>
         </table>
@@ -893,11 +893,11 @@ function doPost(e) {
       // 2. User Confirmation Email (Sent ONLY to user with their name, WITHOUT their problem details)
       if (userEmail && userEmail.includes("@")) {
         const userCentralBox = `
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#f0fdf4" style="background-color:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:18px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#090d16" style="background-color:#090d16;border:2px solid #38bdf8;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.4);">
             <tr>
-              <td align="center" style="padding:12px 26px;">
-                <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:26px;line-height:32px;font-weight:700;letter-spacing:1px;color:#ffffff;">TICKET LOGGED</div>
-                <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#15803d;text-transform:uppercase;">Category: ${category}</div>
+              <td align="center" style="padding:16px 32px;background-color:#090d16;">
+                <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;line-height:30px;font-weight:900;letter-spacing:1.5px;color:#38bdf8;text-transform:uppercase;">TICKET LOGGED</div>
+                <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;font-weight:700;letter-spacing:1.4px;color:#ffffff;text-transform:uppercase;">Category: ${category}</div>
               </td>
             </tr>
           </table>
@@ -1005,11 +1005,11 @@ function doPost(e) {
     const role = data.job_title || "Technical Role";
 
     const reminderCentralBox = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.35);border:1px solid rgba(255,255,255,.18);border-radius:18px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1.5px solid rgba(255,255,255,0.25);border-radius:18px;">
         <tr>
-          <td align="center" style="padding:12px 26px;">
-            <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#0f172a;">${data.time}</div>
-            <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#475569;">${data.date}</div>
+          <td align="center" style="padding:14px 28px;">
+            <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:800;letter-spacing:1px;color:#38bdf8;">${data.time}</div>
+            <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#ffffff;">${data.date}</div>
           </td>
         </tr>
       </table>
@@ -1125,11 +1125,11 @@ function sendScheduledReminder(e) {
       const appVersion = data.app_version || DEFAULT_VERSION;
 
       const alertCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#7f1d1d" style="background-color:rgba(50,10,10,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#450a0a" style="background-color:#450a0a;border:1.5px solid rgba(255,255,255,.25);border-radius:18px;">
           <tr>
-            <td align="center" style="padding:12px 26px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#0f172a;">${data.time || 'NOW'}</div>
-              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#fca5a5;">${data.date || 'TODAY'}</div>
+            <td align="center" style="padding:14px 28px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:800;letter-spacing:1px;color:#fca5a5;">${data.time || 'NOW'}</div>
+              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#ffffff;">${data.date || 'TODAY'}</div>
             </td>
           </tr>
         </table>
@@ -1232,11 +1232,11 @@ function sendScheduledNote(e) {
       const appVersion = data.app_version || DEFAULT_VERSION;
 
       const noteCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#f0fdf4" style="background-color:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1.5px solid rgba(255,255,255,0.25);border-radius:18px;">
           <tr>
-            <td align="center" style="padding:12px 26px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#0f172a;">${data.time}</div>
-              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#15803d;">${data.date}</div>
+            <td align="center" style="padding:14px 28px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:800;letter-spacing:1px;color:#34d399;">${data.time}</div>
+              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#ffffff;">${data.date}</div>
             </td>
           </tr>
         </table>

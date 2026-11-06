@@ -18,20 +18,24 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Direct In-App Installer Upgrade",
-      desc: "In-app updates now reliably execute the downloaded installer directly with automated relaunch, guaranteeing you upgrade to the new version without getting stuck."
+      title: "Interactive HTML Session Exports with Favicon & Branding",
+      desc: "Exported session HTML files now feature clickable question accordions, embedded session screenshots, brand logo header, and custom Clue AI atom favicon."
     },
     {
-      title: "Distinct Versioned Release Binaries",
-      desc: "GitHub releases and download targets now feature distinct versioned installer files (e.g. ClueAI-v5.9.2.exe & ClueAI-v5.9.2.dmg) alongside evergreen links."
+      title: "High-Contrast Email Notifications",
+      desc: "All email templates now use crisp high-contrast cards, readable text, balanced padding, and direct developer website links."
     },
     {
-      title: "Automated Broadcast Recipient Transparency",
-      desc: "Automated GitHub Actions release workflows explicitly log all user recipient email addresses that receive the release broadcast notification."
+      title: "Smart Session Resumption & History Merge",
+      desc: "Resuming existing sessions now inserts continuation headers with exact timestamps and preserves all past interaction history without overwriting."
     },
     {
-      title: "Centered Storage Modal with Balanced Padding",
-      desc: "Storage & Disk Center modal is centered and fitted with balanced padding for optimal focus and layout harmony."
+      title: "Dynamic Verified Email Suggestions",
+      desc: "Reminder, Settings, Notes, and Feedback modals show verified email suggestions on click/focus with properly padded, non-overlapping status badges."
+    },
+    {
+      title: "Feedback Image Upload Animation & Dual Dispatch",
+      desc: "Feedback attachments strictly enforce image formats with upload pulse animation and dual routing to engineering."
     }
   ];
 
@@ -492,7 +496,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.2');
+  const [appVersion, setAppVersion] = useState('5.9.3');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -569,6 +573,8 @@ function App() {
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [feedbackStatusMsg, setFeedbackStatusMsg] = useState('');
   const [showFeedbackEmailSuggest, setShowFeedbackEmailSuggest] = useState(false);
+  const [isUploadingFeedbackImage, setIsUploadingFeedbackImage] = useState(false);
+  const [showSettingsEmailSuggest, setShowSettingsEmailSuggest] = useState(false);
   const feedbackFileInputRef = useRef<HTMLInputElement>(null);
 
   // --- UNIVERSAL 6-DIGIT EMAIL OTP VERIFICATION STATE ---
@@ -898,18 +904,24 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file (PNG, JPG, WebP, GIF).');
+      alert('Please select an image file only (PNG, JPG, WebP).');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
       alert('Selected image exceeds 5 MB. Please select a smaller screenshot.');
       return;
     }
+    setIsUploadingFeedbackImage(true);
     const reader = new FileReader();
     reader.onload = (ev) => {
       if (typeof ev.target?.result === 'string') {
         setFeedbackForm(prev => ({ ...prev, imageBase64: ev.target!.result as string }));
       }
+      setIsUploadingFeedbackImage(false);
+    };
+    reader.onerror = () => {
+      setIsUploadingFeedbackImage(false);
+      alert('Failed to read image file.');
     };
     reader.readAsDataURL(file);
   };
@@ -925,11 +937,16 @@ function App() {
             alert('Pasted screenshot exceeds 5 MB.');
             return;
           }
+          setIsUploadingFeedbackImage(true);
           const reader = new FileReader();
           reader.onload = (ev) => {
             if (typeof ev.target?.result === 'string') {
               setFeedbackForm(prev => ({ ...prev, imageBase64: ev.target!.result as string }));
             }
+            setIsUploadingFeedbackImage(false);
+          };
+          reader.onerror = () => {
+            setIsUploadingFeedbackImage(false);
           };
           reader.readAsDataURL(file);
           e.preventDefault();
@@ -2841,19 +2858,41 @@ function App() {
             return;
           }
 
-          if (currentSessionId) {
-            const existing = sessions.find(s => s.id === currentSessionId);
-            if (existing) {
-              setSessionLog(existing.transcript + `\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+          setCurrentSessionId(Date.now().toString());
+          setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+          setCurrentSessionHistory([]);
+        } else {
+          // Resuming an existing session: preserve history and append continuation heading
+          const existing = sessions.find(s => s.id === currentSessionId);
+          const nowStr = `${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`;
+          const continuationBanner = `\n\n-------------------------------------------------------\n[SESSION_CONTINUED: ${nowStr}]\n-------------------------------------------------------\n\n`;
+          if (existing) {
+            setSessionLog((existing.transcript || '') + continuationBanner);
+            if (Array.isArray(existing.history)) {
+              setCurrentSessionHistory([...existing.history]);
+            }
+            if (existing.name && !sessionNameInput) {
+              setSessionNameInput(existing.name);
             }
           } else {
             setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
-            setCurrentSessionId(Date.now().toString());
+            setCurrentSessionHistory([]);
           }
         }
       } else if (!currentSessionId) {
         setCurrentSessionId(Date.now().toString());
         setSessionLog(`\n\n[SESSION_START:${new Date().toLocaleTimeString()}]\n\n`);
+        setCurrentSessionHistory([]);
+      } else {
+        const existing = sessions.find(s => s.id === currentSessionId);
+        const nowStr = `${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`;
+        const continuationBanner = `\n\n-------------------------------------------------------\n[SESSION_CONTINUED: ${nowStr}]\n-------------------------------------------------------\n\n`;
+        if (existing) {
+          setSessionLog((existing.transcript || '') + continuationBanner);
+          if (Array.isArray(existing.history)) {
+            setCurrentSessionHistory([...existing.history]);
+          }
+        }
       }
 
       setTranscript('');
@@ -3551,6 +3590,10 @@ function App() {
     setIsGenerating(false);
     const silent = typeof isSilentRestart === 'boolean' ? isSilentRestart : false;
 
+    const savedHistory = [...currentSessionHistory];
+    const savedDurationSec = recordingSeconds;
+    const existingSession = currentSessionId ? sessions.find(s => s.id === currentSessionId) : null;
+
     if (!silent) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -3583,17 +3626,18 @@ function App() {
 
     if (!silent) {
       console.log('Idle');
-      const finalLog = sessionLog + `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(recordingSeconds)}]\n\n`;
+      const finalLog = sessionLog + `\n\n[SESSION_END:${new Date().toLocaleTimeString()}|DURATION:${formatTimer(savedDurationSec)}]\n\n`;
 
       if (finalLog.trim()) {
         const newSession = {
           id: currentSessionId || Date.now().toString(),
-          name: sessionNameInput || 'Untitled Session',
+          name: sessionNameInput || existingSession?.name || 'Untitled Session',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date().toLocaleDateString(),
+          date: existingSession?.date || new Date().toLocaleDateString(),
+          duration: formatTimer(savedDurationSec),
           transcript: finalLog.trim(),
           aiAnswer: '',
-          history: [...currentSessionHistory]
+          history: savedHistory
         };
         setSessions(prev => [newSession, ...prev.filter(s => s.id !== newSession.id)]);
       }
@@ -3629,10 +3673,11 @@ function App() {
     timestamp?: string;
   }
 
-  const parseSessionInteractions = (session: any): { interactions: SessionExportInteraction[]; sessionStart: string; sessionEnd: string } => {
+  const parseSessionInteractions = (session: any): { interactions: SessionExportInteraction[]; sessionStart: string; sessionEnd: string; duration: string } => {
     let interactions: SessionExportInteraction[] = [];
     let sessionStart = '';
     let sessionEnd = '';
+    let duration = session?.duration || '';
 
     if (session?.history && Array.isArray(session.history) && session.history.length > 0) {
       interactions = session.history.map((h: any) => ({
@@ -3644,23 +3689,33 @@ function App() {
       }));
     }
 
-    if (interactions.length === 0 && session?.transcript) {
+    if (session?.transcript) {
       const lines = session.transcript.split('\n');
       let currentInteraction: SessionExportInteraction | null = null;
       let block = '';
 
       for (let line of lines) {
         if (line.includes('[SESSION_START:')) {
-          sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
+          if (!sessionStart) sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
         } else if (line.includes('[SESSION_END:')) {
           const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
-          sessionEnd = match?.[1] || '';
+          if (match) {
+            sessionEnd = match[1] || '';
+            if (match[2]) duration = match[2];
+          }
+        } else if (line.includes('[SESSION_CONTINUED:')) {
+          const match = line.match(/\[SESSION_CONTINUED:(.*?)\]/);
+          if (match && !sessionStart) sessionStart = match[1];
         } else if (line.includes('--- QUESTION ---')) {
-          if (currentInteraction) interactions.push(currentInteraction);
-          currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
-          block = 'question';
+          if (interactions.length === 0) {
+            if (currentInteraction) interactions.push(currentInteraction);
+            currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
+            block = 'question';
+          }
         } else if (line.includes('--- AI ANSWER ---')) {
-          block = 'answer';
+          if (interactions.length === 0) {
+            block = 'answer';
+          }
         } else if (line.startsWith('[IMAGE_BASE64:')) {
           const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
           if (match && currentInteraction) currentInteraction.images.push(match[1]);
@@ -3668,20 +3723,20 @@ function App() {
           const match = line.match(/\[MODEL:(.*?)\]/);
           if (match && currentInteraction) currentInteraction.modelInfo = match[1];
         } else {
-          if (currentInteraction) {
+          if (currentInteraction && interactions.length === 0) {
             if (block === 'question') currentInteraction.question += line + '\n';
             if (block === 'answer') currentInteraction.answer += line + '\n';
           }
         }
       }
-      if (currentInteraction) interactions.push(currentInteraction);
+      if (currentInteraction && interactions.length === 0) interactions.push(currentInteraction);
     }
 
-    return { interactions, sessionStart, sessionEnd };
+    return { interactions, sessionStart, sessionEnd, duration };
   };
 
   const generateSessionStandaloneHtml = (session: any) => {
-    const { interactions, sessionStart, sessionEnd } = parseSessionInteractions(session);
+    const { interactions, sessionStart, duration } = parseSessionInteractions(session);
     const sessionName = session.title || session.name || 'ClueAI_Session';
     const dateStr = session.date || new Date().toLocaleDateString();
     const timeStr = session.time || '';
@@ -3691,34 +3746,39 @@ function App() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${sessionName} - ClueAI Session Export</title>
+  <title>${sessionName} • Clue AI Session Export</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080b14'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2300f2fe'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%2338bdf8' stroke-width='1.5' transform='rotate(30 16 16)'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%23818cf8' stroke-width='1.5' transform='rotate(-30 16 16)'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/HelloWorld-Farhan/ClueAi@main/public/logo.png">
   <style>
     :root {
-      --bg: #09090b;
-      --card-bg: #121217;
-      --border: #27272a;
-      --accent: #06b6d4;
+      --bg: #070913;
+      --card-bg: #0e1322;
+      --card-hover: #13192c;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent-cyan: #06b6d4;
       --accent-grad: linear-gradient(135deg, #06b6d4, #3b82f6);
-      --text: #f4f4f5;
-      --text-muted: #a1a1aa;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      padding: 40px 20px;
+      padding: 36px 20px;
       line-height: 1.6;
     }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 920px; margin: 0 auto; }
     .header {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 24px;
-      margin-bottom: 30px;
+      padding: 24px 28px;
+      margin-bottom: 28px;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
     }
     .header::before {
       content: '';
@@ -3726,75 +3786,231 @@ function App() {
       top: 0; left: 0; right: 0; height: 3px;
       background: var(--accent-grad);
     }
-    h1 { font-size: 1.8rem; margin-bottom: 8px; font-weight: 800; }
-    .meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.85rem; color: var(--text-muted); }
+    .brand-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .brand-identity {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #0b1020;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+    }
+    .brand-logo img { width: 100%; height: 100%; object-fit: cover; }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-name {
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .brand-name span { color: var(--accent); }
+    .brand-subtitle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    .brand-badges { display: flex; align-items: center; gap: 8px; }
+    .badge-version {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      font-family: monospace;
+    }
+    .badge-status {
+      background: rgba(34, 197, 94, 0.12);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    h1.session-title {
+      font-size: 1.6rem;
+      margin-bottom: 10px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+    .meta { display: flex; flex-wrap: wrap; gap: 14px 22px; font-size: 0.85rem; color: var(--text-muted); }
     .meta span b { color: var(--text); }
     .interaction-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      margin-bottom: 20px;
+      border-radius: 16px;
+      margin-bottom: 16px;
       overflow: hidden;
-      transition: border-color 0.2s;
+      transition: all 0.2s ease;
     }
-    .card-header {
+    .interaction-card:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+      background: var(--card-hover);
+    }
+    details.interaction-card summary {
       padding: 14px 20px;
       background: rgba(255,255,255,0.02);
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
     }
+    details.interaction-card summary::-webkit-details-marker { display: none; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
     .badge-q {
       background: rgba(6, 182, 212, 0.15);
       color: var(--accent);
       border: 1px solid rgba(6, 182, 212, 0.3);
       padding: 3px 10px;
       border-radius: 999px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .badge-model { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); }
+    .badge-model { font-family: monospace; font-size: 0.72rem; color: var(--text-muted); }
+    .toggle-arrow {
+      font-size: 0.85rem;
+      color: var(--accent);
+      transition: transform 0.2s ease;
+      display: inline-block;
+    }
+    details[open] .toggle-arrow { transform: rotate(180deg); }
     .card-body { padding: 20px; }
-    .question-box { font-weight: 600; font-size: 1rem; color: #fff; margin-bottom: 16px; white-space: pre-wrap; }
+    .question-box {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #fff;
+      margin-bottom: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .card-images {
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card-images img {
+      max-width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #000;
+    }
     .answer-box {
-      background: #070a12;
+      background: #070a14;
       border-left: 3px solid var(--accent);
       padding: 16px;
-      border-radius: 14px;
+      border-radius: 12px;
       font-size: 0.95rem;
       color: #e2e8f0;
       white-space: pre-wrap;
+      line-height: 1.6;
     }
-    .footer { text-align: center; margin-top: 40px; color: #71717a; font-size: 0.8rem; }
+    .answer-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      color: #71717a;
+      font-size: 0.8rem;
+    }
+    .footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>${sessionName}</h1>
+      <div class="brand-bar">
+        <div class="brand-identity">
+          <div class="brand-logo">
+            <img src="https://cdn.jsdelivr.net/gh/HelloWorld-Farhan/ClueAi@main/public/logo.png" onerror="this.style.display='none'" alt="Clue AI" />
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">Clue<span>AI</span></span>
+            <span class="brand-subtitle">Interview Intelligence System</span>
+          </div>
+        </div>
+        <div class="brand-badges">
+          <span class="badge-version">V5.9.3</span>
+          <span class="badge-status">Export Verified</span>
+        </div>
+      </div>
+
+      <h1 class="session-title">${sessionName}</h1>
       <div class="meta">
         <span><b>Date:</b> ${dateStr}</span>
         <span><b>Time:</b> ${timeStr || 'N/A'}</span>
-        <span><b>Interactions:</b> ${interactions.length}</span>
         ${sessionStart ? `<span><b>Started:</b> ${sessionStart}</span>` : ''}
-        ${sessionEnd ? `<span><b>Ended:</b> ${sessionEnd}</span>` : ''}
+        ${duration ? `<span><b>Total Duration:</b> ${duration}</span>` : ''}
+        <span><b>Interactions:</b> ${interactions.length}</span>
       </div>
     </div>
+
     ${interactions.map((it, idx) => `
-      <div class="interaction-card">
-        <div class="card-header">
-          <span class="badge-q">Question ${idx + 1}</span>
-          <span class="badge-model">${it.modelInfo || 'ClueAI Engine'}</span>
-        </div>
+      <details class="interaction-card" open>
+        <summary>
+          <div class="header-left">
+            <span class="badge-q">Question ${idx + 1}</span>
+            <span class="badge-model">${it.modelInfo || 'ClueAI Engine'}</span>
+            ${it.timestamp ? `<span class="badge-model" style="color:#64748b;">• ${it.timestamp}</span>` : ''}
+          </div>
+          <div class="header-right">
+            <span class="toggle-arrow">▼</span>
+          </div>
+        </summary>
         <div class="card-body">
           <div class="question-box">${it.question || 'Session Question'}</div>
-          <div class="answer-box">${it.answer || 'No response recorded.'}</div>
+          ${it.images && it.images.length > 0 ? `
+            <div class="card-images">
+              ${it.images.map((img: string) => `<img src="${img}" alt="Attached Session Snapshot"/>`).join('')}
+            </div>
+          ` : ''}
+          <div class="answer-box">
+            <div class="answer-label">AI Response / Code Solution</div>
+            <div>${it.answer || 'No response recorded.'}</div>
+          </div>
         </div>
-      </div>
+      </details>
     `).join('')}
+
     <div class="footer">
-      Generated by Clue AI • Interview Intelligence System
+      Generated by <b>Clue AI</b> • Interview Intelligence System • Created by <a href="https://farhan-khalid-portfolio.vercel.app/" target="_blank" rel="noopener">Farhan Khalid</a>
     </div>
   </div>
 </body>
@@ -3825,7 +4041,7 @@ function App() {
   };
 
   const buildSessionPdfHtml = (session: any) => {
-    const { interactions } = parseSessionInteractions(session);
+    const { interactions, sessionStart, duration } = parseSessionInteractions(session);
     const sessionTitle = session.title || session.name || 'ClueAI Session';
     const dateStr = session.date || new Date().toLocaleDateString();
     const timeStr = session.time || '';
@@ -3837,6 +4053,11 @@ function App() {
           <span class="q-model">${item.modelInfo || 'ClueAI Model'}</span>
         </div>
         <div class="question-text">${item.question.replace(/\n/g, '<br/>')}</div>
+        ${item.images && item.images.length > 0 ? `
+          <div class="image-gallery">
+            ${item.images.map((img: string) => `<img src="${img}" style="max-width:100%;max-height:360px;object-fit:contain;border-radius:6px;border:1px solid #cbd5e1;margin:8px 0;display:block;" alt="Session Screenshot"/>`).join('')}
+          </div>
+        ` : ''}
         <div class="answer-box">
           <div class="answer-label">AI RESPONSE / CODE:</div>
           <div class="answer-text">${item.answer.replace(/\n/g, '<br/>')}</div>
@@ -3868,17 +4089,20 @@ function App() {
       font-size: 22px;
       margin: 0 0 6px 0;
       color: #0f172a;
+      font-weight: 800;
     }
     .meta {
-      color: #64748b;
+      color: #475569;
       font-size: 11px;
       display: flex;
-      gap: 20px;
+      flex-wrap: wrap;
+      gap: 16px;
     }
+    .meta span b { color: #0f172a; }
     .interaction-block {
       page-break-inside: avoid;
       margin-bottom: 20px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
       border-radius: 8px;
       padding: 16px;
       background: #f8fafc;
@@ -3892,10 +4116,11 @@ function App() {
       color: #0284c7;
     }
     .question-text {
-      font-weight: 600;
+      font-weight: 700;
       color: #0f172a;
       margin-bottom: 12px;
       font-size: 14px;
+      line-height: 1.5;
     }
     .answer-box {
       background: #ffffff;
@@ -3911,15 +4136,17 @@ function App() {
       margin-bottom: 6px;
     }
     .answer-text {
-      color: #334155;
+      color: #0f172a;
+      font-weight: 500;
       white-space: pre-wrap;
+      line-height: 1.6;
     }
     .footer {
       margin-top: 30px;
       border-top: 1px solid #e2e8f0;
       padding-top: 10px;
       font-size: 10px;
-      color: #94a3b8;
+      color: #64748b;
       text-align: center;
     }
   </style>
@@ -3928,15 +4155,17 @@ function App() {
   <div class="header">
     <h1>${sessionTitle}</h1>
     <div class="meta">
-      <span>Date: ${dateStr}</span>
-      <span>Time: ${timeStr}</span>
-      <span>Interactions: ${interactions.length}</span>
+      <span><b>Date:</b> ${dateStr}</span>
+      <span><b>Time:</b> ${timeStr || 'N/A'}</span>
+      ${sessionStart ? `<span><b>Started:</b> ${sessionStart}</span>` : ''}
+      ${duration ? `<span><b>Total Duration:</b> ${duration}</span>` : ''}
+      <span><b>Interactions:</b> ${interactions.length}</span>
       <span>Clue AI Intelligence System</span>
     </div>
   </div>
   ${itemsHtml}
   <div class="footer">
-    Generated with Clue AI • Interview Intelligence System
+    Generated with Clue AI • Interview Intelligence System • Developed by Farhan Khalid
   </div>
 </body>
 </html>`;
@@ -3995,25 +4224,15 @@ function App() {
     const dateStr = session.date || new Date().toLocaleDateString();
     const timeStr = session.time || '';
 
-    const cardsHtml = interactions.slice(0, 15).map((item, idx) => `
-      <div style="background:#0d121f;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-bottom:14px;text-align:left;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-size:11px;font-weight:700;color:#38bdf8;background:rgba(56,189,248,0.1);padding:2px 8px;border-radius:6px;border:1px solid rgba(56,189,248,0.2);">Q${idx + 1}</span>
-          <span style="font-size:10px;color:#64748b;font-family:monospace;">${item.modelInfo || 'ClueAI'}</span>
-        </div>
-        <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:10px;line-height:1.5;">${item.question ? item.question.replace(/\n/g, '<br/>') : 'Session question'}</div>
-        <div style="background:#070a12;border-left:3px solid #06b6d4;padding:12px;border-radius:6px;font-size:12px;color:#cbd5e1;line-height:1.6;white-space:pre-wrap;">${item.answer ? (item.answer.length > 800 ? item.answer.substring(0, 800) + '...' : item.answer) : 'No response recorded.'}</div>
-      </div>
-    `).join('');
-
     return `
-      <div style="text-align:left;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:10px;">
-          <div style="font-size:14px;font-weight:700;color:#38bdf8;margin-bottom:4px;">${sessionTitle}</div>
-          <div style="font-size:11px;color:#94a3b8;">Recorded on ${dateStr} ${timeStr ? '• ' + timeStr : ''} • ${interactions.length} Total Interaction${interactions.length === 1 ? '' : 's'}</div>
+      <div style="text-align:left;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;">
+          <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:6px;">${sessionTitle}</div>
+          <div style="font-size:12px;color:#475569;margin-bottom:12px;">Recorded on ${dateStr} ${timeStr ? '• ' + timeStr : ''}</div>
+          <div style="display:inline-block;background:#0f172a;color:#38bdf8;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;font-family:monospace;">
+            ${interactions.length} Total Interaction${interactions.length === 1 ? '' : 's'} Logged
+          </div>
         </div>
-        ${cardsHtml}
-        ${interactions.length > 15 ? `<div style="text-align:center;font-size:11px;color:#64748b;padding:8px;">Showing 15 of ${interactions.length} interactions. Download the full HTML/PDF in Clue AI for complete logs.</div>` : ''}
       </div>
     `;
   };
@@ -6879,11 +7098,11 @@ function App() {
                       {/* Top Cyberpunk Ambient Glow Bar */}
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[1px]"></div>
 
-                      {/* Hidden File Input for Image Upload */}
+                      {/* Hidden File Input for Image Upload (Images Only) */}
                       <input
                         ref={feedbackFileInputRef}
                         type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        accept="image/png,image/jpeg,image/webp"
                         className="hidden"
                         onChange={handleFeedbackImageSelect}
                       />
@@ -6982,13 +7201,8 @@ function App() {
                                 if (saved.length > 0) setShowFeedbackEmailSuggest(true);
                               }}
                               onBlur={() => setTimeout(() => setShowFeedbackEmailSuggest(false), 200)}
-                              className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl pl-3.5 pr-9 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
+                              className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
                             />
-                            {feedbackForm.email.trim() && isEmailVerified(feedbackForm.email.trim()) && (
-                              <span className="absolute right-3 top-[34px] text-emerald-400 pointer-events-none" title="Verified Inbox">
-                                <CheckCircle2 size={16} className="text-emerald-400" />
-                              </span>
-                            )}
                             {showFeedbackEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
                               <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
                                 <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
@@ -7050,10 +7264,16 @@ function App() {
                           {/* Screenshot / Image Attachment */}
                           <div>
                             <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
-                              Attach Screenshot / Image <span className="text-white/40 normal-case font-normal">(optional)</span>
+                              Attach Screenshot / Image <span className="text-white/40 normal-case font-normal">(images only)</span>
                             </label>
 
-                            {feedbackForm.imageBase64 ? (
+                            {isUploadingFeedbackImage ? (
+                              <div className="rounded-2xl border-2 border-cyan-400/60 bg-cyan-500/10 p-4 flex flex-col items-center justify-center gap-2 text-center animate-pulse shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                                <Loader2 size={24} className="animate-spin text-cyan-400" />
+                                <span className="text-xs font-bold text-white">Uploading & Optimizing Screenshot...</span>
+                                <span className="text-[10px] text-cyan-300 font-mono">Encoding high-resolution image data</span>
+                              </div>
+                            ) : feedbackForm.imageBase64 ? (
                               <div className="relative rounded-2xl border border-cyan-500/40 bg-black/40 p-2.5 flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-3 overflow-hidden">
                                   <img
@@ -7087,7 +7307,7 @@ function App() {
                                   Browse image or press Ctrl+V to paste
                                 </span>
                                 <span className="text-[10px] text-white/40">
-                                  PNG, JPG, WebP up to 5 MB
+                                  PNG, JPG, WebP up to 5 MB (Images Only)
                                 </span>
                               </div>
                             )}
@@ -7622,11 +7842,11 @@ function App() {
                                     className="w-full bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
                                   />
                                 </div>
-                                <div>
+                                <div className="relative">
                                   <label className="block text-xs font-bold text-brand-subtext uppercase mb-1.5 flex items-center justify-between">
                                     <span>Primary Email ID</span>
                                     {userEmail && isEmailVerified(userEmail) && (
-                                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
                                         <CheckCircle2 size={11} /> Verified
                                       </span>
                                     )}
@@ -7638,7 +7858,15 @@ function App() {
                                       onChange={(e) => {
                                         setUserEmail(e.target.value);
                                         localStorage.setItem('clueai_user_email', e.target.value);
+                                        const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                        const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                                        setShowSettingsEmailSuggest(matches.length > 0);
                                       }}
+                                      onFocus={() => {
+                                        const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                        if (saved.length > 0) setShowSettingsEmailSuggest(true);
+                                      }}
+                                      onBlur={() => setTimeout(() => setShowSettingsEmailSuggest(false), 200)}
                                       placeholder="e.g. farhan@example.com"
                                       className="flex-1 bg-brand-secondary border border-brand-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 font-mono"
                                     />
@@ -7649,6 +7877,7 @@ function App() {
                                           if (!userEmail || !userEmail.includes('@')) return;
                                           triggerOtpVerification('settings', userEmail, () => {
                                             localStorage.setItem('clueai_user_email', userEmail);
+                                            markEmailVerified(userEmail);
                                             setModelChangeMsg('Email verified and saved to profile!');
                                             setTimeout(() => setModelChangeMsg(''), 3000);
                                           });
@@ -7659,6 +7888,38 @@ function App() {
                                       </button>
                                     )}
                                   </div>
+                                  {showSettingsEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                                    <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
+                                      <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
+                                        <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">Saved Emails</span>
+                                        <span className="text-[9px] text-white/40">Verified Status</span>
+                                      </div>
+                                      {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                                        .filter(s => !userEmail || s.toLowerCase().includes(userEmail.toLowerCase()))
+                                        .map((email, idx) => {
+                                          const verified = isEmailVerified(email);
+                                          return (
+                                            <div
+                                              key={idx}
+                                              className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0 flex items-center justify-between transition-colors"
+                                              onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setUserEmail(email);
+                                                localStorage.setItem('clueai_user_email', email);
+                                                setShowSettingsEmailSuggest(false);
+                                              }}
+                                            >
+                                              <span className="font-mono text-white/90">{email}</span>
+                                              {verified && (
+                                                <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                                  <CheckCircle2 size={10} className="text-emerald-400" /> Verified
+                                                </span>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <p className="text-[11px] text-white/40 leading-relaxed">
