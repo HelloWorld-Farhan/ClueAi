@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Resilient Update Engine & Instant Downloads",
-      desc: "Eliminated update download errors by introducing multi-channel direct GitHub asset streaming alongside native background updater with zero retry stalls."
+      title: "Shield Disengaged During Initial Setup",
+      desc: "Content protection shield is automatically kept OFF when the initial onboarding window opens, enabling frictionless typing of your name and email without security lockout warnings."
     },
     {
-      title: "Clean Update Broadcast System",
-      desc: "Google Apps Script now persists all registered user emails and broadcasts new update greeting announcements with zero links or clutter."
+      title: "Sleek Horizontal Minimalist Onboarding",
+      desc: "Completely redesigned setup screen into an ergonomic horizontal 2-column layout with high-definition Clue AI branding, ambient electric-cyan accents, and saved email suggestions."
     },
     {
-      title: "Zero-Error Apps Script Runtime",
-      desc: "Re-engineered Google Apps Script template layouts with defensive property fallback handling and a built-in test runner for 100% reliable cloud automation."
+      title: "Auto-Arming Stealth Protection",
+      desc: "Content protection shield and anti-detection mechanisms automatically engage the instant onboarding and verification are completed."
     },
     {
-      title: "Turbocharged Startup & Clean Codebase",
-      desc: "Accelerated cold launch on DOM ready with V8 bytecode optimization and removed obsolete legacy build scripts for a streamlined footprint."
+      title: "Verified Email & Profile Synchronization",
+      desc: "Seamlessly links verified candidate emails with feedback, reminders, and notes profiles for instant dispatch and verified status indicators."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.3');
+  const [appVersion, setAppVersion] = useState('5.8.4');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -1043,6 +1043,7 @@ function App() {
   const [onboardingEmail, setOnboardingEmail] = useState(() => {
     try { return localStorage.getItem('clueai_user_email') || ''; } catch { return ''; }
   });
+  const [showOnboardingEmailSuggest, setShowOnboardingEmailSuggest] = useState(false);
   const [onboardingError, setOnboardingError] = useState('');
   const [onboardingIsSubmitting, setOnboardingIsSubmitting] = useState(false);
   const [isBroadcastingUpdate, setIsBroadcastingUpdate] = useState(false);
@@ -1065,7 +1066,8 @@ function App() {
     }
 
     setOnboardingIsSubmitting(true);
-    triggerOtpVerification('onboarding', emailTrimmed, () => {
+
+    const finalizeOnboarding = () => {
       setUsername(nameTrimmed);
       setUserEmail(emailTrimmed);
       localStorage.setItem('clueai_username', nameTrimmed);
@@ -1095,9 +1097,20 @@ function App() {
 
       setShowOnboardingModal(false);
       setOnboardingIsSubmitting(false);
+
+      // Auto-engage full stealth shield after setup completes
+      setStealthMode(true);
+      ipcRenderer.invoke('set-stealth', true);
+
       setModelChangeMsg(`Welcome to Clue AI, ${nameTrimmed}!`);
       setTimeout(() => setModelChangeMsg(''), 4000);
-    });
+    };
+
+    if (isEmailVerified(emailTrimmed)) {
+      finalizeOnboarding();
+    } else {
+      triggerOtpVerification('onboarding', emailTrimmed, finalizeOnboarding);
+    }
   };
 
   // Reminders
@@ -2011,9 +2024,10 @@ function App() {
   // Block typing if stealth mode is ON
   useEffect(() => {
     const handleInputAttempt = (e: Event) => {
+      if (showOnboardingModal) return; // Never block input during onboarding setup!
       if (stealthMode) {
         const target = e.target as HTMLElement;
-        if (target.closest && target.closest('.stealth-exempt')) return;
+        if (target.closest && (target.closest('.stealth-exempt') || target.closest('.onboarding-modal-container'))) return;
         if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox')) {
           e.preventDefault();
           e.stopPropagation();
@@ -2040,7 +2054,7 @@ function App() {
       document.removeEventListener('mousedown', handleInputAttempt, true);
       document.removeEventListener('keydown', handleInputAttempt, true);
     };
-  }, [stealthMode]);
+  }, [stealthMode, showOnboardingModal]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAiFullscreen, setIsAiFullscreen] = useState(false);
@@ -2154,7 +2168,7 @@ function App() {
 
       // 2. If AI fullscreen is open, or any modal dialog is active, or app is on the dashboard:
       // ALWAYS ensure the window is 100% interactive so the answer screen never gets stuck or locks out clicks!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || showExportModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || showExportModal || showOnboardingModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAiFullscreen || isAnyModalActive || (!isRecording && !isAiFullscreen)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -2167,6 +2181,7 @@ function App() {
       // 3. Any button, input, textarea, card, toolbar, panel or drag-area is ALWAYS interactive!
       if (target.closest && (
         target.closest('.stealth-exempt') ||
+        target.closest('.onboarding-modal-container') ||
         target.closest('button') ||
         target.closest('input') ||
         target.closest('textarea') ||
@@ -2193,7 +2208,7 @@ function App() {
 
     const handleMouseLeave = () => {
       // If stealth mode is off, or AI answer is fullscreen, or any modal is open, or dashboard is visible: NEVER ignore mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || showExportModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || showExportModal || showOnboardingModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (!stealthMode || isAiFullscreen || isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -2487,9 +2502,15 @@ function App() {
   }, [opacity]);
 
   useEffect(() => {
-    // ALWAYS default to Stealth Mode ON every time the app opens for maximum safety
-    setStealthMode(true);
-    ipcRenderer.invoke('set-stealth', true);
+    // If onboarding setup is active, keep shield OFF so user can freely enter name and email
+    if (showOnboardingModal) {
+      setStealthMode(false);
+      ipcRenderer.invoke('set-stealth', false);
+    } else {
+      // Default to Stealth Mode ON every time the app opens for maximum safety
+      setStealthMode(true);
+      ipcRenderer.invoke('set-stealth', true);
+    }
 
     // Defer desktop sources enumeration to prevent startup UI blocking
     const timer = setTimeout(() => {
@@ -2501,6 +2522,14 @@ function App() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Ensure shield is OFF whenever onboarding modal is open
+  useEffect(() => {
+    if (showOnboardingModal) {
+      setStealthMode(false);
+      ipcRenderer.invoke('set-stealth', false);
+    }
+  }, [showOnboardingModal]);
 
   useEffect(() => {
     setStealthWarningToast(null);
@@ -5363,7 +5392,7 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
+            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal && !showOnboardingModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
           >
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
@@ -8541,7 +8570,7 @@ function App() {
               )}
 
               {/* Dashboard Empty State with Scroll-Collapsing Top Sections */}
-              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal && (
+              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal && !showOnboardingModal && (
                 <div className="flex-1 min-h-0 flex flex-col mt-2 px-2 pb-4 overflow-hidden">
                   {/* Upper Two Sections with Smooth Scroll-Collapse Transition */}
                   <motion.div 
@@ -10420,94 +10449,208 @@ function App() {
                 </div>
               )}
 
-              {/* First-Time User Onboarding & Email Verification Modal (v5.8.0) */}
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.4 - Horizontal Minimal Redesign) */}
               <AnimatePresence>
                 {showOnboardingModal && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[600] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                    className="fixed inset-0 z-[600] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 pointer-events-auto select-none stealth-exempt"
                   >
                     <motion.div
-                      initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                      initial={{ scale: 0.94, opacity: 0, y: 16 }}
                       animate={{ scale: 1, opacity: 1, y: 0 }}
-                      exit={{ scale: 0.92, opacity: 0, y: 20 }}
-                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                      className="relative w-full max-w-lg bg-[#0a0c16]/98 border border-cyan-500/40 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.25)] overflow-hidden"
+                      exit={{ scale: 0.94, opacity: 0, y: 16 }}
+                      transition={{ type: "spring", stiffness: 360, damping: 28 }}
+                      className="onboarding-modal-container relative w-full max-w-3xl bg-[#080b15]/98 border border-cyan-500/40 rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.22)] overflow-hidden flex flex-col"
                     >
-                      {/* Top Accent Gradient Bar */}
-                      <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600" />
+                      {/* Top Cyberpunk Accent Line */}
+                      <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
 
-                      <div className="p-8 flex flex-col items-center text-center">
-                        {/* Glowing Emblem */}
-                        <div className="relative mb-6">
-                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-cyan-500/20 via-blue-500/30 to-indigo-500/20 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.4)] animate-pulse">
-                            <Sparkles size={38} className="text-cyan-400" />
+                      <div className="grid grid-cols-1 md:grid-cols-12 min-h-[420px]">
+                        {/* Left Column: Branding, Logo & Stealth Status */}
+                        <div className="md:col-span-5 bg-gradient-to-b from-[#0d1322] via-[#090d1a] to-[#070a14] p-7 sm:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/[0.08] relative overflow-hidden">
+                          {/* Ambient Glow Orbs */}
+                          <div className="absolute -top-16 -left-16 w-44 h-44 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+                          <div className="absolute -bottom-16 -right-16 w-44 h-44 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
+                          <div className="relative z-10">
+                            {/* Clue AI Logo & App Identity */}
+                            <div className="flex items-center gap-3.5 mb-5">
+                              <div className="w-13 h-13 rounded-2xl bg-[#0b1020] border border-cyan-400/40 p-2 flex items-center justify-center shadow-[0_0_25px_rgba(6,182,212,0.35)] shrink-0">
+                                <img src="./logo.png" alt="Clue AI" className="w-9 h-9 object-contain" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl font-black text-white tracking-tight">Clue AI</span>
+                                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">v{appVersion}</span>
+                                </div>
+                                <p className="text-[11px] text-cyan-300/70 font-medium">Next-Gen Stealth Workspace</p>
+                              </div>
+                            </div>
+
+                            {/* Key Highlights */}
+                            <div className="space-y-3.5 my-5">
+                              <div className="flex items-start gap-2.5">
+                                <div className="w-5 h-5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                                  <Sparkles size={11} className="text-cyan-300" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-white/90">Zero-Footprint Stealth</p>
+                                  <p className="text-[10px] text-white/50 leading-tight">Invisible to screen share and recording utilities.</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-2.5">
+                                <div className="w-5 h-5 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                                  <Mail size={11} className="text-blue-300" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-white/90">Instant Cloud Dispatches</p>
+                                  <p className="text-[10px] text-white/50 leading-tight">Interview reminders and verified notes sent directly to your inbox.</p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="absolute -inset-1 rounded-3xl border border-cyan-500/20 animate-ping pointer-events-none" style={{ animationDuration: '3s' }} />
+
+                          {/* Shield Protection Status Pill (OFF during setup) */}
+                          <div className="relative z-10 pt-4 border-t border-white/[0.08]">
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-bold shadow-sm">
+                              <ShieldAlert size={14} className="text-amber-400 shrink-0" />
+                              <span>Protection: Shield OFF</span>
+                            </div>
+                            <p className="text-[10px] text-white/45 leading-normal mt-1.5">
+                              Shield is kept OFF on this setup page so you can type freely. Full anti-detection engages once setup completes.
+                            </p>
+                          </div>
                         </div>
 
-                        <h2 className="text-2xl font-black text-white tracking-tight mb-2">
-                          Welcome to Clue AI
-                        </h2>
-                        <p className="text-xs text-white/60 leading-relaxed max-w-sm mb-6">
-                          Set up your candidate profile and verify your email to unlock live stealth assistance, automated reminders, and instant note dispatches.
-                        </p>
-
-                        <div className="w-full space-y-4 text-left">
-                          <div>
-                            <label className="block text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1.5">
-                              Your Full Name <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={onboardingName}
-                              onChange={(e) => {
-                                setOnboardingName(e.target.value);
-                                if (onboardingError) setOnboardingError('');
-                              }}
-                              placeholder="e.g. Farhan Khalid"
-                              autoFocus
-                              className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all shadow-inner"
-                            />
+                        {/* Right Column: Setup Form */}
+                        <div className="md:col-span-7 p-7 sm:p-8 bg-[#080b15] flex flex-col justify-center relative">
+                          <div className="mb-5">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2.5 py-0.5 rounded-md inline-block mb-1.5">
+                              Candidate Setup
+                            </span>
+                            <h2 className="text-xl font-black text-white tracking-tight">
+                              Welcome to Clue AI
+                            </h2>
+                            <p className="text-xs text-white/60 mt-1">
+                              Configure your profile and verify your inbox to get started.
+                            </p>
                           </div>
 
-                          <div>
-                            <label className="block text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1.5">
-                              Your Email Address <span className="text-rose-400">*</span>
-                            </label>
-                            <input
-                              type="email"
-                              value={onboardingEmail}
-                              onChange={(e) => {
-                                setOnboardingEmail(e.target.value);
-                                if (onboardingError) setOnboardingError('');
-                              }}
-                              placeholder="e.g. farhan@example.com"
-                              className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-all shadow-inner font-mono"
-                            />
-                          </div>
-
-                          {onboardingError && (
-                            <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3 flex items-center gap-2 text-rose-300 text-xs font-bold">
-                              <AlertTriangle size={14} className="shrink-0 text-rose-400" />
-                              <span>{onboardingError}</span>
+                          <div className="space-y-4">
+                            {/* Full Name Input */}
+                            <div>
+                              <label className="block text-[11px] font-bold text-cyan-400/90 uppercase tracking-wider mb-1.5">
+                                Your Full Name <span className="text-rose-400">*</span>
+                              </label>
+                              <div className="relative">
+                                <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                                <input
+                                  type="text"
+                                  value={onboardingName}
+                                  onChange={(e) => {
+                                    setOnboardingName(e.target.value);
+                                    if (onboardingError) setOnboardingError('');
+                                  }}
+                                  placeholder="e.g. Farhan Khalid"
+                                  autoFocus
+                                  className="w-full bg-white/[0.04] border border-white/10 focus:border-cyan-400 focus:bg-white/[0.07] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-all shadow-inner"
+                                />
+                              </div>
                             </div>
-                          )}
 
-                          <button
-                            onClick={handleCompleteOnboarding}
-                            disabled={onboardingIsSubmitting}
-                            className="w-full mt-2 py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_25px_rgba(6,182,212,0.5)] border border-cyan-300/60 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                          >
-                            <ShieldCheck size={16} />
-                            <span>{onboardingIsSubmitting ? 'Verifying...' : 'Verify & Launch Clue AI'}</span>
-                          </button>
+                            {/* Email Address Input */}
+                            <div className="relative">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-[11px] font-bold text-cyan-400/90 uppercase tracking-wider">
+                                  Your Email Address <span className="text-rose-400">*</span>
+                                </label>
+                                {isEmailVerified(onboardingEmail.trim().toLowerCase()) && (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                                    <ShieldCheck size={11} className="text-emerald-400" /> Verified
+                                  </span>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                                <input
+                                  type="email"
+                                  value={onboardingEmail}
+                                  onChange={(e) => {
+                                    setOnboardingEmail(e.target.value);
+                                    if (onboardingError) setOnboardingError('');
+                                  }}
+                                  onFocus={() => setShowOnboardingEmailSuggest(true)}
+                                  onBlur={() => setTimeout(() => setShowOnboardingEmailSuggest(false), 200)}
+                                  placeholder="e.g. farhan@example.com"
+                                  className="w-full bg-white/[0.04] border border-white/10 focus:border-cyan-400 focus:bg-white/[0.07] rounded-xl pl-10 pr-24 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-all shadow-inner font-mono"
+                                />
+                              </div>
 
-                          <p className="text-[10px] text-white/40 text-center leading-normal pt-1">
-                            A quick 6-digit verification code will be dispatched to your inbox.
-                          </p>
+                              {/* Saved Email Auto-suggestions */}
+                              {showOnboardingEmailSuggest && (JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[]).length > 0 && (
+                                <div className="absolute left-0 right-0 top-full mt-1.5 p-2 bg-[#0d1222] border border-cyan-500/30 rounded-xl shadow-2xl z-30 max-h-36 overflow-y-auto">
+                                  <div className="text-[10px] font-bold text-cyan-400/80 uppercase px-2 py-0.5 mb-1">Saved Inboxes</div>
+                                  {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[]).map((email) => (
+                                    <button
+                                      key={email}
+                                      type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setOnboardingEmail(email);
+                                        setShowOnboardingEmailSuggest(false);
+                                        if (onboardingError) setOnboardingError('');
+                                      }}
+                                      className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-cyan-500/15 text-left text-xs font-mono text-white/80 transition-all cursor-pointer"
+                                    >
+                                      <span>{email}</span>
+                                      {isEmailVerified(email) && (
+                                        <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-sans font-semibold">
+                                          <ShieldCheck size={11} /> Verified
+                                        </span>
+                                      )}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Error Alert */}
+                            {onboardingError && (
+                              <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-2.5 flex items-center gap-2 text-rose-300 text-xs font-semibold">
+                                <AlertTriangle size={14} className="shrink-0 text-rose-400" />
+                                <span>{onboardingError}</span>
+                              </div>
+                            )}
+
+                            {/* Submit CTA */}
+                            <button
+                              onClick={handleCompleteOnboarding}
+                              disabled={onboardingIsSubmitting}
+                              className="w-full mt-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 hover:from-cyan-300 hover:to-blue-400 text-white shadow-[0_0_25px_rgba(6,182,212,0.45)] border border-cyan-300/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            >
+                              {onboardingIsSubmitting ? (
+                                <>
+                                  <Loader2 size={15} className="animate-spin" />
+                                  <span>Configuring Profile...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ShieldCheck size={15} />
+                                  <span>{isEmailVerified(onboardingEmail.trim().toLowerCase()) ? 'Launch Clue AI' : 'Verify & Launch Clue AI'}</span>
+                                </>
+                              )}
+                            </button>
+
+                            <p className="text-[10px] text-white/40 text-center leading-normal pt-1">
+                              {isEmailVerified(onboardingEmail.trim().toLowerCase())
+                                ? 'Your email is already verified. Clue AI will launch immediately.'
+                                : 'A 6-digit verification code will be sent to your inbox for instant confirmation.'}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -10725,7 +10868,7 @@ function App() {
                   Installing Clue AI Update
                 </h2>
                 <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.2'}
+                  Upgrading to Version {updateInfo.version || '5.8.4'}
                 </p>
 
                 {/* High-tech Progress Bar */}
