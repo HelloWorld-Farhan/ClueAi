@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClueAI - Reminder Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #05060b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #05060b; padding: 35px 15px;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #090a12; border-radius: 20px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+          
+          <!-- Top Neon Accent Header -->
+          <tr>
+            <td style="background: linear-gradient(90deg, #06b6d4, #3b82f6, #6366f1); height: 5px;"></td>
+          </tr>
+
+          <!-- Brand Logo Header -->
+          <tr>
+            <td style="padding: 35px 35px 20px 35px; text-align: center;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 2px; color: #22d3ee; text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);">
+                CLUE AI
+              </h1>
+              <p style="margin: 6px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; color: #94a3b8; font-weight: bold;">
+                Intelligent Interview Assistant
+              </p>
+            </td>
+          </tr>
+
+          <!-- Hero Message Box -->
+          <tr>
+            <td style="padding: 10px 35px 25px 35px;">
+              <div style="background-color: #121422; border-radius: 16px; border: 1px solid #1e2640; border-left: 4px solid #06b6d4; padding: 25px 25px 20px 25px;">
+                <h2 style="margin: 0 0 14px 0; font-size: 19px; font-weight: 800; color: #ffffff;">
+                  Interview Reminder Confirmed 🎯
+                </h2>
+                <p style="margin: 0 0 16px 0; font-size: 14.5px; line-height: 1.6; color: #cbd5e1;">
+                  Hello <strong style="color: #ffffff;">{{toName}}</strong>,
+                </p>
+                <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #94a3b8;">
+                  Your automated interview reminder has been securely locked into ClueAI's cloud scheduler. We will notify you right before your interview so you are fully prepared and confident.
+                </p>
+
+                <!-- Interview Details Card -->
+                <div style="background-color: #080911; border-radius: 12px; border: 1px solid #1e2640; padding: 18px; margin-top: 20px;">
+                  <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #22d3ee; border-bottom: 1px solid #1e2640; padding-bottom: 8px; margin-bottom: 12px;">
+                    Scheduled Details
+                  </div>
+                  <table width="100%" border="0" cellspacing="0" cellpadding="4" style="font-size: 13.5px;">
+                    <tr>
+                      <td style="color: #64748b; width: 40%; font-size: 12px; text-transform: uppercase;">Company</td>
+                      <td style="color: #ffffff; font-weight: bold;">{{companyName}}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #64748b; font-size: 12px; text-transform: uppercase;">Role / Position</td>
+                      <td style="color: #38bdf8; font-weight: bold;">{{jobTitle}}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #64748b; font-size: 12px; text-transform: uppercase;">Interview Date</td>
+                      <td style="color: #ffffff; font-weight: bold;">{{date}}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #64748b; font-size: 12px; text-transform: uppercase;">Scheduled Time</td>
+                      <td style="color: #22d3ee; font-weight: bold;">{{time}}</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Stealth Checklist -->
+                <div style="margin-top: 22px;">
+                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #38bdf8;">
+                    ⚡ Quick Stealth Setup Tips:
+                  </p>
+                  <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #94a3b8; line-height: 1.7;">
+                    <li>Keep ClueAI in <strong>Stealth Mode</strong> if sharing your screen on Zoom, Teams, or Meet.</li>
+                    <li>Ensure microphone audio is active to enable live question transcription.</li>
+                    <li>Press <code style="background-color: #080911; padding: 2px 6px; border-radius: 5px; color: #22d3ee; border: 1px solid #1e2640;">Ctrl + Shift + Enter</code> to trigger answers instantly.</li>
+                  </ul>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Support & Help Section -->
+          <tr>
+            <td style="padding: 0 35px 25px 35px; text-align: center;">
+              <div style="background-color: #0e101d; border-radius: 12px; border: 1px solid #1e2640; padding: 16px;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #94a3b8;">
+                  Have questions, issues, or feedback?
+                </p>
+                <a href="mailto:clueai.support@gmail.com" style="display: inline-block; background-color: rgba(34,211,238,0.1); border: 1px solid #22d3ee; color: #22d3ee; font-weight: bold; font-size: 13px; text-decoration: none; padding: 7px 18px; border-radius: 20px;">
+                  ✉️ clueai.support@gmail.com
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Developer Footer -->
+          <tr>
+            <td style="padding: 25px 35px 35px 35px; border-top: 1px solid #171b2d; text-align: center; background-color: #07080e;">
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Built by Farhan Khalid
+              </p>
+              <a href="https://farhan-khalid-portfolio.vercel.app/" style="display: inline-block; background: linear-gradient(135deg, #06b6d4, #2563eb); color: #ffffff; font-size: 12px; font-weight: 900; text-decoration: none; padding: 10px 24px; border-radius: 25px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 20px rgba(6,182,212,0.4); margin-bottom: 20px;">
+                ✨ View Developer Portfolio →
+              </a>
+              <p style="margin: 0; font-size: 11px; color: #475569; line-height: 1.6;">
+                Engineered with passion for engineers, candidates & interviewees worldwide.<br>
+                © 2026 ClueAI. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

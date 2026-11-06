@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive, MessageSquareShare, Image as ImageIcon, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -18,24 +18,24 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
+      title: "Interactive Feedback & Support Center",
+      desc: "Instantly share your thoughts, report issues, or suggest improvements directly from the header with one-click screenshot attachment and real-time dispatch."
+    },
+    {
+      title: "Cyberpunk Email Engine & Confirmation System",
+      desc: "All interview alerts, notes, reminders, and feedback notifications now utilize high-contrast cyberpunk dark and neon electric-blue templates with instant automated confirmations."
+    },
+    {
+      title: "Dual Engineering & Support Routing",
+      desc: "All user feedback is automatically synchronized with both lead engineering and Clue AI support for rapid triage and personalized resolution."
+    },
+    {
       title: "Full-Screen Animated Update Installation",
-      desc: "Clean Samsung-style full-screen installation experience showing live extraction and file verification progress from 1% to 100% before relaunching."
+      desc: "Dedicated full-screen installation experience showing live extraction and file verification progress from 1% to 100% before relaunching."
     },
     {
       title: "Word-Detecting Voice Scroll Teleprompter",
       desc: "Follows your spoken words in real time, automatically softly blurring read words while brightly highlighting your current word and scrolling smoothly."
-    },
-    {
-      title: "Real-Time Spoken Word Feedback",
-      desc: "Floating live transcription indicator confirms recognized speech instantly so you always see what the software hears."
-    },
-    {
-      title: "Enhanced Microphone Sensitivity & Auto Gain",
-      desc: "Hardware-level automatic gain control and audio boosting captures normal and quiet speech effortlessly without needing to speak loudly."
-    },
-    {
-      title: "Accurate Release Notes in Update Center",
-      desc: "Update dialog always presents real, user-perspective feature summaries with dedicated headings and clear descriptions."
     }
   ];
 
@@ -496,7 +496,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.4');
+  const [appVersion, setAppVersion] = useState('5.7.5');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -542,6 +542,20 @@ function App() {
   const [cacheClearedSuccess, setCacheClearedSuccess] = useState(false);
   const [isRefreshingStorage, setIsRefreshingStorage] = useState(false);
   const [storageRefreshedMsg, setStorageRefreshedMsg] = useState(false);
+
+  // --- FEEDBACK & SUPPORT MODAL STATE ---
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    email: '',
+    category: 'Bug / Issue',
+    description: '',
+    imageBase64: ''
+  });
+  const [feedbackErrors, setFeedbackErrors] = useState<{ email?: string; description?: string }>({});
+  const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [feedbackStatusMsg, setFeedbackStatusMsg] = useState('');
+  const [showFeedbackEmailSuggest, setShowFeedbackEmailSuggest] = useState(false);
+  const feedbackFileInputRef = useRef<HTMLInputElement>(null);
 
   // Semver comparison helper
   const isNewerVersion = (latest: string, current: string): boolean => {
@@ -599,6 +613,126 @@ function App() {
     } finally {
       setIsClearingCache(false);
       fetchStorageInfo();
+    }
+  };
+
+  // Feedback Submission & Screenshot Upload Handlers
+  const handleFeedbackImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, WebP, GIF).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Selected image exceeds 5 MB. Please select a smaller screenshot.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (typeof ev.target?.result === 'string') {
+        setFeedbackForm(prev => ({ ...prev, imageBase64: ev.target!.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFeedbackPaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          if (file.size > 5 * 1024 * 1024) {
+            alert('Pasted screenshot exceeds 5 MB.');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            if (typeof ev.target?.result === 'string') {
+              setFeedbackForm(prev => ({ ...prev, imageBase64: ev.target!.result as string }));
+            }
+          };
+          reader.readAsDataURL(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    const errors: { email?: string; description?: string } = {};
+    const emailTrimmed = feedbackForm.email.trim();
+    const descTrimmed = feedbackForm.description.trim();
+
+    if (!emailTrimmed) {
+      errors.email = 'Email address is required.';
+    } else if (!/^\S+@\S+\.\S+$/.test(emailTrimmed)) {
+      errors.email = 'Please provide a valid email address (e.g. user@example.com).';
+    }
+
+    if (!descTrimmed) {
+      errors.description = 'Please describe the issue or feedback you are reporting.';
+    } else if (descTrimmed.length < 8) {
+      errors.description = 'Please provide at least 8 characters explaining the issue.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFeedbackErrors(errors);
+      return;
+    }
+
+    setFeedbackErrors({});
+    setFeedbackStatus('sending');
+    setFeedbackStatusMsg('Routing feedback report to Clue AI engineers...');
+
+    try {
+      try {
+        const savedEmails: string[] = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+        if (!savedEmails.includes(emailTrimmed)) {
+          savedEmails.push(emailTrimmed);
+          localStorage.setItem('clueai_saved_emails', JSON.stringify(savedEmails));
+        }
+      } catch (err) {}
+
+      const payload = {
+        type: 'feedback',
+        user_email: emailTrimmed,
+        user_name: username || 'ClueAI User',
+        category: feedbackForm.category,
+        description: descTrimmed,
+        image_base64: feedbackForm.imageBase64 || '',
+        app_version: appVersion,
+        timestamp: new Date().toISOString()
+      };
+
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      setFeedbackStatus('success');
+      setFeedbackStatusMsg('Feedback successfully dispatched! Dispatched to farhankhalid17968@gmail.com and clueai.support@gmail.com. A confirmation email has also been sent to your inbox.');
+
+      setTimeout(() => {
+        setShowFeedbackModal(false);
+        setFeedbackStatus('idle');
+        setFeedbackForm({
+          email: emailTrimmed,
+          category: 'Bug / Issue',
+          description: '',
+          imageBase64: ''
+        });
+      }, 2500);
+    } catch (err) {
+      setFeedbackStatus('error');
+      setFeedbackStatusMsg('Failed to dispatch feedback. Please check your internet connection or email clueai.support@gmail.com.');
     }
   };
 
@@ -4624,7 +4758,7 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
+            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
           >
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
@@ -4691,6 +4825,24 @@ function App() {
                             </button>
                           </div>
                         )}
+
+                        {/* Top Bar Feedback Button Next to Name */}
+                        <button
+                          onClick={() => {
+                            setFeedbackErrors({});
+                            setFeedbackStatus('idle');
+                            const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                            if (saved.length > 0 && !feedbackForm.email) {
+                              setFeedbackForm(prev => ({ ...prev, email: saved[0] }));
+                            }
+                            setShowFeedbackModal(true);
+                          }}
+                          className="px-2.5 py-1 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:border-cyan-300 flex items-center gap-1.5 transition-all cursor-pointer ml-2 hover:scale-[1.03] active:scale-[0.98]"
+                          title="Share feedback or report an issue"
+                        >
+                          <MessageSquareShare size={12} className="text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
+                          <span>Feedback</span>
+                        </button>
                       </div>
 
                       {/* Right: Window Controls */}
@@ -5804,6 +5956,268 @@ function App() {
                 )}
               </AnimatePresence>
 
+              {/* Animated User Feedback Modal with Blur Backdrop */}
+              <AnimatePresence>
+                {showFeedbackModal && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.94, opacity: 0, y: 15 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.94, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className="bg-[#090b14] border border-cyan-500/40 w-full max-w-lg rounded-3xl p-6 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.25)] flex flex-col gap-4 text-left max-h-[92vh] overflow-y-auto custom-scrollbar"
+                      onPaste={handleFeedbackPaste}
+                    >
+                      {/* Hidden File Input for Image Upload */}
+                      <input
+                        ref={feedbackFileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleFeedbackImageSelect}
+                      />
+
+                      {/* Header */}
+                      <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                            <MessageSquareShare size={20} className="text-white" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-black text-white">Share Your Feedback</h3>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                                Clue AI Support
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 mt-0.5">
+                              Report issues, suggest features, or reach out to our engineering team.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => setShowFeedbackModal(false)}
+                          className="p-1.5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      {/* Feedback Status / Alerts */}
+                      {feedbackStatus === 'success' && (
+                        <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-2xl p-3.5 flex items-start gap-3 text-emerald-200 text-xs shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                          <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                          <div className="leading-relaxed">
+                            <strong className="text-emerald-100 block font-bold mb-0.5">Feedback Dispatched Successfully!</strong>
+                            {feedbackStatusMsg}
+                          </div>
+                        </div>
+                      )}
+
+                      {feedbackStatus === 'error' && (
+                        <div className="bg-rose-500/15 border border-rose-500/40 rounded-2xl p-3.5 flex items-start gap-3 text-rose-200 text-xs shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+                          <AlertTriangle size={18} className="text-rose-400 shrink-0 mt-0.5" />
+                          <div className="leading-relaxed">
+                            <strong className="text-rose-100 block font-bold mb-0.5">Dispatch Error</strong>
+                            {feedbackStatusMsg}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Form Body */}
+                      <div className="space-y-3.5">
+                        {/* Email Address with Autocomplete Suggestions */}
+                        <div className="relative">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                            Your Email ID <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="e.g. your.email@example.com"
+                            value={feedbackForm.email}
+                            onChange={(e) => {
+                              setFeedbackForm(prev => ({ ...prev, email: e.target.value }));
+                              if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
+                              const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                              const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                              setShowFeedbackEmailSuggest(matches.length > 0);
+                            }}
+                            onFocus={() => {
+                              const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                              if (saved.length > 0) setShowFeedbackEmailSuggest(true);
+                            }}
+                            onBlur={() => setTimeout(() => setShowFeedbackEmailSuggest(false), 200)}
+                            className={`w-full bg-white/5 border ${feedbackErrors.email ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 outline-none transition-colors shadow-inner`}
+                          />
+                          {showFeedbackEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                            <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
+                              <div className="px-3 py-1.5 bg-black/40 border-b border-white/10">
+                                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">Suggested Saved Emails</span>
+                              </div>
+                              {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                                .filter(s => !feedbackForm.email || s.toLowerCase().includes(feedbackForm.email.toLowerCase()))
+                                .map((email, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setFeedbackForm(prev => ({ ...prev, email }));
+                                      setShowFeedbackEmailSuggest(false);
+                                      if (feedbackErrors.email) setFeedbackErrors(prev => ({ ...prev, email: undefined }));
+                                    }}
+                                  >
+                                    {email}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                          {feedbackErrors.email && (
+                            <p className="text-rose-400 text-[10px] font-bold mt-1 pl-1">
+                              {feedbackErrors.email}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Category Dropdown */}
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                            Feedback Category
+                          </label>
+                          <select
+                            value={feedbackForm.category}
+                            onChange={(e) => setFeedbackForm(prev => ({ ...prev, category: e.target.value }))}
+                            className="w-full bg-[#121526] border border-white/10 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white outline-none transition-colors cursor-pointer"
+                          >
+                            <option value="Bug / Issue" className="bg-[#121526] text-white">Bug / Issue</option>
+                            <option value="Feature Request" className="bg-[#121526] text-white">Feature Request</option>
+                            <option value="Audio & Voice Scroll" className="bg-[#121526] text-white">Audio & Voice Scroll</option>
+                            <option value="UI & Controls" className="bg-[#121526] text-white">UI & Controls</option>
+                            <option value="Performance & Stability" className="bg-[#121526] text-white">Performance & Stability</option>
+                            <option value="General Feedback" className="bg-[#121526] text-white">General Feedback</option>
+                          </select>
+                        </div>
+
+                        {/* Description Textarea */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                              Problem Details / Feedback <span className="text-rose-400">*</span>
+                            </label>
+                            <span className="text-[10px] text-white/40 font-mono">
+                              {feedbackForm.description.length} chars (Ctrl+V to paste image)
+                            </span>
+                          </div>
+                          <textarea
+                            rows={4}
+                            placeholder="Please describe what happened, what you expected, or any improvements you'd like to see..."
+                            value={feedbackForm.description}
+                            onChange={(e) => {
+                              setFeedbackForm(prev => ({ ...prev, description: e.target.value }));
+                              if (feedbackErrors.description) setFeedbackErrors(prev => ({ ...prev, description: undefined }));
+                            }}
+                            className={`w-full bg-white/5 border ${feedbackErrors.description ? 'border-rose-500/60 focus:border-rose-400' : 'border-white/10 focus:border-cyan-400'} rounded-xl p-3 text-xs text-white placeholder-white/30 outline-none transition-colors resize-none shadow-inner`}
+                          />
+                          {feedbackErrors.description && (
+                            <p className="text-rose-400 text-[10px] font-bold mt-1 pl-1">
+                              {feedbackErrors.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Image / Screenshot Upload & Preview Area */}
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                            Attach Screenshot / Image <span className="text-white/40 normal-case font-normal">(optional)</span>
+                          </label>
+
+                          {feedbackForm.imageBase64 ? (
+                            <div className="relative rounded-2xl border border-cyan-500/40 bg-black/40 p-2.5 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <img
+                                  src={feedbackForm.imageBase64}
+                                  alt="Screenshot Preview"
+                                  className="w-14 h-14 object-cover rounded-xl border border-cyan-400/30 shrink-0"
+                                />
+                                <div className="text-left overflow-hidden">
+                                  <div className="text-xs font-bold text-white truncate">Screenshot Attached</div>
+                                  <div className="text-[10px] text-cyan-300 font-mono">Ready for email upload</div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setFeedbackForm(prev => ({ ...prev, imageBase64: '' }))}
+                                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                              >
+                                <Trash2 size={12} />
+                                <span>Remove</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => feedbackFileInputRef.current?.click()}
+                              className="border border-dashed border-white/20 hover:border-cyan-400/60 rounded-2xl p-4 bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 text-center group"
+                            >
+                              <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+                                <ImageIcon size={16} />
+                              </div>
+                              <span className="text-xs font-bold text-white/80 group-hover:text-cyan-300 transition-colors">
+                                Click to browse image or press Ctrl+V to paste screenshot
+                              </span>
+                              <span className="text-[10px] text-white/40">
+                                Supports PNG, JPG, WebP up to 5 MB
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="flex items-center justify-between pt-3 border-t border-white/10 shrink-0 mt-1">
+                        <div className="text-[10px] text-white/40">
+                          Routed to <span className="text-cyan-400 font-mono">farhankhalid17968@gmail.com</span> & support
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowFeedbackModal(false)}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={feedbackStatus === 'sending'}
+                            onClick={handleSendFeedback}
+                            className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:border-cyan-300 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+                          >
+                            {feedbackStatus === 'sending' ? (
+                              <>
+                                <Loader2 size={13} className="animate-spin text-white" />
+                                <span>Sending Feedback...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send size={13} className="text-white" />
+                                <span>Submit Feedback</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Full-Screen Settings Modal with Framer Motion & Perfect Sizing */}
               <AnimatePresence>
                 {showSettings && (
@@ -6840,7 +7254,7 @@ function App() {
               )}
 
               {/* Dashboard Empty State with Scroll-Collapsing Top Sections */}
-              {!isRecording && !showSettings && !showInfo && !showUpdateModal && (
+              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && (
                 <div className="flex-1 min-h-0 flex flex-col mt-2 px-2 pb-4 overflow-hidden">
                   {/* Upper Two Sections with Smooth Scroll-Collapse Transition */}
                   <motion.div 
