@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
+      title: "Reliable Instant Cold Boot & Single Instance",
+      desc: "Fixed process lock contention so Clue AI always opens instantly and reliably on cold boot, installer completions, and shortcut launches."
+    },
+    {
+      title: "Centered Storage Modal with Balanced Padding",
+      desc: "The Storage & Disk Center modal is now beautifully fitted and centered in the middle of your screen with generous horizontal padding."
+    },
+    {
       title: "Streamlined Minimal Announcement Emails",
-      desc: "Update notifications are now ultra-compact with only the official blue hero banner and a concise greeting, removing noisy changelogs for maximum clarity."
+      desc: "Update notifications are ultra-compact with only the official blue hero banner and a concise greeting for maximum clarity."
     },
     {
       title: "Universal Portfolio Website Redirection",
-      desc: "All email templates now feature a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website."
-    },
-    {
-      title: "Instant Global CDN Edge Logo Delivery",
-      desc: "Migrated official Clue AI email assets to high-speed CDN edge nodes, ensuring immediate and crisp logo rendering across all email clients."
-    },
-    {
-      title: "Process Resilience & Zombie Process Elimination",
-      desc: "Starting Clue AI cleanly kills previous lingering processes, boots in milliseconds, and provides Ctrl+Shift+X emergency termination."
+      desc: "All email templates feature a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.0');
+  const [appVersion, setAppVersion] = useState('5.9.1');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -6340,14 +6340,14 @@ function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[350] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 overflow-hidden pointer-events-auto"
+                    className="fixed inset-0 z-[350] bg-black/45 backdrop-blur-sm flex items-center justify-center px-6 py-4 sm:px-12 md:px-20 overflow-hidden pointer-events-auto"
                   >
                     <motion.div
                       initial={{ scale: 0.94, opacity: 0, y: 15 }}
                       animate={{ scale: 1, opacity: 1, y: 0 }}
                       exit={{ scale: 0.94, opacity: 0, y: 15 }}
                       transition={{ type: "spring", stiffness: 380, damping: 28 }}
-                      className="bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 w-full max-w-2xl rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.2)] flex flex-col gap-5 relative max-h-[88vh] overflow-hidden"
+                      className="bg-[#0a0b12]/95 backdrop-blur-3xl border border-cyan-500/40 w-full max-w-xl mx-auto rounded-3xl p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_50px_rgba(6,182,212,0.2)] flex flex-col gap-4 relative max-h-[85vh] overflow-hidden"
                     >
                       {/* Header */}
                       <div className="flex items-center justify-between pb-3.5 border-b border-white/10 shrink-0">
@@ -6374,9 +6374,9 @@ function App() {
                       </div>
 
                       {/* Main Grid: ClueAI Footprint & Laptop Disk */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         {/* Card 1: ClueAI Application & User Data Breakdown */}
-                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-4 flex flex-col justify-between shadow-inner">
+                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
                           <div>
                             {/* Section A: Software Storage Footprint */}
                             <div className="pb-3 border-b border-white/5">
@@ -6460,7 +6460,7 @@ function App() {
                         </div>
 
                         {/* Card 2: Laptop Hard Drive Capacity */}
-                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-4 flex flex-col justify-between shadow-inner">
+                        <div className="bg-[#05060b]/90 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
                           <div>
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black uppercase tracking-wider text-white/50">

@@ -20,15 +20,15 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.0)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.1)
 
-### 🚀 What's New in v5.9.0
+### 🚀 What's New in v5.9.1
+- 🚀 **Reliable Instant Cold Boot & Single Instance**: Fixed process lock race condition so Clue AI always opens instantly and reliably on cold boot, installer completions, and desktop shortcut clicks without mutual process termination.
+- 🪟 **Centered Storage Modal with Balanced Padding**: The Storage & Disk Center modal is now fitted and centered in the middle of your screen with generous horizontal padding (`px-6 sm:px-12 md:px-20`) for optimal aesthetic balance.
 - ✉️ **Streamlined Minimal Update Emails**: Update notifications are now ultra-compact with only the official blue hero banner and a concise greeting, removing noisy changelog dumps for maximum clarity and mobile readability.
 - 🌐 **Universal Portfolio Website Redirection**: Added a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website (`https://farhan-khalid-portfolio.vercel.app/`) across all email templates and developer cards.
 - ⚡ **Instant Global CDN Edge Logo Delivery**: Migrated email logo assets to high-speed jsDelivr CDN edge nodes, ensuring immediate and crisp logo rendering across all email clients without delayed placeholders.
-- 🛡️ **Instant Single-Instance Replacement & Zombie Killer**: Launching Clue AI automatically terminates any previous or stuck background instances, ensuring only one instance runs at any time.
 - 🛑 **Emergency Background Kill Shortcut (`Ctrl + Shift + X`)**: Terminates all Clue AI background processes immediately. Strict shortcut isolation ensures only `Ctrl + Shift + K` responds when minimized.
-- 👤 **Permanent One-Time Device Setup**: Onboarding candidate setup strictly opens once per device installation. Added top-right minimize and close controls directly to the starting panel.
 
 ### 🪟 1. For Windows
 

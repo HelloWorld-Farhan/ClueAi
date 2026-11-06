@@ -40,29 +40,25 @@ let isStealthMode = true;
 let isCustomMaximized = false;
 let preMaximizeBounds = { width: 1000, height: 600, x: 0, y: 0 };
 
-function terminateAllClueAiProcesses(excludeCurrentPid = false) {
+function terminateAllClueAiProcesses() {
   try {
-    if (!excludeCurrentPid && mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.destroy();
     }
   } catch (e) {}
 
   if (process.platform === 'win32') {
     try {
-      const { execSync } = require('child_process');
-      if (excludeCurrentPid) {
-        // Force terminate any other running ClueAI processes except current process
-        execSync(`powershell -NoProfile -NonInteractive -Command "Get-Process -Name 'ClueAI','clueai' -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force"`, { stdio: 'ignore' });
-      } else {
-        execSync('taskkill /F /IM "ClueAI.exe" /T', { stdio: 'ignore' });
-        execSync('taskkill /F /IM "clueai.exe" /T', { stdio: 'ignore' });
-      }
+      const { exec } = require('child_process');
+      exec('taskkill /F /IM "ClueAI.exe" /T & taskkill /F /IM "clueai.exe" /T', () => {
+        app.exit(0);
+      });
+      setTimeout(() => app.exit(0), 400);
+      return;
     } catch (e) {}
   }
 
-  if (!excludeCurrentPid) {
-    app.exit(0);
-  }
+  app.exit(0);
 }
 
 function applyStealthProtection(win, enabled) {
@@ -971,11 +967,6 @@ async function downloadReleaseAssetDirect(latestVersion) {
       }
     } catch (e) { }
 
-    // Terminate any other ClueAI processes so the installer is never locked
-    try {
-      terminateAllClueAiProcesses(true);
-    } catch (e) { }
-
     if (autoUpdater) {
       try {
         const fs = require('fs');
@@ -984,7 +975,7 @@ async function downloadReleaseAssetDirect(latestVersion) {
       } catch (err) { }
 
       try {
-        // Run silent update and force relaunch to avoid process-lock prompt
+        // Run silent update and force relaunch
         autoUpdater.quitAndInstall(true, true);
       } catch (err) {
         console.error('quitAndInstall error:', err);
@@ -1345,31 +1336,23 @@ async function downloadReleaseAssetDirect(latestVersion) {
   }
 }
 
-const PID_FILE = path.join(app.getPath('userData'), 'clueai_main.pid');
-
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  // Another instance is already running or holding the lock.
-  // User requirement: "if one is running the next will start when the previous one is killed make that proelry"
-  try {
-    terminateAllClueAiProcesses(true);
-  } catch (e) {}
-  app.relaunch();
-  app.exit(0);
+  // If another instance is running, exit this process cleanly.
+  // The active instance receives 'second-instance' and focuses itself.
+  app.quit();
 } else {
-  try {
-    const fs = require('fs');
-    fs.writeFileSync(PID_FILE, process.pid.toString(), 'utf8');
-  } catch (e) {}
-
-  app.on('second-instance', () => {
-    // A newer instance was launched: self-terminate so the new one has full control
-    try {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.destroy();
-      }
-    } catch (e) {}
-    app.exit(0);
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Bring active window to front and focus immediately
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      applyStealthProtection(mainWindow, isStealthMode);
+      mainWindow.webContents.send('window-shown');
+      mainWindow.focus();
+    }
   });
 
   app.whenReady().then(() => {
