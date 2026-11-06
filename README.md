@@ -20,14 +20,14 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.8.7)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.8.8)
 
-### 🚀 What's New in v5.8.7
-- 🎨 **Modern Curved Email Design**: Unified border curvature across all email dispatches (24px outer containers, 20px hero cards, 18px data blocks, 16px buttons, 999px pill badges) for a polished, modern look in web and mobile email clients.
-- 📦 **Session Export Modal & Dual PDF/HTML Dispatch**: Smooth blur-backdrop modal with 1-click direct download (HTML / PDF) and instant cloud dispatch to verified email addresses with the session PDF attached.
-- 🛡️ **Frictionless Onboarding**: Automatically disables shield protection on the first-time profile setup screen so credentials can be entered smoothly without keyboard hook interference.
-- 📢 **Zero-Link Greeting Broadcasts**: Clean, trusted release notifications broadcast to all registered Clue AI users without external redirect links.
-- ⚡ **Turbocharged Startup & Resilient Updater**: Optimized app bootstrap time and robust in-app updater with visual progress stages and seamless relaunch.
+### 🚀 What's New in v5.8.8
+- ☀️ **Clean White High-Contrast Email Theme**: All 9 email dispatches (OTP verification, welcome message, session exports, release updates, and reminders) transitioned from dark to a crisp, high-contrast white layout (`#ffffff` container on `#f1f5f9` canvas) with deep charcoal typography (`#0f172a` / `#1e293b`) for 100% text visibility in Gmail, Outlook, and mobile apps.
+- 🤖 **Automated GitHub Release Broadcasts**: Removed manual in-app broadcast button. New updates built on GitHub Actions automatically trigger Google Apps Script to notify all registered candidates with zero human intervention.
+- 🎨 **Modern Curved Architecture**: 24px container radii, 20px hero sections, 18px central verification boxes, and 999px pill status chips.
+- 📦 **Session Export Suite**: Blur-backdrop modal with 1-click local download (HTML / PDF) and verified cloud delivery with PDF attachment.
+- ⚡ **Turbocharged Startup**: Instant cold boot and resilient auto-updater with stage monitoring and zero-lag relaunch.
 
 ### 🪟 1. For Windows
 

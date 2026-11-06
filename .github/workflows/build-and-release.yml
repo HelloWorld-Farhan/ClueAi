@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Target Release Tag'
         required: false
-        default: 'v5.8.7'
+        default: 'v5.8.8'
 
 permissions:
   contents: write
@@ -57,3 +57,24 @@ jobs:
             release/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Automated Release Email Broadcast
+        if: matrix.os == 'windows-latest' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        run: |
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          $ver = $tag -replace '^v',''
+          Write-Host "Triggering automated Clue AI V$ver release announcement email broadcast..."
+          $payload = @{
+            type = "broadcast_update"
+            action = "broadcast_update"
+            version = $ver
+            app_version = $ver
+            highlights = "• Clean White High-Contrast Email Theme with superior text visibility and crisp layout`n• Automated Release Announcement Delivery on GitHub update release`n• Streamlined Update Center and instant session exports`n• Seamless performance and startup optimizations"
+          } | ConvertTo-Json
+          try {
+            $resp = Invoke-RestMethod -Uri "https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec" -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 30
+            Write-Host "Broadcast webhook successfully invoked: $resp"
+          } catch {
+            Write-Host "Broadcast webhook notification notice: $_"
+          }
+        shell: powershell

@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * CLUE AI - Google Apps Script Backend (v5.8.7)
+ * CLUE AI - Google Apps Script Backend (v5.8.8)
  * =========================================================================
  * Handles:
  *  1. Universal 6-Digit Email OTP Verification (Dark Mode)
@@ -18,7 +18,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.8.7";
+const DEFAULT_VERSION = "5.8.8";
 
 /**
  * Zero-argument Test Runner for Google Apps Script IDE
@@ -147,14 +147,14 @@ function getEmailLayout(opts) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <title>${headline} - Clue AI</title>
 <style>
   body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
   table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
   img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none}
-  body{margin:0!important;padding:0!important;width:100%!important;background:#070a10}
+  body{margin:0!important;padding:0!important;width:100%!important;background:#f1f5f9}
   a{text-decoration:none}
   @media only screen and (max-width:620px){
     .container{width:100%!important}
@@ -165,21 +165,21 @@ function getEmailLayout(opts) {
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background-color:#070a10;">
+<body style="margin:0;padding:0;background-color:#f1f5f9;">
  
 <!-- hidden preview text -->
 <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#070a10;">
   ${previewText}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
 </div>
  
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#070a10" style="background-color:#070a10;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f5f9" style="background-color:#f1f5f9;">
 <tr><td align="center" style="padding:28px 12px;">
  
   <!-- ============ CONTAINER ============ -->
-  <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#0d1117" style="width:600px;max-width:600px;background-color:#0d1117;border:1px solid #1c2433;border-radius:24px;overflow:hidden;">
+  <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:24px;overflow:hidden;">
  
     <!-- accent line -->
-    <tr><td height="4" bgcolor="#22d3ee" style="height:4px;line-height:4px;font-size:0;background-color:#22d3ee;background-image:${accentGradient};border-radius:24px 24px 0 0;">&nbsp;</td></tr>
+    <tr><td height="4" bgcolor="#22d3ee" style="height:4px;line-height:4px;font-size:0;background-color:#0284c7;background-image:${accentGradient};border-radius:24px 24px 0 0;">&nbsp;</td></tr>
  
     <!-- ============ HEADER ============ -->
     <tr>
@@ -190,20 +190,20 @@ function getEmailLayout(opts) {
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;padding:0;">
-                    <img src="https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi/main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid #155e75;box-shadow:0 0 15px rgba(34,211,238,0.25);" />
+                    <img src="https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi/main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid #cbd5e1;box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
                   </td>
-                  <td style="padding-left:12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#ffffff;letter-spacing:.2px;">Clue <span style="color:#22d3ee;">AI</span></td>
+                  <td style="padding-left:12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#0f172a;letter-spacing:.2px;">Clue <span style="color:#0284c7;">AI</span></td>
                 </tr>
               </table>
             </td>
             <td align="right" valign="middle">
-              <span style="display:inline-block;padding:5px 11px;border:1px solid #155e75;border-radius:999px;background-color:#08202b;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.6px;color:#22d3ee;">V${version}</span>
+              <span style="display:inline-block;padding:5px 11px;border:1px solid #bfdbfe;border-radius:999px;background-color:#eff6ff;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.6px;color:#1d4ed8;">V${version}</span>
             </td>
           </tr>
         </table>
       </td>
     </tr>
-    <tr><td style="padding:0 28px;" class="px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#1c2433" style="height:1px;line-height:1px;font-size:0;background-color:#1c2433;">&nbsp;</td></tr></table></td></tr>
+    <tr><td style="padding:0 28px;" class="px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#f1f5f9" style="height:1px;line-height:1px;font-size:0;background-color:#f1f5f9;">&nbsp;</td></tr></table></td></tr>
  
     <!-- ============ HERO CARD ============ -->
     <tr>
@@ -222,7 +222,7 @@ function getEmailLayout(opts) {
               </table>
  
               <h1 class="h1" style="margin:18px 0 8px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:30px;line-height:38px;font-weight:800;color:#ffffff;">${headline}</h1>
-              ${subheadline ? `<p style="margin:0 0 20px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#dbe7ff;">${subheadline}</p>` : ''}
+              ${subheadline ? `<p style="margin:0 0 20px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#e0f2fe;">${subheadline}</p>` : ''}
  
               <!-- central block -->
               ${centralBoxHtml}
@@ -258,14 +258,14 @@ function getEmailLayout(opts) {
     <!-- ============ MADE BY CARD ============ -->
     <tr>
       <td class="px" style="padding:22px 28px 8px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
             <td align="center" style="padding:24px 20px;">
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#ffffff;">Made by Farhan Khalid</div>
-              <div style="margin-top:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:21px;color:#94a3b8;">Developer &amp; Engineer<br>Development driven by real users &bull; Faster iteration on features</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#0f172a;">Made by Farhan Khalid</div>
+              <div style="margin-top:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:21px;color:#475569;">Developer &amp; Engineer<br>Development driven by real users &bull; Faster iteration on features</div>
               ${showPortfolioLink ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:16px;">
                 <tr>
-                  <td align="center" bgcolor="#fcd34d" style="background-color:#fcd34d;border-radius:999px;">
+                  <td align="center" bgcolor="#fef08a" style="background-color:#fef08a;border:1px solid #facc15;border-radius:999px;">
                     <a href="${PORTFOLIO_URL}" target="_blank" style="display:inline-block;padding:11px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:800;color:#3b2a00;border-radius:999px;">&#10024; View Portfolio &rarr;</a>
                   </td>
                 </tr>
@@ -319,11 +319,11 @@ function parseTargetDate(dateStr, timeStr) {
  */
 function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
       <tr>
         <td align="center" style="padding:16px 32px;">
-          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:38px;line-height:42px;font-weight:900;letter-spacing:12px;color:#ffffff;padding-left:12px;">${otp}</div>
-          <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#bcd2ff;text-transform:uppercase;">⏱ Valid for 10 minutes</div>
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:38px;line-height:42px;font-weight:900;letter-spacing:12px;color:#1d4ed8;padding-left:12px;">${otp}</div>
+          <div style="margin-top:6px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#475569;text-transform:uppercase;">⏱ Valid for 10 minutes</div>
         </td>
       </tr>
     </table>
@@ -332,12 +332,12 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const messageCard = `
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
             <td width="5" bgcolor="#10b981" style="width:5px;background-color:#10b981;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
             <td style="padding:18px 20px;">
-              <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Permanent Cross-Feature Trust</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">Once verified, this email is automatically trusted across your profile, interview reminders, feedback submissions, and saved notes with zero redundant verification.</div>
+              <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#059669;">Permanent Cross-Feature Trust</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#1e293b;">Once verified, this email is automatically trusted across your profile, interview reminders, feedback submissions, and saved notes with zero redundant verification.</div>
             </td>
           </tr>
         </table>
@@ -348,22 +348,22 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const detailsRows = `
     <tr>
       <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
             <td style="padding:6px 20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Target Email</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#22d3ee;">${targetEmail}</td>
+                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Target Email</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#0284c7;">${targetEmail}</td>
                 </tr>
                 <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Action</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">Account &amp; Security Verification</td>
+                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Action</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">Account &amp; Security Verification</td>
                 </tr>
                 <tr>
-                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Security Status</td>
+                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Security Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ENCRYPTED</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">ENCRYPTED</span>
                   </td>
                 </tr>
               </table>
@@ -393,11 +393,11 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
  */
 function getWelcomeEmailHtml(userName, email, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.22);border-radius:18px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
       <tr>
         <td align="center" style="padding:12px 28px;">
-          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#ffffff;">ACTIVE PRO PROFILE</div>
-          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#bcd2ff;text-transform:uppercase;">Verified Address: ${email}</div>
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#1d4ed8;">ACTIVE PRO PROFILE</div>
+          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">Verified Address: ${email}</div>
         </td>
       </tr>
     </table>
@@ -406,12 +406,12 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
   const messageCard = `
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
-            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
+            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
             <td style="padding:18px 20px;">
-              <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What You Can Do With Clue AI</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+              <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">What You Can Do With Clue AI</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#1e293b;">
                 &bull; <strong>Stealth Mode:</strong> Undetectable interview copilot with zero window capture.<br>
                 &bull; <strong>Real-Time AI Streaming:</strong> Instant code solutions &amp; algorithmic explanations.<br>
                 &bull; <strong>Offline Voice-Gated Teleprompter:</strong> Hands-free scrolling triggered by your voice.<br>
@@ -427,22 +427,22 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
   const detailsRows = `
     <tr>
       <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
             <td style="padding:6px 20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Candidate Name</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Candidate Name</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${userName}</td>
                 </tr>
                 <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Verified Email</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">${email}</td>
+                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Verified Email</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0284c7;">${email}</td>
                 </tr>
                 <tr>
-                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Account Status</td>
+                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Account Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">VERIFIED &amp; READY</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">VERIFIED &amp; READY</span>
                   </td>
                 </tr>
               </table>
@@ -472,11 +472,11 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
  */
 function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
       <tr>
         <td align="center" style="padding:12px 28px;">
-          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#ffffff;">VERSION ${appVersion}</div>
-          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#bcd2ff;text-transform:uppercase;">Latest Stable Build</div>
+          <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#1d4ed8;">VERSION ${appVersion}</div>
+          <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#475569;text-transform:uppercase;">Latest Stable Build</div>
         </td>
       </tr>
     </table>
@@ -485,19 +485,19 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
   const messageCard = `
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
-            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
+            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
             <td style="padding:20px 22px;">
-              <div style="margin:0 0 10px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;">Hello ${userName || 'Clue AI User'},</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:23px;color:#e5e7eb;margin-bottom:14px;">
+              <div style="margin:0 0 10px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#0f172a;">Hello ${userName || 'Clue AI User'},</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:23px;color:#1e293b;margin-bottom:14px;">
                 Greetings from the Clue AI team! We are pleased to notify you that a new software update (Version ${appVersion}) has just arrived for Clue AI.
               </div>
-              <div style="margin:0 0 6px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What's New in V${appVersion}</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13.5px;line-height:22px;color:#cbd5e1;">
+              <div style="margin:0 0 6px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">What's New in V${appVersion}</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13.5px;line-height:22px;color:#334155;">
                 ${releaseHighlights || 'Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.'}
               </div>
-              <div style="margin-top:16px;padding:12px 14px;background-color:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.25);border-radius:14px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#93c5fd;">
+              <div style="margin-top:16px;padding:12px 14px;background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#1e40af;">
                 <strong>How to update:</strong> Simply open Clue AI on your device and click the Update button to upgrade seamlessly.
               </div>
             </td>
@@ -510,22 +510,22 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
   const detailsRows = `
     <tr>
       <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
             <td style="padding:6px 20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Platforms</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">Windows &bull; macOS</td>
+                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Platforms</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">Windows &bull; macOS</td>
                 </tr>
                 <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Availability</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">Instant In-App / Automatic Upgrade</td>
+                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Availability</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0284c7;">Instant In-App / Automatic Upgrade</td>
                 </tr>
                 <tr>
-                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">RELEASE ACTIVE</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">RELEASE ACTIVE</span>
                   </td>
                 </tr>
               </table>
@@ -670,8 +670,8 @@ function doPost(e) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:18px;">
           <tr>
             <td align="center" style="padding:10px 24px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#ffffff;">${questionCount} Questions &amp; Solutions</div>
-              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#bcd2ff;text-transform:uppercase;">Date: ${sessionDate} &bull; ${sessionTime}</div>
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#1d4ed8;">${questionCount} Questions &amp; Solutions</div>
+              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">Date: ${sessionDate} &bull; ${sessionTime}</div>
             </td>
           </tr>
         </table>
@@ -680,30 +680,30 @@ function doPost(e) {
       const detailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Candidate Name</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Candidate Name</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${userName}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Session Title</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${sessionName}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Session Title</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${sessionName}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Export Attachments</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">${cleanSessionName}.pdf &bull; ${cleanSessionName}.html</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Export Attachments</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0284c7;">${cleanSessionName}.pdf &bull; ${cleanSessionName}.html</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Exported To</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">${email}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Exported To</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0284c7;">${email}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Status</td>
                       <td align="right" style="padding:13px 0;">
-                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">EXPORT DELIVERED</span>
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">EXPORT DELIVERED</span>
                       </td>
                     </tr>
                   </table>
@@ -717,12 +717,12 @@ function doPost(e) {
       const messageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
-                <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
-                  <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">Questions &amp; AI Solutions:</div>
-                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:24px;color:#e5e7eb;">
+                  <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">Questions &amp; AI Solutions:</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:24px;color:#1e293b;">
                     ${sessionContentHtml}
                   </div>
                 </td>
@@ -805,11 +805,11 @@ function doPost(e) {
           screenshotSection = `
             <tr>
               <td class="px" style="padding:16px 28px 4px 28px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
                   <tr>
                     <td style="padding:18px 20px;">
                       <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f59e0b;">Attached Screenshot</div>
-                      <div style="background-color:#0b1626;border:1px solid #1c2433;border-radius:16px;padding:10px;text-align:center;">
+                      <div style="background-color:#0b1626;border:1px solid #e2e8f0;border-radius:16px;padding:10px;text-align:center;">
                         <img src="cid:feedback_screenshot" alt="Screenshot" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #155e75;" />
                       </div>
                     </td>
@@ -827,29 +827,29 @@ function doPost(e) {
       const adminDetailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Candidate Name</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Candidate Name</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${userName}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">User Email</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#22d3ee;"><a href="mailto:${userEmail}" style="color:#22d3ee;text-decoration:none;">${userEmail}</a></td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">User Email</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#0284c7;"><a href="mailto:${userEmail}" style="color:#0284c7;text-decoration:none;">${userEmail}</a></td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Category</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${category}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Category</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${category}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Timestamp</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;color:#94a3b8;">${timestamp}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Timestamp</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;color:#475569;">${timestamp}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">App Version</td>
-                      <td align="right" style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;color:#34d399;font-weight:700;">V${appVersion}</td>
+                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">App Version</td>
+                      <td align="right" style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;color:#059669;font-weight:700;">V${appVersion}</td>
                     </tr>
                   </table>
                 </td>
@@ -862,12 +862,12 @@ function doPost(e) {
       const adminMessageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td width="5" bgcolor="#3b82f6" style="width:5px;background-color:#3b82f6;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
                   <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#60a5fa;">Reported Problem / Message:</div>
-                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;white-space:pre-wrap;">${description}</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#1e293b;white-space:pre-wrap;">${description}</div>
                 </td>
               </tr>
             </table>
@@ -880,7 +880,7 @@ function doPost(e) {
           <tr>
             <td align="center" style="padding:10px 24px;">
               <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:#ffffff;">${category}</div>
-              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#bcd2ff;text-transform:uppercase;">App Version: v${appVersion}</div>
+              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#475569;text-transform:uppercase;">App Version: v${appVersion}</div>
             </td>
           </tr>
         </table>
@@ -915,11 +915,11 @@ function doPost(e) {
       // 2. User Confirmation Email (Sent ONLY to user with their name, WITHOUT their problem details)
       if (userEmail && userEmail.includes("@")) {
         const userCentralBox = `
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#f0fdf4" style="background-color:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:18px;">
             <tr>
               <td align="center" style="padding:12px 26px;">
                 <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:26px;line-height:32px;font-weight:700;letter-spacing:1px;color:#ffffff;">TICKET LOGGED</div>
-                <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#a7f3d0;text-transform:uppercase;">Category: ${category}</div>
+                <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#15803d;text-transform:uppercase;">Category: ${category}</div>
               </td>
             </tr>
           </table>
@@ -928,12 +928,12 @@ function doPost(e) {
         const userMessageCard = `
           <tr>
             <td class="px" style="padding:16px 28px 4px 28px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
                 <tr>
                   <td width="5" bgcolor="#10b981" style="width:5px;background-color:#10b981;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                   <td style="padding:18px 20px;">
-                    <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Direct Engineering Routing</div>
-                    <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+                    <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#059669;">Direct Engineering Routing</div>
+                    <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#1e293b;">
                       Your report has been forwarded directly to our engineering and support leads. Every submission directly influences upcoming feature rollouts and rapid patches. If additional troubleshooting is needed, our team will reach out directly to your verified email.
                     </div>
                   </td>
@@ -946,22 +946,22 @@ function doPost(e) {
         const userDetailsRows = `
           <tr>
             <td class="px" style="padding:12px 28px 4px 28px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
                 <tr>
                   <td style="padding:6px 20px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Submitted By</td>
-                        <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                        <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Submitted By</td>
+                        <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${userName}</td>
                       </tr>
                       <tr>
-                        <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Category</td>
-                        <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#22d3ee;">${category}</td>
+                        <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Category</td>
+                        <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#0284c7;">${category}</td>
                       </tr>
                       <tr>
-                        <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Routing Status</td>
+                        <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Routing Status</td>
                         <td align="right" style="padding:13px 0;">
-                          <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">DELIVERED TO ENGINEERING</span>
+                          <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">DELIVERED TO ENGINEERING</span>
                         </td>
                       </tr>
                     </table>
@@ -1030,8 +1030,8 @@ function doPost(e) {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.35);border:1px solid rgba(255,255,255,.18);border-radius:18px;">
         <tr>
           <td align="center" style="padding:12px 26px;">
-            <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time}</div>
-            <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#bcd2ff;">${data.date}</div>
+            <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#0f172a;">${data.time}</div>
+            <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#475569;">${data.date}</div>
           </td>
         </tr>
       </table>
@@ -1040,12 +1040,12 @@ function doPost(e) {
     const reminderMessageCard = `
       <tr>
         <td class="px" style="padding:16px 28px 4px 28px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
             <tr>
-              <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
+              <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
               <td style="padding:18px 20px;">
-                <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">Reminder Message</div>
-                <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;">Scheduled interview reminder for ${company} (${role}).</div>
+                <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">Reminder Message</div>
+                <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#1e293b;">Scheduled interview reminder for ${company} (${role}).</div>
               </td>
             </tr>
           </table>
@@ -1056,26 +1056,26 @@ function doPost(e) {
     const reminderDetailsRows = `
       <tr>
         <td class="px" style="padding:12px 28px 4px 28px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
             <tr>
               <td style="padding:6px 20px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Company</td>
-                    <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${company}</td>
+                    <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Company</td>
+                    <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${company}</td>
                   </tr>
                   <tr>
-                    <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Role</td>
-                    <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${role}</td>
+                    <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Role</td>
+                    <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${role}</td>
                   </tr>
                   <tr>
-                    <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Date &amp; Time</td>
-                    <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;font-weight:600;color:#22d3ee;">${data.date} &nbsp;&bull;&nbsp; ${data.time}</td>
+                    <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Date &amp; Time</td>
+                    <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;font-weight:600;color:#0284c7;">${data.date} &nbsp;&bull;&nbsp; ${data.time}</td>
                   </tr>
                   <tr>
-                    <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                    <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Status</td>
                     <td align="right" style="padding:13px 0;">
-                      <span style="display:inline-block;padding:4px 11px;border:1px solid #155e75;border-radius:999px;background-color:#08202b;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#22d3ee;">SCHEDULED</span>
+                      <span style="display:inline-block;padding:4px 11px;border:1px solid #7dd3fc;border-radius:999px;background-color:#e0f2fe;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#0369a1;">SCHEDULED</span>
                     </td>
                   </tr>
                 </table>
@@ -1150,7 +1150,7 @@ function sendScheduledReminder(e) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#7f1d1d" style="background-color:rgba(50,10,10,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
           <tr>
             <td align="center" style="padding:12px 26px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time || 'NOW'}</div>
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#0f172a;">${data.time || 'NOW'}</div>
               <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#fca5a5;">${data.date || 'TODAY'}</div>
             </td>
           </tr>
@@ -1160,12 +1160,12 @@ function sendScheduledReminder(e) {
       const alertMessageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td width="5" bgcolor="#ef4444" style="width:5px;background-color:#ef4444;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
                   <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f87171;">Pre-Interview Checklist</div>
-                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#1e293b;">
                     &bull; Launch ClueAI desktop application<br>
                     &bull; Verify microphone &amp; audio source active<br>
                     &bull; Press <code>Ctrl + Shift + Enter</code> or Start AI Interview for live assistance
@@ -1180,18 +1180,18 @@ function sendScheduledReminder(e) {
       const alertDetailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Company</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${company}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Company</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${company}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Status</td>
                       <td align="right" style="padding:13px 0;">
-                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">STARTING NOW</span>
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">STARTING NOW</span>
                       </td>
                     </tr>
                   </table>
@@ -1254,11 +1254,11 @@ function sendScheduledNote(e) {
       const appVersion = data.app_version || DEFAULT_VERSION;
 
       const noteCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#f0fdf4" style="background-color:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:18px;">
           <tr>
             <td align="center" style="padding:12px 26px;">
-              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time}</div>
-              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#a7f3d0;">${data.date}</div>
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#0f172a;">${data.time}</div>
+              <div style="margin-top:4px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12px;letter-spacing:1.6px;color:#15803d;">${data.date}</div>
             </td>
           </tr>
         </table>
@@ -1267,12 +1267,12 @@ function sendScheduledNote(e) {
       const noteMessageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td width="5" bgcolor="#10b981" style="width:5px;background-color:#10b981;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
-                  <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Interview Notes &amp; Highlights</div>
-                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;white-space:pre-wrap;">${data.notes}</div>
+                  <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#059669;">Interview Notes &amp; Highlights</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#1e293b;white-space:pre-wrap;">${data.notes}</div>
                 </td>
               </tr>
             </table>
@@ -1283,18 +1283,18 @@ function sendScheduledNote(e) {
       const noteDetailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Saved At</td>
-                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;font-weight:600;color:#22d3ee;">${data.date} &nbsp;&bull;&nbsp; ${data.time}</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Saved At</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;font-weight:600;color:#0284c7;">${data.date} &nbsp;&bull;&nbsp; ${data.time}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Status</td>
                       <td align="right" style="padding:13px 0;">
-                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ARCHIVED</span>
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">ARCHIVED</span>
                       </td>
                     </tr>
                   </table>

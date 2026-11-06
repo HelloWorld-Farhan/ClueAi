@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.7');
+  const [appVersion, setAppVersion] = useState('5.8.8');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -1047,7 +1047,6 @@ function App() {
   const [showOnboardingEmailSuggest, setShowOnboardingEmailSuggest] = useState(false);
   const [onboardingError, setOnboardingError] = useState('');
   const [onboardingIsSubmitting, setOnboardingIsSubmitting] = useState(false);
-  const [isBroadcastingUpdate, setIsBroadcastingUpdate] = useState(false);
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
   const [tempUsername, setTempUsername] = useState(username);
 
@@ -6207,37 +6206,6 @@ function App() {
                               </button>
 
                               <button
-                                onClick={async () => {
-                                  setIsBroadcastingUpdate(true);
-                                  try {
-                                    const defaultNotes = `• Premium Claude Dark Email System with dynamic V${appVersion} branding\n• First-Time User Onboarding & Email Verification\n• Cross-Feature Verified Email Pre-selection & Settings Profile\n• Automated Release Announcement Delivery to all users`;
-                                    await fetch(GOOGLE_SCRIPT_URL, {
-                                      method: 'POST',
-                                      mode: 'no-cors',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        type: 'broadcast_update',
-                                        app_version: appVersion,
-                                        highlights: defaultNotes
-                                      })
-                                    });
-                                    setModelChangeMsg(`Release update email broadcast dispatched to all registered users!`);
-                                    setTimeout(() => setModelChangeMsg(''), 4000);
-                                  } catch (e) {
-                                    console.error(e);
-                                  } finally {
-                                    setIsBroadcastingUpdate(false);
-                                  }
-                                }}
-                                disabled={isBroadcastingUpdate}
-                                className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
-                                title="Broadcast update notification email to all users"
-                              >
-                                <Send size={12} className={isBroadcastingUpdate ? 'animate-pulse' : ''} />
-                                <span>{isBroadcastingUpdate ? 'Broadcasting...' : 'Broadcast Email'}</span>
-                              </button>
-
-                              <button
                                 onClick={() => setShowUpdateModal(false)}
                                 className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white bg-white/[0.02] hover:bg-white/10 border border-white/5 transition-colors cursor-pointer"
                               >
@@ -10464,7 +10432,7 @@ function App() {
                 </div>
               )}
 
-              {/* First-Time User Onboarding & Email Verification Modal (v5.8.7 - Horizontal Minimal Redesign) */}
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.8 - Horizontal Minimal Redesign) */}
               <AnimatePresence>
                 {showOnboardingModal && (
                   <motion.div
@@ -10888,7 +10856,7 @@ function App() {
                   Installing Clue AI Update
                 </h2>
                 <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.7'}
+                  Upgrading to Version {updateInfo.version || '5.8.8'}
                 </p>
 
                 {/* High-tech Progress Bar */}
