@@ -44,11 +44,44 @@ jobs:
           npm run build
           npx electron-builder --publish never
 
+      - name: Generate Release Notes
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        run: |
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          $ver = $tag -replace '^v',''
+
+          # Extract What's New from README.md if available
+          $readme = Get-Content -Path "README.md" -Raw
+          $match = [regex]::Match($readme, "(?s)### 🚀 What's New.*?(?=### 🪟|\Z)")
+          $whatsNew = if ($match.Success) { $match.Value.Trim() } else { "Performance optimizations and stability enhancements." }
+
+          $notes = @"
+          # Clue AI $tag - Official Release
+
+          Welcome to **Clue AI $tag**!
+
+          $whatsNew
+
+          ---
+
+          ### 📦 Installation
+          - **Windows**: Download ``ClueAI.exe`` from Assets below or update seamlessly within Clue AI.
+          - **macOS**: Download ``ClueAI.dmg`` and drag to Applications.
+
+          ---
+          *Official Release &bull; Powered by Clue AI Engineering &bull; Developed by [Farhan Khalid](https://farhan-khalid-portfolio.vercel.app/)*
+          "@
+          Set-Content -Path "RELEASE_NOTES.md" -Value $notes -Encoding UTF8
+        shell: powershell
+
       - name: Upload Release Binaries
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
+          name: Clue AI ${{ inputs.tag || github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: true
           files: |
             release/*.exe
             release/*.blockmap
