@@ -3,9 +3,9 @@
 
 !macro customInit
   ; Automatically terminate any lingering ClueAI instances to prevent file locks or "ClueAI cannot be closed" prompts
-  nsExec::Exec 'taskkill /F /IM "ClueAI.exe" /T'
-  nsExec::Exec 'taskkill /F /IM "clueai.exe" /T'
-  Sleep 600
+  nsExec::ExecToLog 'cmd.exe /C taskkill /F /IM "ClueAI.exe" /T'
+  nsExec::ExecToLog 'cmd.exe /C taskkill /F /IM "clueai.exe" /T'
+  Sleep 1000
 !macroend
 
 !macro customUnInstall

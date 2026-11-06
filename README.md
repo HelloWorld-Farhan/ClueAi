@@ -20,15 +20,15 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.8.9)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.8.10)
 
-### 🚀 What's New in v5.8.9
-- 📄 **Direct PDF Downloads (No Print Dialog)**: PDF export now renders cleanly and downloads directly as a `.pdf` file with live section generation and success animations, eliminating the blocking Windows Print dialog and freezing issues.
-- 🔄 **Safe Shortcut & Data Protection**: Pressing `Ctrl+Shift+R` gracefully refreshes the workspace without destroying your sessions, API keys, or profile data. Only the dedicated "Delete All User Data" button in Storage Settings will clear records.
-- 🔕 **Minimized Shortcut Isolation**: When Clue AI is minimized or hidden, all auxiliary shortcuts (including refresh and audio controls) are deactivated; only `Ctrl+Shift+K` stays active to restore your window.
-- ⚡ **Zero-Lock Updates**: The installer and in-app updater automatically terminate lingering previous processes, resolving the *"ClueAI cannot be closed"* retry prompt forever.
-- 🪟 **Unified Gentle Modal Blur**: Standardized all dialog overlays with subtle, elegant frosted glass (`backdrop-blur-sm`) and balanced lighting, keeping your dashboard visible without pitch-black void or neon glare.
-- ☀️ **Clean White High-Contrast Emails**: High-readability white email templates across all dispatches with deep charcoal typography.
+### 🚀 What's New in v5.8.10
+- 🛡️ **Instant Single-Instance Replacement & Zombie Killer**: Launching Clue AI automatically and cleanly terminates any previous or stuck background instances, ensuring only one instance runs at any time without process locking or lingering threads.
+- ⚡ **Sub-Second Cold Boot Speed**: Streamlined Electron initialization, deferred background tasks, and asynchronous audio boot to get the dashboard live on your screen in milliseconds.
+- 👤 **Permanent One-Time Device Setup**: The candidate onboarding profile setup only appears once per device installation. Once configured or dismissed, it will never show again unless explicitly uninstalled and reinstalled.
+- 🪟 **Top-Right Window Controls in Starting Panel**: Added Minimize and Close window control buttons directly to the onboarding starting panel with smooth frosted glass styling.
+- 🛑 **Emergency Background Kill Shortcut (`Ctrl + Shift + X`)**: Added `Ctrl + Shift + X` to terminate all Clue AI background processes immediately. When Clue AI is minimized, strict hotkey isolation ensures only `Ctrl + Shift + K` responds.
+- 📄 **Direct PDF Downloads & Safe Data Reload**: Direct zero-freeze PDF exports via Chromium IPC, safe reload on `Ctrl + Shift + R`, and gentle backdrop blur across all modals.
 
 ### 🪟 1. For Windows
 

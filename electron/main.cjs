@@ -40,6 +40,31 @@ let isStealthMode = true;
 let isCustomMaximized = false;
 let preMaximizeBounds = { width: 1000, height: 600, x: 0, y: 0 };
 
+function terminateAllClueAiProcesses(excludeCurrentPid = false) {
+  try {
+    if (!excludeCurrentPid && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.destroy();
+    }
+  } catch (e) {}
+
+  if (process.platform === 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      if (excludeCurrentPid) {
+        // Force terminate any other running ClueAI processes except current process
+        execSync(`powershell -NoProfile -NonInteractive -Command "Get-Process -Name 'ClueAI','clueai' -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force"`, { stdio: 'ignore' });
+      } else {
+        execSync('taskkill /F /IM "ClueAI.exe" /T', { stdio: 'ignore' });
+        execSync('taskkill /F /IM "clueai.exe" /T', { stdio: 'ignore' });
+      }
+    } catch (e) {}
+  }
+
+  if (!excludeCurrentPid) {
+    app.exit(0);
+  }
+}
+
 function applyStealthProtection(win, enabled) {
   if (!win || win.isDestroyed()) return;
   try {
@@ -99,7 +124,7 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', showMainWindowFast);
 
   // Fast safety fallback: show immediately if ready-to-show delays
-  setTimeout(showMainWindowFast, 150);
+  setTimeout(showMainWindowFast, 60);
 
   // Force the window to the absolute highest z-level, above all fullscreen apps
   // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
@@ -135,9 +160,27 @@ function createWindow() {
     } catch (e) { }
   }
 
+  function registerCloseShortcut() {
+    try {
+      globalShortcut.unregister('CommandOrControl+Shift+X');
+      globalShortcut.register('CommandOrControl+Shift+X', () => {
+        terminateAllClueAiProcesses(false);
+      });
+    } catch (e) {
+      console.warn('Failed to register CommandOrControl+Shift+X:', e.message);
+    }
+  }
+
+  function unregisterCloseShortcut() {
+    try {
+      globalShortcut.unregister('CommandOrControl+Shift+X');
+    } catch (e) { }
+  }
+
   mainWindow.on('minimize', () => {
     unregisterAllHotkeys();
     unregisterRestartShortcut();
+    unregisterCloseShortcut();
   });
 
   mainWindow.on('restore', () => {
@@ -148,6 +191,7 @@ function createWindow() {
       mainWindow.webContents.send('window-shown');
     }
     registerRestartShortcut();
+    registerCloseShortcut();
     if (hotkeysActive) {
       registerAllHotkeys();
     }
@@ -156,6 +200,7 @@ function createWindow() {
   mainWindow.on('hide', () => {
     unregisterAllHotkeys();
     unregisterRestartShortcut();
+    unregisterCloseShortcut();
   });
 
   mainWindow.on('show', () => {
@@ -166,37 +211,40 @@ function createWindow() {
       mainWindow.webContents.send('window-shown');
     }
     registerRestartShortcut();
+    registerCloseShortcut();
     if (hotkeysActive) {
       registerAllHotkeys();
     }
   });
 
-  // --- AUDIO API IPC HANDLERS ---
-  if (audio && audio.mic) {
-    try {
-      audio.mic.start(250);
-      audio.mic.on('change', (val) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          const vol = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
-          mainWindow.webContents.send('mic-state-changed', {
-            volume: typeof vol === 'number' ? vol : audio.mic.get(),
-            muted: audio.mic.isMuted()
-          });
-        }
-      });
-      audio.mic.on('toggle', (val) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          const isM = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
-          mainWindow.webContents.send('mic-state-changed', {
-            volume: audio.mic.get(),
-            muted: Boolean(isM)
-          });
-        }
-      });
-    } catch (err) {
-      console.warn('Failed to start audio.mic listener:', err.message);
+  // --- AUDIO API IPC HANDLERS (Asynchronously initialized to maximize startup speed) ---
+  setImmediate(() => {
+    if (audio && audio.mic) {
+      try {
+        audio.mic.start(250);
+        audio.mic.on('change', (val) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            const vol = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
+            mainWindow.webContents.send('mic-state-changed', {
+              volume: typeof vol === 'number' ? vol : audio.mic.get(),
+              muted: audio.mic.isMuted()
+            });
+          }
+        });
+        audio.mic.on('toggle', (val) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            const isM = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
+            mainWindow.webContents.send('mic-state-changed', {
+              volume: audio.mic.get(),
+              muted: Boolean(isM)
+            });
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to start audio.mic listener:', err.message);
+      }
     }
-  }
+  });
 
   ipcMain.handle('get-mic-state', () => {
     try {
@@ -727,6 +775,26 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('close-window', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+  });
+
+  ipcMain.on('close-window', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+  });
+
+  ipcMain.handle('kill-all-processes', () => {
+    terminateAllClueAiProcesses(false);
+  });
+
+  ipcMain.on('kill-all-processes', () => {
+    terminateAllClueAiProcesses(false);
+  });
+
   
 let directDownloadedInstallerPath = null;
 let isActivelyDownloadingUpdate = false;
@@ -901,6 +969,11 @@ async function downloadReleaseAssetDirect(latestVersion) {
         mainWindow.destroy();
         mainWindow = null;
       }
+    } catch (e) { }
+
+    // Terminate any other ClueAI processes so the installer is never locked
+    try {
+      terminateAllClueAiProcesses(true);
     } catch (e) { }
 
     if (autoUpdater) {
@@ -1272,20 +1345,31 @@ async function downloadReleaseAssetDirect(latestVersion) {
   }
 }
 
+const PID_FILE = path.join(app.getPath('userData'), 'clueai_main.pid');
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  app.quit();
+  // Another instance is already running or holding the lock.
+  // User requirement: "if one is running the next will start when the previous one is killed make that proelry"
+  try {
+    terminateAllClueAiProcesses(true);
+  } catch (e) {}
+  app.relaunch();
+  app.exit(0);
 } else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      if (!mainWindow.isVisible()) mainWindow.show();
-      mainWindow.setIgnoreMouseEvents(false);
-      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      applyStealthProtection(mainWindow, isStealthMode);
-      mainWindow.webContents.send('window-shown');
-      mainWindow.focus();
-    }
+  try {
+    const fs = require('fs');
+    fs.writeFileSync(PID_FILE, process.pid.toString(), 'utf8');
+  } catch (e) {}
+
+  app.on('second-instance', () => {
+    // A newer instance was launched: self-terminate so the new one has full control
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+      }
+    } catch (e) {}
+    app.exit(0);
   });
 
   app.whenReady().then(() => {
@@ -1360,12 +1444,12 @@ if (!gotTheLock) {
         }
       });
 
-      // Fast startup check after 1.5 seconds
+      // Startup check deferred to avoid cold boot contention
       setTimeout(() => {
         try {
           autoUpdater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
         } catch (e) { }
-      }, 1500);
+      }, 5000);
     }
 
     globalShortcut.register('CommandOrControl+Shift+K', () => {
@@ -1394,6 +1478,7 @@ if (!gotTheLock) {
     });
 
     registerRestartShortcut();
+    registerCloseShortcut();
   });
 
   app.on('will-quit', () => {

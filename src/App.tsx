@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Live Dashboard Backdrop Blur & Glassmorphism",
-      desc: "All modals and dialogs now feature translucent frosted glass overlays that smoothly blur your active dashboard in the background instead of displaying a dark void."
+      title: "Instant Single-Instance Replacement & Zombie Killer",
+      desc: "Opening Clue AI instantly terminates any previous background instances and launches fresh in milliseconds, preventing duplicate processes or file locking."
     },
     {
-      title: "Instant OTP Dispatch & Verification Flow",
-      desc: "High-speed 6-digit confirmation codes are dispatched instantly to your Gmail inbox with optimized network delivery and real-time countdown."
+      title: "Permanent One-Time Device Setup & Top Window Controls",
+      desc: "Onboarding candidate setup only opens once per device. The starting panel now features built-in minimize and close window controls with frosted cyberpunk accents."
     },
     {
-      title: "Optimized Layering & Responsive Verification",
-      desc: "Verification popups now open with top-level priority layering and immediate autofocus across onboarding, feedback dispatches, and session exports."
+      title: "Emergency Process Termination Shortcut (Ctrl + Shift + X)",
+      desc: "Use Ctrl + Shift + X to immediately kill all running Clue AI processes. When minimized, strict shortcut isolation ensures only Ctrl + Shift + K is active."
     },
     {
-      title: "Real-Time Email Verification Tick",
-      desc: "Verified email inboxes now immediately show a crisp green verification checkmark directly inside the input fields."
+      title: "Sub-Second Startup Optimization & Silent Auto-Update",
+      desc: "Cold boots now initialize in milliseconds with deferred non-critical background jobs, and updates terminate previous processes cleanly without dialog errors."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.9');
+  const [appVersion, setAppVersion] = useState('5.8.10');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -1035,11 +1035,23 @@ function App() {
   });
   const [showOnboardingModal, setShowOnboardingModal] = useState(() => {
     try {
-      const onboarded = localStorage.getItem('clueai_onboarded_v580');
-      const hasEmail = localStorage.getItem('clueai_user_email');
-      return !onboarded || !hasEmail;
-    } catch {
+      // 1. Strict one-time device check: once set, NEVER open again until uninstalled
+      if (localStorage.getItem('clueai_device_onboarded') === 'true') return false;
+      if (localStorage.getItem('clueai_onboarded') === 'true') return false;
+      if (localStorage.getItem('clueai_onboarded_v580') === 'true') return false;
+
+      // 2. If user already has username or email configured, do NOT prompt again
+      const savedEmail = localStorage.getItem('clueai_user_email');
+      const savedName = localStorage.getItem('clueai_username');
+      if (savedEmail && savedEmail.trim().length > 0) return false;
+      if (savedName && savedName.trim().length > 0) return false;
+
+      const savedEmails = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+      if (Array.isArray(savedEmails) && savedEmails.length > 0) return false;
+
       return true;
+    } catch {
+      return false;
     }
   });
   const [onboardingName, setOnboardingName] = useState(() => {
@@ -1076,6 +1088,8 @@ function App() {
       setUserEmail(emailTrimmed);
       localStorage.setItem('clueai_username', nameTrimmed);
       localStorage.setItem('clueai_user_email', emailTrimmed);
+      localStorage.setItem('clueai_device_onboarded', 'true');
+      localStorage.setItem('clueai_onboarded', 'true');
       localStorage.setItem('clueai_onboarded_v580', 'true');
       markEmailVerified(emailTrimmed);
 
@@ -4147,6 +4161,20 @@ function App() {
         return;
       }
 
+      // Local Ctrl+Shift+X emergency close & kill all processes
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === 'x' || e.code === 'KeyX')) {
+        e.preventDefault();
+        closeApp();
+        return;
+      }
+
+      // Local Ctrl+Shift+R safe reload
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === 'r' || e.code === 'KeyR')) {
+        e.preventDefault();
+        restartApp();
+        return;
+      }
+
       // If hotkeys toggle is OFF, block all shortcut keys entirely
       if (!globalHotkeysEnabled) return;
 
@@ -4436,7 +4464,13 @@ function App() {
   // that used to exist here caused a race condition — it was overriding the
   // pointer-based logic and sometimes locking out mouse clicks. Removed.
 
-  const closeApp = () => ipcRenderer.send('app-quit');
+  const closeApp = () => {
+    try {
+      ipcRenderer.invoke('kill-all-processes');
+    } catch {
+      ipcRenderer.send('app-quit');
+    }
+  };
   const minimizeApp = () => {
     ipcRenderer.invoke('minimize-window');
   };
@@ -5854,14 +5888,27 @@ function App() {
                                     <h4 className="text-sm font-bold text-purple-400 tracking-wide mb-1.5">
                                       Global Launch & App Control
                                     </h4>
-                                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 text-xs text-brand-subtext leading-relaxed space-y-1.5">
+                                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 text-xs text-brand-subtext leading-relaxed space-y-2">
                                       <div className="flex items-center justify-between">
-                                        <span>Show / Hide ClueAI</span>
+                                        <span className="flex flex-col">
+                                          <span className="text-white/90 font-medium">Show / Hide ClueAI</span>
+                                          <span className="text-[10px] text-white/40">Only hotkey active when minimized</span>
+                                        </span>
                                         <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-purple-300">Ctrl + Shift + K</kbd>
                                       </div>
                                       <div className="flex items-center justify-between">
-                                        <span>Restart App & Reset Audio</span>
+                                        <span className="flex flex-col">
+                                          <span className="text-white/90 font-medium">Safe Reload (Keeps Data)</span>
+                                          <span className="text-[10px] text-white/40">Restarts without clearing storage</span>
+                                        </span>
                                         <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-cyan-300">Ctrl + Shift + R</kbd>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="flex flex-col">
+                                          <span className="text-white/90 font-medium">Emergency Close & Kill Processes</span>
+                                          <span className="text-[10px] text-white/40">Immediately kills all background tasks</span>
+                                        </span>
+                                        <kbd className="bg-black/60 border border-white/20 px-1.5 py-0.5 rounded font-mono text-rose-300">Ctrl + Shift + X</kbd>
                                       </div>
                                     </div>
                                   </div>
@@ -10514,6 +10561,31 @@ function App() {
                     >
                       {/* Top Cyberpunk Accent Line */}
                       <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+
+                      {/* Top-Right Window Control Icons for Starting Panel */}
+                      <div className="absolute top-3.5 right-3.5 z-40 flex items-center gap-1.5 bg-black/60 border border-white/10 rounded-xl p-1 backdrop-blur-md">
+                        <button
+                          onClick={restartApp}
+                          title="Restart Clue AI (Ctrl + Shift + R)"
+                          className="p-1.5 hover:bg-cyan-500/20 text-white/60 hover:text-cyan-300 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <RefreshCw size={13} />
+                        </button>
+                        <button
+                          onClick={minimizeApp}
+                          title="Minimize Window (Ctrl + Shift + K)"
+                          className="p-1.5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <button
+                          onClick={closeApp}
+                          title="Close & Terminate Processes (Ctrl + Shift + X)"
+                          className="p-1.5 hover:bg-rose-500/20 text-white/60 hover:text-rose-400 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-12 min-h-[420px]">
                         {/* Left Column: Branding, Logo & Stealth Status */}
