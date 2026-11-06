@@ -68,7 +68,7 @@ async function transcribeWithGemini(wavBlob: Blob): Promise<string> {
                   }
                 },
                 {
-                  text: 'Transcribe the spoken audio verbatim into English text. Return ONLY the exact words spoken without quotes, introduction, commentary, or markdown. If there is silence, background noise, or no clear human speech, return empty text.'
+                  text: 'Transcribe the spoken audio verbatim into English text. Return ONLY the exact words spoken without quotes, introduction, commentary, or markdown. Preserve complete words and sentences (such as "tell me about yourself") without truncating trailing words or replacing them with idioms. If there is silence, background noise, or no clear human speech, return empty text.'
                 }
               ]
             }
@@ -149,10 +149,10 @@ export async function transcribeAudioChunk(audioData: Float32Array, contextText:
       formData.append('language', 'en'); 
       formData.append('temperature', '0.0');
       
-      // Neutral prompt to avoid conditioning hallucinations on quiet/background room audio
-      let promptString = "Verbatim speech transcription with natural punctuation.";
+      // Verbatim interview prompt: Ensures full sentences (e.g. "tell me about yourself") are captured completely
+      let promptString = "Verbatim interview transcription. Capture full questions, technical discussion, and phrases accurately without truncating ending words.";
       if (contextText && contextText.trim().length > 0 && contextText.length < 250) {
-        // Only use context if it's a specific, targeted short snippet (e.g. from Voice Scroll teleprompter)
+        // Only use context if it's a specific, targeted short snippet
         promptString = contextText.trim().slice(0, 120);
       }
       

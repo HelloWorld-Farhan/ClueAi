@@ -446,16 +446,24 @@ function App() {
   const [isVoiceScroll, setIsVoiceScroll] = useState(false);
   const isVoiceScrollRef = useRef(false);
   isVoiceScrollRef.current = isVoiceScroll;
+  const [voiceScrollSpeed, setVoiceScrollSpeed] = useState<number>(2); // 1-5 speed level for Voice Scroll
+  const voiceScrollSpeedRef = useRef<number>(2);
+  voiceScrollSpeedRef.current = voiceScrollSpeed;
+  const isSpeakingRef = useRef<boolean>(false);
+  const [isSpeakingLive, setIsSpeakingLive] = useState(false);
+  const lastSpokenTimestampRef = useRef<number>(0);
+  const voiceVelocityRef = useRef<number>(0);
+  const isHoveringAnswerRef = useRef<boolean>(false);
+  const isWheelOverridingRef = useRef<boolean>(false);
+  const wheelTimeoutRef = useRef<any>(null);
   const [activeReadIndex, setActiveReadIndex] = useState(0);
   const activeReadIndexRef = useRef(0);
   activeReadIndexRef.current = activeReadIndex;
-  const paragraphRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.2');
-  const [showVoiceKeysWarning, setShowVoiceKeysWarning] = useState(false);
+  const [appVersion, setAppVersion] = useState('5.7.3');
   const [sessionModalMode, setSessionModalMode] = useState<'new' | 'resume'>('new');
   const [sessionSearchTerm, setSessionSearchTerm] = useState('');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
@@ -558,13 +566,12 @@ function App() {
     }
   };
 
-  // Word-Level Voice Teleprompter Reading Tracker
+  // Word-Level Voice Teleprompter Progress Tracker
   const [readWordIndex, setReadWordIndex] = useState(0);
   const readWordIndexRef = useRef(0);
   readWordIndexRef.current = readWordIndex;
   const readWordProgressRef = useRef(0);
   readWordProgressRef.current = readWordIndex;
-  const wordRefs = useRef<{ [idx: number]: HTMLElement | null }>({});
 
 
   const [username, setUsername] = useState(() => {
@@ -1629,7 +1636,7 @@ function App() {
 
       // 2. If AI fullscreen is open, or any modal dialog is active, or app is on the dashboard:
       // ALWAYS ensure the window is 100% interactive so the answer screen never gets stuck or locks out clicks!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showVoiceKeysWarning || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAiFullscreen || isAnyModalActive || (!isRecording && !isAiFullscreen)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -1668,7 +1675,7 @@ function App() {
 
     const handleMouseLeave = () => {
       // If stealth mode is off, or AI answer is fullscreen, or any modal is open, or dashboard is visible: NEVER ignore mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showVoiceKeysWarning || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (!stealthMode || isAiFullscreen || isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -2396,7 +2403,10 @@ function App() {
       if (hasMicAudio && micStream) {
         try {
           const micSource = audioCtx.createMediaStreamSource(micStream);
-          micSource.connect(mixer);
+          const micGain = audioCtx.createGain();
+          micGain.gain.value = 1.35; // Crystal-clear capture for quiet and normal speech
+          micSource.connect(micGain);
+          micGain.connect(mixer);
         } catch (errConnectMic) {
           console.warn('Could not connect mic source to mixer:', errConnectMic);
         }
@@ -2408,11 +2418,36 @@ function App() {
       const inputSampleRate = audioCtx.sampleRate || 16000;
 
       processor.onaudioprocess = (e) => {
-        // Work 3: When manual edit / keyword editor is open, do not buffer speech
+        // When manual edit / keyword editor is open, do not buffer speech
         if (showVirtualKeyboardRef.current) return;
-        if ((isPausedRef.current && !isVoiceScrollRef.current) || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
+
+        // Native Web Audio Volume Gate (0% CPU, 0 API calls)
+        let frameMax = 0;
+        let frameSumSquares = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          const val = Math.abs(inputData[i]);
+          if (val > frameMax) frameMax = val;
+          frameSumSquares += val * val;
+        }
+        const frameRms = Math.sqrt(frameSumSquares / inputData.length);
+
+        // Ambient noise threshold: sound above 0.02 or RMS above 0.007
+        if (frameMax > 0.020 || frameRms > 0.007) {
+          lastSpokenTimestampRef.current = Date.now();
+        }
+
+        // Voice active state with smooth 350ms speech hold buffer (accommodates inter-syllable pauses)
+        const isSpeaking = (Date.now() - lastSpokenTimestampRef.current) < 350;
+        if (isSpeakingRef.current !== isSpeaking) {
+          isSpeakingRef.current = isSpeaking;
+          setIsSpeakingLive(isSpeaking);
+        }
+
+        // When paused or showing AI answer, do not buffer speech for STT (Voice Scroll runs 100% offline via volume gate)
+        if (isPausedRef.current || isAiFullscreenRef.current) return;
+
         let resampled: Float32Array;
 
         if (inputSampleRate === 16000) {
@@ -2433,11 +2468,6 @@ function App() {
 
         audioChunksRef.current.push(resampled);
         totalAudioSamplesRef.current += resampled.length;
-
-        // Work 2: Low-latency voice scroll - trigger recognition as soon as ~300ms audio is captured
-        if (isAiFullscreenRef.current && isVoiceScrollRef.current && totalAudioSamplesRef.current >= 16000 * 0.3 && !isProcessingRef.current) {
-          processAudioRef.current();
-        }
       };
 
       mixer.connect(processor);
@@ -2496,14 +2526,14 @@ function App() {
 
   const processAudio = async () => {
     if (!streamRef.current) return;
-    // Work 3: If manual edit section is open, do not transcribe or inject words
+    // When manual edit section is open, do not transcribe or inject words
     if (showVirtualKeyboardRef.current) return;
-    if ((isPausedRef.current && !isVoiceScrollRef.current) || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) {
+    if (isPausedRef.current || isAiFullscreenRef.current) {
       return;
     }
     if (isProcessingRef.current) return;
 
-    const minSamples = (isAiFullscreenRef.current && isVoiceScrollRef.current) ? (16000 * 0.3) : (16000 * 0.5);
+    const minSamples = 16000 * 0.8;
     if (totalAudioSamplesRef.current < minSamples) {
       return;
     }
@@ -2526,7 +2556,7 @@ function App() {
       }
 
       // Dual-Metric Voice Activity Detection (VAD): RMS Energy + Peak Amplitude
-      const recentAudio = currentAudio.slice(Math.max(0, currentAudio.length - 16000 * 1.2));
+      const recentAudio = currentAudio.slice(Math.max(0, currentAudio.length - 16000 * 0.8));
       let sumSquares = 0;
       let maxVal = 0;
       for (let i = 0; i < recentAudio.length; i++) {
@@ -2537,29 +2567,26 @@ function App() {
       }
       const rms = Math.sqrt(sumSquares / (recentAudio.length || 1));
 
-      // Noise Gate: Room noise, fan hum, and static produce low RMS (< 0.009) and peak (< 0.030).
-      // Vocal speech produces strong RMS (> 0.012) and peak (> 0.035).
-      const isVoiceActive = isVoiceScrollRef.current
-        ? (rms >= 0.010 && maxVal >= 0.030)
-        : (rms >= 0.012 && maxVal >= 0.035);
+      // Sensitive Vocal Gate: Captures quiet/soft voices without capturing ambient static
+      // Ambient fan/room noise: maxVal < 0.015, rms < 0.005
+      // Human speech (including soft speech): maxVal >= 0.020 or rms >= 0.007
+      const isVoiceActive = (maxVal >= 0.020 || rms >= 0.007);
 
       if (!isVoiceActive) {
         silenceFramesRef.current += 1;
-        // If silent for more than 1.5s (3 frames of 500ms) and buffer is not empty
-        if (silenceFramesRef.current > 3 && totalAudioSamplesRef.current > 0) {
+        // Require at least 2.0s (4 frames of 500ms) of continuous silence before committing sentence
+        if (silenceFramesRef.current >= 4 && totalAudioSamplesRef.current > 0) {
           logEvent("Silence detected. Committing sentence and flushing STT buffer.");
 
-          if (!isVoiceScrollRef.current) {
-            if (interimTranscriptRef.current) {
-              finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
-            }
+          if (interimTranscriptRef.current) {
+            finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
           }
 
-          clearAudioBuffer(); // FLUSH buffer!
+          clearAudioBuffer(); // FLUSH buffer only when user actually finished talking
           interimTranscriptRef.current = ''; // Reset interim
           silenceFramesRef.current = 0;
 
-          if (!isPausedRef.current && !isVoiceScrollRef.current) {
+          if (!isPausedRef.current) {
             setFinalizedText(finalizedTranscriptRef.current);
             setInterimText('');
             setTranscript(finalizedTranscriptRef.current);
@@ -2570,113 +2597,7 @@ function App() {
       }
 
       logEvent(`Triggering STT. Buffer size: ${(currentAudio.length / 16000).toFixed(2)}s, Max Volume: ${maxVal.toFixed(4)}`);
-
       silenceFramesRef.current = 0; // Reset silence counter since they are speaking
-
-      // Special handling for Voice Scroll (Teleprompter Word & Paragraph Speech Tracking)
-      if (isAiFullscreenRef.current && isVoiceScrollRef.current) {
-        if (!aiAnswerRef.current) {
-          clearAudioBuffer();
-          isProcessingRef.current = false;
-          return;
-        }
-
-        const cleanAnswer = aiAnswerRef.current.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
-        const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
-
-        // 1. Flatten all words with global indices
-        let totalWords = 0;
-        const allWordsList: { raw: string; clean: string; idx: number; pIdx: number }[] = [];
-        paragraphs.forEach((p, pIdx) => {
-          const words = p.split(/\s+/).filter(Boolean);
-          words.forEach(w => {
-            const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-            allWordsList.push({ raw: w, clean, idx: totalWords++, pIdx });
-          });
-        });
-
-        const curWordIdx = readWordProgressRef.current || 0;
-
-        // Context prompt: prime Whisper STT with the exact upcoming words from the solution
-        const promptSnippet = allWordsList.slice(curWordIdx, curWordIdx + 25).map(w => w.raw).join(' ');
-        const voiceText = await transcribeAudioChunk(currentAudio, promptSnippet);
-        clearAudioBuffer(); // Keep buffer responsive and short for real-time word tracking
-
-        if (voiceText && !voiceText.startsWith('ERR:') && voiceText.trim().length > 0) {
-          const spokenWords = voiceText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 0);
-          if (spokenWords.length > 0 && allWordsList.length > 0) {
-            // Strict Contiguous Speech Tracking:
-            // Anchor tightly to curWordIdx with an immediate lookahead window of at most 8 words.
-            // Never jump far ahead or skip to the bottom on scattered single-word hits!
-            const stopWords = new Set(['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'is', 'it', 'as', 'by', 'with', 'this', 'that']);
-            const lookaheadWindow = Math.min(allWordsList.length, curWordIdx + 8);
-
-            const isWordMatch = (target: string, spoken: string) => {
-              if (!target || !spoken) return false;
-              if (target === spoken) return true;
-              if (target.length > 3 && spoken.length > 3 && (target.includes(spoken) || spoken.includes(target))) return true;
-              if (target.length >= 4 && spoken.length >= 4 && target.slice(0, 3) === spoken.slice(0, 3)) return true;
-              return false;
-            };
-
-            let matchedIdx = -1;
-
-            // Strategy 1: Contiguous multi-word match (bigram / trigram) starting from curWordIdx within lookahead
-            for (let i = curWordIdx; i < lookaheadWindow; i++) {
-              let consecutiveMatches = 0;
-              for (let s = 0; s < spokenWords.length; s++) {
-                const targetWord = allWordsList[i + consecutiveMatches]?.clean;
-                const spokenWord = spokenWords[s];
-                if (targetWord && spokenWord && isWordMatch(targetWord, spokenWord)) {
-                  consecutiveMatches++;
-                } else if (consecutiveMatches > 0) {
-                  break; // Enforce strict contiguity: if broken, stop counting
-                }
-              }
-              // If we matched 2 or more contiguous words, this is a verified match!
-              if (consecutiveMatches >= 2) {
-                matchedIdx = i + consecutiveMatches;
-                break;
-              }
-            }
-
-            // Strategy 2: If no 2-word contiguous phrase found, check if the immediate next non-stopword matches
-            if (matchedIdx === -1) {
-              for (let s = 0; s < Math.min(spokenWords.length, 3); s++) {
-                const sw = spokenWords[s];
-                if (stopWords.has(sw)) continue; // Skip stop-words to prevent false skips
-                for (let k = curWordIdx; k < Math.min(allWordsList.length, curWordIdx + 4); k++) {
-                  const targetClean = allWordsList[k]?.clean;
-                  if (targetClean && !stopWords.has(targetClean) && isWordMatch(targetClean, sw)) {
-                    matchedIdx = k + 1;
-                    break;
-                  }
-                }
-                if (matchedIdx !== -1) break;
-              }
-            }
-
-            // Safety Guard: A single audio chunk can NEVER jump more than 6 words forward!
-            if (matchedIdx > curWordIdx) {
-              const boundedNextIdx = Math.min(curWordIdx + 6, Math.min(allWordsList.length, matchedIdx));
-              setReadWordIndex(boundedNextIdx);
-              readWordProgressRef.current = boundedNextIdx;
-
-              const targetPara = allWordsList[boundedNextIdx - 1]?.pIdx ?? activeReadIndexRef.current;
-              setActiveReadIndex(targetPara);
-
-              // Smoothly scroll the matched word or paragraph into center view
-              if (wordRefs.current[boundedNextIdx - 1]) {
-                wordRefs.current[boundedNextIdx - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              } else if (paragraphRefs.current[targetPara]) {
-                paragraphRefs.current[targetPara]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }
-          }
-        }
-        isProcessingRef.current = false;
-        return;
-      }
 
       // FORCE COMMIT: If the buffer exceeds 12 seconds, Whisper large-v3-turbo might start dropping earlier sentences.
       // We force a commit here to start a fresh sentence chunk.
@@ -3509,32 +3430,59 @@ function App() {
     let accumulatedScroll = 0;
 
     const scrollLoop = (time: number) => {
-      const delta = time - lastTime;
+      const delta = Math.min(100, Math.max(1, time - lastTime));
       lastTime = time;
 
-      if (scrollSpeed > 0 && isAiFullscreen && aiAnswerScrollRef.current) {
-        // Speed 1: 15 pixels per second
-        // Speed 5: 75 pixels per second
-        const pixelsPerSecond = scrollSpeed * 15;
-        const scrollAmount = (pixelsPerSecond * delta) / 1000;
+      if (isAiFullscreen && aiAnswerScrollRef.current) {
+        if (isVoiceScrollRef.current) {
+          // "Voice-Gated Delta Scrolling" (100% Offline & Non-AI)
+          // Hover-to-Pause / Wheel Override: if mouse wheel or hover is active, pause immediately
+          const isPausedManually = isHoveringAnswerRef.current || isWheelOverridingRef.current;
 
-        accumulatedScroll += scrollAmount;
+          // Speed mapping: 1x=20px/s, 2x=35px/s (standard reading pace), 3x=55px/s, 4x=80px/s, 5x=110px/s
+          const speedTable = [20, 20, 35, 55, 80, 110];
+          const targetVelocity = (!isPausedManually && isSpeakingRef.current)
+            ? (speedTable[voiceScrollSpeedRef.current] || 35)
+            : 0;
 
-        if (accumulatedScroll >= 1) {
-          const pixelsToScroll = Math.floor(accumulatedScroll);
-          aiAnswerScrollRef.current.scrollBy(0, pixelsToScroll);
-          accumulatedScroll -= pixelsToScroll;
+          // Physics-based smooth acceleration & gentle deceleration to stop
+          // When speaking starts: accelerate quickly to reading speed
+          // When user pauses or takes a breath: gently decelerate to a stop
+          const rate = targetVelocity > voiceVelocityRef.current ? 7.5 : 4.5;
+          const blend = 1 - Math.exp(-rate * (delta / 1000));
+          voiceVelocityRef.current += (targetVelocity - voiceVelocityRef.current) * blend;
+
+          if (Math.abs(voiceVelocityRef.current) < 0.2) {
+            voiceVelocityRef.current = 0;
+          }
+
+          if (voiceVelocityRef.current > 0) {
+            const scrollPx = (voiceVelocityRef.current * delta) / 1000;
+            aiAnswerScrollRef.current.scrollBy(0, scrollPx);
+          }
+        } else if (scrollSpeed > 0) {
+          // Constant Auto-Scroll
+          const pixelsPerSecond = scrollSpeed * 15;
+          const scrollAmount = (pixelsPerSecond * delta) / 1000;
+          accumulatedScroll += scrollAmount;
+
+          if (accumulatedScroll >= 1) {
+            const pixelsToScroll = Math.floor(accumulatedScroll);
+            aiAnswerScrollRef.current.scrollBy(0, pixelsToScroll);
+            accumulatedScroll -= pixelsToScroll;
+          }
         }
       }
+
       animationFrameId = requestAnimationFrame(scrollLoop);
     };
 
-    if (scrollSpeed > 0 && isAiFullscreen) {
+    if (isAiFullscreen && (scrollSpeed > 0 || isVoiceScroll)) {
       animationFrameId = requestAnimationFrame(scrollLoop);
     }
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [scrollSpeed, isAiFullscreen]);
+  }, [scrollSpeed, isVoiceScroll, isAiFullscreen]);
 
   // NOTE: The click-through / mouse-events logic is handled exclusively by the
   // pointermove handler above (lines ~1181-1204). The duplicate mousemove handler
@@ -4052,45 +4000,70 @@ function App() {
                         )}
                       </div>
 
-                      {/* Voice Scroll (Teleprompter Speech-Follow Mode) */}
-                      <button
-                        type="button"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() => {
-                          const validGroq = groqKeys.filter(k => k.trim()).length;
-                          const validGemini = geminiKeys.filter(k => k.trim()).length;
-                          const has8Keys = validGroq >= 8 || validGemini >= 8;
-
-                          if (!isVoiceScroll && !has8Keys) {
-                            setShowVoiceKeysWarning(true);
-                            return;
-                          }
-
-                          setIsVoiceScroll(prev => {
-                            const next = !prev;
-                            if (next) {
-                              setScrollSpeed(0); // Mutual exclusion: turn off normal scroll
-                              setActiveReadIndex(0);
-                              setReadWordIndex(0);
-                              readWordProgressRef.current = 0;
-                              aiAnswerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                              if (!isRecordingRef.current) {
-                                startRecording(true);
+                      {/* Voice Scroll (Voice-Gated Delta Teleprompter Mode - 100% Offline & Non-AI) */}
+                      <div className={`flex items-center rounded-xl p-0.5 border transition-all ${
+                        isVoiceScroll 
+                          ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.25)]' 
+                          : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+                      }`}>
+                        <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={() => {
+                            setIsVoiceScroll(prev => {
+                              const next = !prev;
+                              if (next) {
+                                setScrollSpeed(0); // Mutual exclusion: turn off normal scroll
+                                if (!isRecordingRef.current) {
+                                  startRecording(true);
+                                }
                               }
-                            }
-                            return next;
-                          });
-                        }}
-                        className={`px-2.5 py-1 rounded-xl transition-all font-bold text-xs flex items-center gap-1.5 border shadow-sm cursor-pointer ${
-                          isVoiceScroll 
-                            ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.25)]' 
-                            : 'bg-white/5 text-white/70 hover:text-white border-white/10 hover:border-white/20'
-                        }`}
-                        title="Voice Scroll: Syncs scrolling with your spoken words in real-time as you read aloud"
-                      >
-                        <Mic size={12} className={isVoiceScroll ? 'text-cyan-400 animate-pulse' : 'text-white/60'} />
-                        <span className="text-[10px] tracking-tight">{isVoiceScroll ? 'Voice Sync ON' : 'Voice Scroll'}</span>
-                      </button>
+                              return next;
+                            });
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            isVoiceScroll ? 'bg-cyan-500/20 text-cyan-300' : 'hover:text-white'
+                          }`}
+                          title="Voice Scroll: Automatically scrolls smoothly as you speak (100% offline, zero API calls)"
+                        >
+                          <Mic size={12} className={isVoiceScroll ? (isSpeakingLive ? 'text-emerald-400 animate-pulse' : 'text-cyan-400') : 'text-white/60'} />
+                          <span className="text-[10px] tracking-tight">
+                            {isVoiceScroll ? (isSpeakingLive ? 'Speaking' : 'Voice Scroll ON') : 'Voice Scroll'}
+                          </span>
+                        </button>
+
+                        {isVoiceScroll && (
+                          <div className="flex items-center gap-0.5 pl-1 pr-1 border-l border-cyan-500/30">
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={() => setVoiceScrollSpeed(prev => Math.max(1, prev - 1))}
+                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-cyan-300 hover:text-white cursor-pointer"
+                              title="Decrease voice scroll speed"
+                            >
+                              -
+                            </button>
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={() => setVoiceScrollSpeed(prev => (prev >= 5 ? 1 : prev + 1))}
+                              className="px-1 text-[10px] font-mono font-black text-cyan-300 hover:text-cyan-200 cursor-pointer"
+                              title="Cycle voice scroll speed (1x - 5x)"
+                            >
+                              {voiceScrollSpeed}x
+                            </button>
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={() => setVoiceScrollSpeed(prev => Math.min(5, prev + 1))}
+                              className="w-4 h-5 flex items-center justify-center hover:bg-white/10 rounded text-[10px] font-bold text-cyan-300 hover:text-white cursor-pointer"
+                              title="Increase voice scroll speed"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Copy Button */}
                       <button
@@ -4188,7 +4161,7 @@ function App() {
                       </span>
                     </div>
                     <div className="text-white text-[13px] leading-snug max-h-[52px] overflow-y-auto custom-scrollbar select-text pr-2">
-                      {(frozenQuestionTranscript || (isVoiceScroll ? "" : transcript) || "").trim() || "Screenshot / Vision analysis provided."}
+                      {(frozenQuestionTranscript || transcript || "").trim() || "Screenshot / Vision analysis provided."}
                     </div>
 
                     {/* Inline Snapshots */}
@@ -4301,62 +4274,22 @@ function App() {
                   </div>
                   <div
                     ref={aiAnswerScrollRef}
+                    onMouseEnter={() => { isHoveringAnswerRef.current = true; }}
+                    onMouseLeave={() => { isHoveringAnswerRef.current = false; }}
+                    onWheel={() => {
+                      isWheelOverridingRef.current = true;
+                      if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
+                      wheelTimeoutRef.current = setTimeout(() => {
+                        isWheelOverridingRef.current = false;
+                      }, 1500);
+                    }}
                     className="overflow-y-auto pr-1 leading-snug font-bold w-full h-full no-scrollbar"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', fontSize: `${stealthFontSize}px` }}
                   >
                     {aiAnswer ? (
-                      isVoiceScroll ? (
-                        (() => {
-                          const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
-                          const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
-
-                          let globalWordCounter = 0;
-                          const parsedParas = paragraphs.map((para, pIdx) => {
-                            const words = para.split(/\s+/).filter(Boolean).map(w => {
-                              const wordObj = { raw: w, idx: globalWordCounter, pIdx };
-                              globalWordCounter++;
-                              return wordObj;
-                            });
-                            return { pIdx, para, words };
-                          });
-
-                          return (
-                            <div className="space-y-3">
-                              {parsedParas.map(({ pIdx, words }) => (
-                                <div key={pIdx} className="leading-snug flex flex-wrap gap-x-1.5 gap-y-1">
-                                  {words.map((w) => {
-                                    const isPast = w.idx < readWordIndex;
-                                    const isCurrent = w.idx === readWordIndex;
-                                    return (
-                                      <span
-                                        key={w.idx}
-                                        onClick={() => {
-                                          setReadWordIndex(w.idx);
-                                          readWordProgressRef.current = w.idx;
-                                          setActiveReadIndex(pIdx);
-                                        }}
-                                        className={`cursor-pointer transition-all duration-150 ${
-                                          isCurrent
-                                            ? 'text-cyan-300 font-black bg-cyan-400/25 px-1 py-0.5 rounded ring-1 ring-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]'
-                                            : isPast
-                                            ? 'text-white/35 font-normal filter saturate-50'
-                                            : 'text-white/95 font-semibold'
-                                        }`}
-                                      >
-                                        {w.raw}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()
-                      ) : (
-                        <ReactMarkdown components={markdownComponents}>
-                          {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
-                        </ReactMarkdown>
-                      )
+                      <ReactMarkdown components={markdownComponents}>
+                        {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
+                      </ReactMarkdown>
                     ) : (
                       "Generating..."
                     )}
@@ -4368,7 +4301,19 @@ function App() {
                     <div className="w-12 h-1.5 rounded-full bg-white/50"></div>
                   </div>
 
-                  <div className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-6 md:p-8'}`} ref={aiAnswerScrollRef}>
+                  <div
+                    className={`overflow-y-auto custom-scrollbar no-drag bg-transparent ${isAnswerMinimized ? 'w-full p-4' : 'w-full p-6 md:p-8'}`}
+                    ref={aiAnswerScrollRef}
+                    onMouseEnter={() => { isHoveringAnswerRef.current = true; }}
+                    onMouseLeave={() => { isHoveringAnswerRef.current = false; }}
+                    onWheel={() => {
+                      isWheelOverridingRef.current = true;
+                      if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
+                      wheelTimeoutRef.current = setTimeout(() => {
+                        isWheelOverridingRef.current = false;
+                      }, 1500);
+                    }}
+                  >
                     <div className={`max-w-5xl mx-auto font-bold leading-snug ${altColor ? 'text-black/60' : 'text-white/90'}`} style={{ fontSize: aiAnswerTextSize + "px" }}>
                       {/* Unified Answer Header: Solution Title, Split View Toggle, Font Controls & Minimize in single row */}
                       <div className="flex items-center justify-between gap-3 mb-4 pb-2.5 border-b border-white/10 select-none">
@@ -4473,69 +4418,6 @@ function App() {
                                       </ReactMarkdown>
                                     </div>
                                   </div>
-                                </div>
-                              );
-                            })()
-                          ) : isVoiceScroll ? (
-                            (() => {
-                              const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
-                              const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
-
-                              let globalWordCounter = 0;
-                              const parsedParas = paragraphs.map((para, pIdx) => {
-                                const words = para.split(/\s+/).filter(Boolean).map(w => {
-                                  const wordObj = { raw: w, idx: globalWordCounter, pIdx };
-                                  globalWordCounter++;
-                                  return wordObj;
-                                });
-                                return { pIdx, para, words };
-                              });
-
-                              return (
-                                <div className="space-y-5">
-                                  {parsedParas.map(({ pIdx, words }) => {
-                                    const isParaActive = words.some(w => w.idx === readWordIndex);
-                                    const isParaPast = words.every(w => w.idx < readWordIndex);
-                                    return (
-                                      <div
-                                        key={pIdx}
-                                        ref={el => { paragraphRefs.current[pIdx] = el; }}
-                                        className={`transition-all duration-300 rounded-2xl p-4 border leading-relaxed flex flex-wrap gap-x-2 gap-y-1.5 ${
-                                          isParaActive
-                                            ? 'border-cyan-400/50 bg-cyan-500/[0.04] shadow-[0_0_25px_rgba(6,182,212,0.12)] ring-1 ring-cyan-400/30'
-                                            : isParaPast
-                                            ? 'border-white/5 bg-white/[0.01] opacity-40'
-                                            : 'border-white/10 bg-white/[0.02] opacity-90'
-                                        }`}
-                                      >
-                                        {words.map((w) => {
-                                          const isPast = w.idx < readWordIndex;
-                                          const isCurrent = w.idx === readWordIndex;
-                                          return (
-                                            <span
-                                              key={w.idx}
-                                              ref={el => { wordRefs.current[w.idx] = el; }}
-                                              onClick={() => {
-                                                setReadWordIndex(w.idx);
-                                                readWordProgressRef.current = w.idx;
-                                                setActiveReadIndex(pIdx);
-                                                wordRefs.current[w.idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                              }}
-                                              className={`cursor-pointer transition-all duration-150 select-text ${
-                                                isCurrent
-                                                  ? 'text-cyan-300 font-black bg-cyan-400/25 px-1.5 py-0.5 rounded-lg ring-2 ring-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.6)] scale-105 inline-block'
-                                                  : isPast
-                                                  ? 'text-white/35 font-normal filter saturate-50 hover:text-white/70'
-                                                  : 'text-white/95 font-semibold hover:text-cyan-200'
-                                              }`}
-                                            >
-                                              {w.raw}
-                                            </span>
-                                          );
-                                        })}
-                                      </div>
-                                    );
-                                  })}
                                 </div>
                               );
                             })()
@@ -7768,69 +7650,7 @@ function App() {
                 )}
               </AnimatePresence>
 
-              {/* Voice Scroll 8-Key Requirement Warning Modal */}
-              <AnimatePresence>
-                {showVoiceKeysWarning && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto select-none"
-                  >
-                    <motion.div
-                      initial={{ scale: 0.94, opacity: 0, y: 10 }}
-                      animate={{ scale: 1, opacity: 1, y: 0 }}
-                      exit={{ scale: 0.94, opacity: 0, y: 10 }}
-                      className="bg-[#0b0c14] border border-cyan-500/40 rounded-3xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(6,182,212,0.25)]"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2.5 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                          <Key size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-black text-white">Voice Scroll Requires 8 API Keys</h3>
-                          <p className="text-[11px] text-white/50">Zero-latency teleprompter speech tracking</p>
-                        </div>
-                      </div>
-                      <p className="text-white/80 text-xs leading-relaxed mb-4">
-                        To follow your speech in real time across sentences without hitting free-tier API rate limits (HTTP 429), Voice Scroll rotates through 8 API keys per chunk.
-                      </p>
-                      <div className="bg-white/5 border border-white/10 rounded-2xl p-3 mb-5 space-y-1.5 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Groq Keys Configured:</span>
-                          <span className={`font-mono font-bold ${groqKeys.filter(k => k.trim()).length >= 8 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                            {groqKeys.filter(k => k.trim()).length} / 8 Loaded
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Gemini Keys Configured:</span>
-                          <span className={`font-mono font-bold ${geminiKeys.filter(k => k.trim()).length >= 8 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                            {geminiKeys.filter(k => k.trim()).length} / 8 Loaded
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2.5 justify-end">
-                        <button
-                          onClick={() => setShowVoiceKeysWarning(false)}
-                          className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
-                        >
-                          Dismiss
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowVoiceKeysWarning(false);
-                            setShowSettings(true);
-                            setApiAccordion('groq');
-                          }}
-                          className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Settings size={14} /> Open Settings to Add Keys
-                        </button>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
               {/* Stealth Warning Modal */}
               {showStealthWarning && (
                 <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
