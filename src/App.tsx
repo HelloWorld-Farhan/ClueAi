@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.6');
+  const [appVersion, setAppVersion] = useState('5.8.7');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -10464,7 +10464,7 @@ function App() {
                 </div>
               )}
 
-              {/* First-Time User Onboarding & Email Verification Modal (v5.8.6 - Horizontal Minimal Redesign) */}
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.7 - Horizontal Minimal Redesign) */}
               <AnimatePresence>
                 {showOnboardingModal && (
                   <motion.div
@@ -10888,7 +10888,7 @@ function App() {
                   Installing Clue AI Update
                 </h2>
                 <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.6'}
+                  Upgrading to Version {updateInfo.version || '5.8.7'}
                 </p>
 
                 {/* High-tech Progress Bar */}

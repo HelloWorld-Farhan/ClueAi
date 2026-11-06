@@ -20,7 +20,14 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.8.6)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.8.7)
+
+### 🚀 What's New in v5.8.7
+- 🎨 **Modern Curved Email Design**: Unified border curvature across all email dispatches (24px outer containers, 20px hero cards, 18px data blocks, 16px buttons, 999px pill badges) for a polished, modern look in web and mobile email clients.
+- 📦 **Session Export Modal & Dual PDF/HTML Dispatch**: Smooth blur-backdrop modal with 1-click direct download (HTML / PDF) and instant cloud dispatch to verified email addresses with the session PDF attached.
+- 🛡️ **Frictionless Onboarding**: Automatically disables shield protection on the first-time profile setup screen so credentials can be entered smoothly without keyboard hook interference.
+- 📢 **Zero-Link Greeting Broadcasts**: Clean, trusted release notifications broadcast to all registered Clue AI users without external redirect links.
+- ⚡ **Turbocharged Startup & Resilient Updater**: Optimized app bootstrap time and robust in-app updater with visual progress stages and seamless relaunch.
 
 ### 🪟 1. For Windows
 
