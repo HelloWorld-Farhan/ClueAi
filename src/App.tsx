@@ -3697,7 +3697,7 @@ function App() {
     .header {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 20px;
       padding: 24px;
       margin-bottom: 30px;
       position: relative;
@@ -3715,7 +3715,7 @@ function App() {
     .interaction-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 18px;
       margin-bottom: 20px;
       overflow: hidden;
       transition: border-color 0.2s;
@@ -3744,7 +3744,7 @@ function App() {
       background: #070a12;
       border-left: 3px solid var(--accent);
       padding: 16px;
-      border-radius: 8px;
+      border-radius: 14px;
       font-size: 0.95rem;
       color: #e2e8f0;
       white-space: pre-wrap;
@@ -9041,9 +9041,11 @@ function App() {
                               <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 px-1.5 py-0.5 rounded-lg shrink-0">
                                 <button
                                   onClick={() => {
-                                    const newState = !globalHotkeysEnabled;
-                                    setGlobalHotkeysEnabled(newState);
-                                    ipcRenderer.invoke('toggle-global-hotkeys', newState);
+                                    const next = !globalHotkeysEnabled;
+                                    setGlobalHotkeysEnabled(next);
+                                    if (typeof ipcRenderer !== 'undefined') {
+                                      ipcRenderer.invoke('toggle-global-hotkeys', next);
+                                    }
                                   }}
                                   className={`relative w-6 h-3 rounded-full transition-colors flex items-center px-0.5 ${globalHotkeysEnabled ? 'bg-green-500/80' : 'bg-rose-500/80'}`}
                                 >

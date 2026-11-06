@@ -176,10 +176,10 @@ function getEmailLayout(opts) {
 <tr><td align="center" style="padding:28px 12px;">
  
   <!-- ============ CONTAINER ============ -->
-  <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#0d1117" style="width:600px;max-width:600px;background-color:#0d1117;border:1px solid #1c2433;border-radius:20px;overflow:hidden;">
+  <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#0d1117" style="width:600px;max-width:600px;background-color:#0d1117;border:1px solid #1c2433;border-radius:24px;overflow:hidden;">
  
     <!-- accent line -->
-    <tr><td height="4" bgcolor="#22d3ee" style="height:4px;line-height:4px;font-size:0;background-color:#22d3ee;background-image:${accentGradient};">&nbsp;</td></tr>
+    <tr><td height="4" bgcolor="#22d3ee" style="height:4px;line-height:4px;font-size:0;background-color:#22d3ee;background-image:${accentGradient};border-radius:24px 24px 0 0;">&nbsp;</td></tr>
  
     <!-- ============ HEADER ============ -->
     <tr>
@@ -190,7 +190,7 @@ function getEmailLayout(opts) {
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;padding:0;">
-                    <img src="https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi/main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:10px;object-fit:cover;border:1px solid #155e75;box-shadow:0 0 15px rgba(34,211,238,0.25);" />
+                    <img src="https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi/main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid #155e75;box-shadow:0 0 15px rgba(34,211,238,0.25);" />
                   </td>
                   <td style="padding-left:12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#ffffff;letter-spacing:.2px;">Clue <span style="color:#22d3ee;">AI</span></td>
                 </tr>
@@ -208,7 +208,7 @@ function getEmailLayout(opts) {
     <!-- ============ HERO CARD ============ -->
     <tr>
       <td class="px" style="padding:24px 28px 8px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#2563eb" style="background-color:#2563eb;background-image:${heroGradient};border-radius:18px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#2563eb" style="background-color:#2563eb;background-image:${heroGradient};border-radius:20px;overflow:hidden;">
           <tr>
             <td align="center" style="padding:30px 24px 30px 24px;">
  
@@ -247,8 +247,8 @@ function getEmailLayout(opts) {
       <td align="center" class="px" style="padding:22px 28px 6px 28px;">
         <table role="presentation" class="btn-full" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
           <tr>
-            <td align="center" bgcolor="#0ea5e9" style="border-radius:12px;background-color:#0ea5e9;background-image:linear-gradient(90deg,#06b6d4 0%,#0ea5e9 55%,#2563eb 100%);">
-              <a href="${buttonUrl}" target="_blank" style="display:block;padding:15px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ffffff;border-radius:12px;">&#9654;&nbsp;&nbsp;${buttonText}</a>
+            <td align="center" bgcolor="#0ea5e9" style="border-radius:16px;background-color:#0ea5e9;background-image:linear-gradient(90deg,#06b6d4 0%,#0ea5e9 55%,#2563eb 100%);">
+              <a href="${buttonUrl}" target="_blank" style="display:block;padding:15px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ffffff;border-radius:16px;">&#9654;&nbsp;&nbsp;${buttonText}</a>
             </td>
           </tr>
         </table>
@@ -258,7 +258,7 @@ function getEmailLayout(opts) {
     <!-- ============ MADE BY CARD ============ -->
     <tr>
       <td class="px" style="padding:22px 28px 8px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
             <td align="center" style="padding:24px 20px;">
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#ffffff;">Made by Farhan Khalid</div>
@@ -319,7 +319,7 @@ function parseTargetDate(dateStr, timeStr) {
  */
 function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:16px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
       <tr>
         <td align="center" style="padding:16px 32px;">
           <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:38px;line-height:42px;font-weight:900;letter-spacing:12px;color:#ffffff;padding-left:12px;">${otp}</div>
@@ -332,9 +332,9 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const messageCard = `
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
-            <td width="4" bgcolor="#10b981" style="width:4px;background-color:#10b981;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td width="5" bgcolor="#10b981" style="width:5px;background-color:#10b981;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
             <td style="padding:18px 20px;">
               <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Permanent Cross-Feature Trust</div>
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">Once verified, this email is automatically trusted across your profile, interview reminders, feedback submissions, and saved notes with zero redundant verification.</div>
@@ -348,7 +348,7 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
   const detailsRows = `
     <tr>
       <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
             <td style="padding:6px 20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -363,7 +363,7 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
                 <tr>
                   <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Security Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ENCRYPTED</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ENCRYPTED</span>
                   </td>
                 </tr>
               </table>
@@ -393,7 +393,7 @@ function getOtpEmailHtml(otp, userName, targetEmail, appVersion) {
  */
 function getWelcomeEmailHtml(userName, email, appVersion) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.22);border-radius:14px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.22);border-radius:18px;">
       <tr>
         <td align="center" style="padding:12px 28px;">
           <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#ffffff;">ACTIVE PRO PROFILE</div>
@@ -406,9 +406,9 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
   const messageCard = `
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
-            <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
             <td style="padding:18px 20px;">
               <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What You Can Do With Clue AI</div>
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
@@ -427,7 +427,7 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
   const detailsRows = `
     <tr>
       <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
             <td style="padding:6px 20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -442,7 +442,7 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
                 <tr>
                   <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Account Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">VERIFIED &amp; READY</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">VERIFIED &amp; READY</span>
                   </td>
                 </tr>
               </table>
@@ -472,7 +472,7 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
  */
 function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
   const centralBox = `
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
       <tr>
         <td align="center" style="padding:12px 28px;">
           <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:24px;font-weight:900;letter-spacing:2px;color:#ffffff;">VERSION ${appVersion}</div>
@@ -485,9 +485,9 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
   const messageCard = `
     <tr>
       <td class="px" style="padding:16px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
-            <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
             <td style="padding:20px 22px;">
               <div style="margin:0 0 10px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;">Hello ${userName || 'Clue AI User'},</div>
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:23px;color:#e5e7eb;margin-bottom:14px;">
@@ -497,7 +497,7 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13.5px;line-height:22px;color:#cbd5e1;">
                 ${releaseHighlights || 'Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.'}
               </div>
-              <div style="margin-top:16px;padding:12px 14px;background-color:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.25);border-radius:10px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#93c5fd;">
+              <div style="margin-top:16px;padding:12px 14px;background-color:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.25);border-radius:14px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#93c5fd;">
                 <strong>How to update:</strong> Simply open Clue AI on your device and click the Update button to upgrade seamlessly.
               </div>
             </td>
@@ -510,7 +510,7 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
   const detailsRows = `
     <tr>
       <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
           <tr>
             <td style="padding:6px 20px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -525,7 +525,7 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
                 <tr>
                   <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">RELEASE ACTIVE</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">RELEASE ACTIVE</span>
                   </td>
                 </tr>
               </table>
@@ -667,7 +667,7 @@ function doPost(e) {
       }
 
       const centralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:18px;">
           <tr>
             <td align="center" style="padding:10px 24px;">
               <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#ffffff;">${questionCount} Questions &amp; Solutions</div>
@@ -680,7 +680,7 @@ function doPost(e) {
       const detailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -703,7 +703,7 @@ function doPost(e) {
                     <tr>
                       <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
                       <td align="right" style="padding:13px 0;">
-                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">EXPORT DELIVERED</span>
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">EXPORT DELIVERED</span>
                       </td>
                     </tr>
                   </table>
@@ -717,9 +717,9 @@ function doPost(e) {
       const messageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
-                <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
                   <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">Questions &amp; AI Solutions:</div>
                   <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:24px;color:#e5e7eb;">
@@ -805,12 +805,12 @@ function doPost(e) {
           screenshotSection = `
             <tr>
               <td class="px" style="padding:16px 28px 4px 28px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
                   <tr>
                     <td style="padding:18px 20px;">
                       <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f59e0b;">Attached Screenshot</div>
-                      <div style="background-color:#0b1626;border:1px solid #1c2433;border-radius:12px;padding:10px;text-align:center;">
-                        <img src="cid:feedback_screenshot" alt="Screenshot" style="max-width:100%;height:auto;border-radius:8px;border:1px solid #155e75;" />
+                      <div style="background-color:#0b1626;border:1px solid #1c2433;border-radius:16px;padding:10px;text-align:center;">
+                        <img src="cid:feedback_screenshot" alt="Screenshot" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #155e75;" />
                       </div>
                     </td>
                   </tr>
@@ -827,7 +827,7 @@ function doPost(e) {
       const adminDetailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -862,9 +862,9 @@ function doPost(e) {
       const adminMessageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
-                <td width="4" bgcolor="#3b82f6" style="width:4px;background-color:#3b82f6;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="5" bgcolor="#3b82f6" style="width:5px;background-color:#3b82f6;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
                   <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#60a5fa;">Reported Problem / Message:</div>
                   <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;white-space:pre-wrap;">${description}</div>
@@ -876,7 +876,7 @@ function doPost(e) {
       `;
 
       const adminCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:18px;">
           <tr>
             <td align="center" style="padding:10px 24px;">
               <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:#ffffff;">${category}</div>
@@ -915,7 +915,7 @@ function doPost(e) {
       // 2. User Confirmation Email (Sent ONLY to user with their name, WITHOUT their problem details)
       if (userEmail && userEmail.includes("@")) {
         const userCentralBox = `
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
             <tr>
               <td align="center" style="padding:12px 26px;">
                 <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:26px;line-height:32px;font-weight:700;letter-spacing:1px;color:#ffffff;">TICKET LOGGED</div>
@@ -928,9 +928,9 @@ function doPost(e) {
         const userMessageCard = `
           <tr>
             <td class="px" style="padding:16px 28px 4px 28px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
                 <tr>
-                  <td width="4" bgcolor="#10b981" style="width:4px;background-color:#10b981;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td width="5" bgcolor="#10b981" style="width:5px;background-color:#10b981;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                   <td style="padding:18px 20px;">
                     <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Direct Engineering Routing</div>
                     <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
@@ -946,7 +946,7 @@ function doPost(e) {
         const userDetailsRows = `
           <tr>
             <td class="px" style="padding:12px 28px 4px 28px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
                 <tr>
                   <td style="padding:6px 20px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -961,7 +961,7 @@ function doPost(e) {
                       <tr>
                         <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Routing Status</td>
                         <td align="right" style="padding:13px 0;">
-                          <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">DELIVERED TO ENGINEERING</span>
+                          <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">DELIVERED TO ENGINEERING</span>
                         </td>
                       </tr>
                     </table>
@@ -1027,7 +1027,7 @@ function doPost(e) {
     const role = data.job_title || "Technical Role";
 
     const reminderCentralBox = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.35);border:1px solid rgba(255,255,255,.18);border-radius:14px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.35);border:1px solid rgba(255,255,255,.18);border-radius:18px;">
         <tr>
           <td align="center" style="padding:12px 26px;">
             <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time}</div>
@@ -1040,9 +1040,9 @@ function doPost(e) {
     const reminderMessageCard = `
       <tr>
         <td class="px" style="padding:16px 28px 4px 28px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
             <tr>
-              <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+              <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#22d3ee;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
               <td style="padding:18px 20px;">
                 <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">Reminder Message</div>
                 <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;">Scheduled interview reminder for ${company} (${role}).</div>
@@ -1056,7 +1056,7 @@ function doPost(e) {
     const reminderDetailsRows = `
       <tr>
         <td class="px" style="padding:12px 28px 4px 28px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
             <tr>
               <td style="padding:6px 20px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1075,7 +1075,7 @@ function doPost(e) {
                   <tr>
                     <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
                     <td align="right" style="padding:13px 0;">
-                      <span style="display:inline-block;padding:4px 11px;border:1px solid #155e75;border-radius:6px;background-color:#08202b;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#22d3ee;">SCHEDULED</span>
+                      <span style="display:inline-block;padding:4px 11px;border:1px solid #155e75;border-radius:999px;background-color:#08202b;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#22d3ee;">SCHEDULED</span>
                     </td>
                   </tr>
                 </table>
@@ -1147,7 +1147,7 @@ function sendScheduledReminder(e) {
       const appVersion = data.app_version || DEFAULT_VERSION;
 
       const alertCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#7f1d1d" style="background-color:rgba(50,10,10,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#7f1d1d" style="background-color:rgba(50,10,10,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
           <tr>
             <td align="center" style="padding:12px 26px;">
               <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time || 'NOW'}</div>
@@ -1160,9 +1160,9 @@ function sendScheduledReminder(e) {
       const alertMessageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
-                <td width="4" bgcolor="#ef4444" style="width:4px;background-color:#ef4444;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="5" bgcolor="#ef4444" style="width:5px;background-color:#ef4444;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
                   <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f87171;">Pre-Interview Checklist</div>
                   <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
@@ -1180,7 +1180,7 @@ function sendScheduledReminder(e) {
       const alertDetailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1191,7 +1191,7 @@ function sendScheduledReminder(e) {
                     <tr>
                       <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
                       <td align="right" style="padding:13px 0;">
-                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">STARTING NOW</span>
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">STARTING NOW</span>
                       </td>
                     </tr>
                   </table>
@@ -1254,7 +1254,7 @@ function sendScheduledNote(e) {
       const appVersion = data.app_version || DEFAULT_VERSION;
 
       const noteCentralBox = `
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:14px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#064e3b" style="background-color:rgba(4,40,30,.4);border:1px solid rgba(255,255,255,.25);border-radius:18px;">
           <tr>
             <td align="center" style="padding:12px 26px;">
               <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:34px;line-height:38px;font-weight:700;letter-spacing:1px;color:#ffffff;">${data.time}</div>
@@ -1267,9 +1267,9 @@ function sendScheduledNote(e) {
       const noteMessageCard = `
         <tr>
           <td class="px" style="padding:16px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
-                <td width="4" bgcolor="#10b981" style="width:4px;background-color:#10b981;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="5" bgcolor="#10b981" style="width:5px;background-color:#10b981;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
                 <td style="padding:18px 20px;">
                   <div style="margin:0 0 8px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#34d399;">Interview Notes &amp; Highlights</div>
                   <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:25px;color:#e5e7eb;white-space:pre-wrap;">${data.notes}</div>
@@ -1283,7 +1283,7 @@ function sendScheduledNote(e) {
       const noteDetailsRows = `
         <tr>
           <td class="px" style="padding:12px 28px 4px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:20px;overflow:hidden;">
               <tr>
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1294,7 +1294,7 @@ function sendScheduledNote(e) {
                     <tr>
                       <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
                       <td align="right" style="padding:13px 0;">
-                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ARCHIVED</span>
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:999px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">ARCHIVED</span>
                       </td>
                     </tr>
                   </table>
