@@ -44,6 +44,9 @@ if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
+  app.commandLine.appendSwitch('enable-fast-unload');
+  app.commandLine.appendSwitch('v8-cache-options', 'code');
+  app.commandLine.appendSwitch('js-flags', '--max-opt=4 --turbo-fast-api-calls');
 }
 
 function createWindow() {
@@ -72,33 +75,21 @@ function createWindow() {
     },
   });
 
-  mainWindow.once('ready-to-show', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      applyStealthProtection(mainWindow, isStealthMode);
-    }
-  });
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      applyStealthProtection(mainWindow, isStealthMode);
-    }
-  });
-
-  // Fast safety fallback: show immediately if ready-to-show delays
-  setTimeout(() => {
+  const showMainWindowFast = () => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
       mainWindow.focus();
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       applyStealthProtection(mainWindow, isStealthMode);
     }
-  }, 200);
+  };
+
+  mainWindow.webContents.once('dom-ready', showMainWindowFast);
+  mainWindow.once('ready-to-show', showMainWindowFast);
+  mainWindow.webContents.on('did-finish-load', showMainWindowFast);
+
+  // Fast safety fallback: show immediately if ready-to-show delays
+  setTimeout(showMainWindowFast, 150);
 
   // Force the window to the absolute highest z-level, above all fullscreen apps
   // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
@@ -732,8 +723,8 @@ function createWindow() {
         // instead of a blank desktop while the silent installer swaps binaries.
       } catch (e) { }
       try {
-        // Run silently (/S) and force-run after installation (--force-run)
-        autoUpdater.quitAndInstall(true, true);
+        // Run with isSilent=false on Windows so NSIS installs and instantly force-runs Clue AI
+        autoUpdater.quitAndInstall(false, true);
       } catch (err) {
         console.error('quitAndInstall error:', err);
         app.relaunch();
@@ -1054,35 +1045,6 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
   }
 }
-function terminateOtherInstances() {
-  try {
-    const { execSync } = require('child_process');
-    if (process.platform === 'win32') {
-      const output = execSync('tasklist /FO CSV /NH', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
-      const lines = output.split(/\r?\n/);
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        const match = line.match(/^"([^"]+)","(\d+)"/);
-        if (match) {
-          const procName = match[1].toLowerCase();
-          const pid = parseInt(match[2], 10);
-          if (procName.includes('clueai') && pid && pid !== process.pid) {
-            try {
-              execSync('taskkill /F /T /PID ' + pid, { stdio: 'ignore' });
-            } catch (_) { }
-          }
-        }
-      }
-    } else if (process.platform === 'darwin') {
-      try {
-        const currentPid = process.pid;
-        execSync(`pgrep -f "ClueAI" | grep -v "^${currentPid}$" | xargs kill -9 2>/dev/null || true`, { stdio: 'ignore' });
-      } catch (_) { }
-    }
-  } catch (err) {
-    console.warn('Process scan notice:', err.message);
-  }
-}
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -1160,9 +1122,6 @@ if (!gotTheLock) {
         } catch (err) {
           console.warn('Failed to write .in_app_update token in before-quit-for-update:', err.message);
         }
-        setTimeout(() => {
-          app.exit(0);
-        }, 300);
       });
 
       autoUpdater.on('error', (err) => {
