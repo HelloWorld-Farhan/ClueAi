@@ -135,9 +135,9 @@ function getEmailLayout(opts) {
   const messageCardHtml = opts.messageCardHtml || "";
   const detailsRowsHtml = opts.detailsRowsHtml || "";
   const extraHtml = opts.extraHtml || "";
-  const buttonText = opts.buttonText || "Open Clue AI";
+  const buttonText = opts.buttonText || "";
   const buttonUrl = opts.buttonUrl || PORTFOLIO_URL;
-  const showButton = opts.showButton !== undefined ? opts.showButton : true;
+  const showButton = opts.showButton === true; // Default to false: No redundant buttons on mobile or desktop
   const showPortfolioLink = opts.showPortfolioLink !== undefined ? opts.showPortfolioLink : true;
   const footerNote = opts.footerNote || "You received this email because of your Clue AI account settings.";
 
@@ -189,8 +189,10 @@ function getEmailLayout(opts) {
             <td align="left" valign="middle">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td width="38" height="38" align="center" valign="middle" bgcolor="#0b1626" style="width:38px;height:38px;background-color:#0b1626;border:1px solid #155e75;border-radius:11px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:17px;font-weight:700;color:#22d3ee;">C</td>
-                  <td style="padding-left:11px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#ffffff;letter-spacing:.2px;">Clue <span style="color:#22d3ee;">AI</span></td>
+                  <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;padding:0;">
+                    <img src="https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi/main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:10px;object-fit:cover;border:1px solid #155e75;box-shadow:0 0 15px rgba(34,211,238,0.25);" />
+                  </td>
+                  <td style="padding-left:12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#ffffff;letter-spacing:.2px;">Clue <span style="color:#22d3ee;">AI</span></td>
                 </tr>
               </table>
             </td>
@@ -632,6 +634,7 @@ function doPost(e) {
       const sessionTime = data.session_time || new Date().toLocaleTimeString();
       const questionCount = data.question_count || (data.interactions ? data.interactions.length : 1);
       const sessionContentHtml = data.html_content || data.content || '<p>No transcript content recorded.</p>';
+      const fullHtml = data.full_html || data.html_content || sessionContentHtml;
 
       if (!email || !email.includes('@')) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Missing valid recipient email' }))
@@ -639,6 +642,29 @@ function doPost(e) {
       }
 
       registerUserEmail(email, userName);
+
+      const cleanSessionName = (sessionName || "ClueAI_Session").replace(/[^a-zA-Z0-9_\-\s]/g, "").trim().replace(/\s+/g, "_");
+
+      // 1. Generate standalone HTML and PDF attachments
+      const htmlBlob = Utilities.newBlob(fullHtml, "text/html", `${cleanSessionName}.html`);
+      let attachments = [];
+      try {
+        const pdfBlob = htmlBlob.getAs("application/pdf").setName(`${cleanSessionName}.pdf`);
+        attachments.push(pdfBlob);
+      } catch (pdfErr) {
+        console.warn("PDF conversion notice:", pdfErr);
+      }
+      attachments.push(htmlBlob);
+
+      // 2. Create Google Drive preview file if DriveApp is available
+      let viewUrl = "";
+      try {
+        const driveFile = DriveApp.createFile(`${cleanSessionName}_Interactive_Report.html`, fullHtml, "text/html");
+        driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        viewUrl = driveFile.getUrl();
+      } catch (driveErr) {
+        console.warn("DriveApp preview link non-fatal notice:", driveErr);
+      }
 
       const centralBox = `
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;">
@@ -665,6 +691,10 @@ function doPost(e) {
                     <tr>
                       <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Session Title</td>
                       <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${sessionName}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Export Attachments</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">${cleanSessionName}.pdf &bull; ${cleanSessionName}.html</td>
                     </tr>
                     <tr>
                       <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Exported To</td>
@@ -707,19 +737,22 @@ function doPost(e) {
         heroChip: "● Interview Session Export",
         headline: sessionName,
         subheadline: `Hi ${userName}, here is your exported session report with AI solutions & code.`,
-        previewText: `Your interview session export for ${sessionName} is ready.`,
+        previewText: `Your interview session export for ${sessionName} is ready with attached PDF & HTML.`,
         centralBoxHtml: centralBox,
         detailsRowsHtml: detailsRows,
         messageCardHtml: messageCard,
-        buttonText: "Launch Clue AI Copilot",
-        footerNote: "You received this email because you requested a session export in Clue AI."
+        showButton: true,
+        buttonText: "Open Interactive Session HTML",
+        buttonUrl: viewUrl || PORTFOLIO_URL,
+        footerNote: "Your formatted PDF report and standalone HTML are attached directly to this email."
       });
 
       MailApp.sendEmail({
         to: email,
         subject: `ClueAI Session Export: ${sessionName}`,
         htmlBody: exportEmailHtml,
-        name: "ClueAI Sessions"
+        name: "ClueAI Sessions",
+        attachments: attachments
       });
 
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Session exported to email successfully" }))

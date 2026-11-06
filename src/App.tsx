@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Shield Disengaged During Initial Setup",
-      desc: "Content protection shield is automatically kept OFF when the initial onboarding window opens, enabling frictionless typing of your name and email without security lockout warnings."
+      title: "Streamlined Clean Emails & Redundant Button Removal",
+      desc: "Removed unneeded software launching and download buttons across all email templates for a clean, distraction-free reading experience on mobile phones and desktops."
     },
     {
-      title: "Sleek Horizontal Minimalist Onboarding",
-      desc: "Completely redesigned setup screen into an ergonomic horizontal 2-column layout with high-definition Clue AI branding, ambient electric-cyan accents, and saved email suggestions."
+      title: "Official Clue AI Logo in Email Headers",
+      desc: "Replaced the previous placeholder letter badge with the official high-resolution Clue AI logo across all automated notifications, alerts, and dispatches."
     },
     {
-      title: "Auto-Arming Stealth Protection",
-      desc: "Content protection shield and anti-detection mechanisms automatically engage the instant onboarding and verification are completed."
+      title: "Interactive Session HTML & Direct PDF Attachments",
+      desc: "Session export emails now include direct PDF and HTML file attachments along with an intuitive button to view the full interactive session transcript."
     },
     {
-      title: "Verified Email & Profile Synchronization",
-      desc: "Seamlessly links verified candidate emails with feedback, reminders, and notes profiles for instant dispatch and verified status indicators."
+      title: "Minimal Cyberpunk Email Aesthetic",
+      desc: "Refined all notification templates into a sleek, compact layout while maintaining the signature deep-space black and electric-cyan color scheme."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.4');
+  const [appVersion, setAppVersion] = useState('5.8.5');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -3662,13 +3662,13 @@ function App() {
     return { interactions, sessionStart, sessionEnd };
   };
 
-  const downloadSessionHtml = (session: any) => {
+  const generateSessionStandaloneHtml = (session: any) => {
     const { interactions, sessionStart, sessionEnd } = parseSessionInteractions(session);
     const sessionName = session.title || session.name || 'ClueAI_Session';
     const dateStr = session.date || new Date().toLocaleDateString();
     const timeStr = session.time || '';
 
-    const htmlContent = `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3781,7 +3781,11 @@ function App() {
   </div>
 </body>
 </html>`;
+  };
 
+  const downloadSessionHtml = (session: any) => {
+    const sessionName = session.title || session.name || 'ClueAI_Session';
+    const htmlContent = generateSessionStandaloneHtml(session);
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -3965,6 +3969,7 @@ function App() {
       try {
         const { interactions } = parseSessionInteractions(exportTargetSession);
         const emailContentHtml = generateSessionEmailBody(exportTargetSession, interactions);
+        const fullStandaloneHtml = generateSessionStandaloneHtml(exportTargetSession);
         const sessionTitle = exportTargetSession.title || exportTargetSession.name || 'Interview Session';
 
         await fetch(GOOGLE_SCRIPT_URL, {
@@ -3978,6 +3983,7 @@ function App() {
             user_name: username || 'Clue AI User',
             app_version: appVersion,
             html_content: emailContentHtml,
+            full_html: fullStandaloneHtml,
             summary: `Exported ${interactions.length} interaction${interactions.length === 1 ? '' : 's'} from session ${sessionTitle}.`
           })
         });
@@ -10449,7 +10455,7 @@ function App() {
                 </div>
               )}
 
-              {/* First-Time User Onboarding & Email Verification Modal (v5.8.4 - Horizontal Minimal Redesign) */}
+              {/* First-Time User Onboarding & Email Verification Modal (v5.8.5 - Horizontal Minimal Redesign) */}
               <AnimatePresence>
                 {showOnboardingModal && (
                   <motion.div
@@ -10868,7 +10874,7 @@ function App() {
                   Installing Clue AI Update
                 </h2>
                 <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.4'}
+                  Upgrading to Version {updateInfo.version || '5.8.5'}
                 </p>
 
                 {/* High-tech Progress Bar */}
