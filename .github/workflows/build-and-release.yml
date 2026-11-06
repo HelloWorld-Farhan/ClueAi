@@ -45,14 +45,24 @@ jobs:
           npx electron-builder --publish never
 
       - name: Stage Evergreen Artifacts
-        shell: bash
         run: |
-          for f in release/ClueAI-v*.exe; do
-            [ -f "$f" ] && cp "$f" release/ClueAI.exe
-          done
-          for f in release/ClueAI-v*.dmg; do
-            [ -f "$f" ] && cp "$f" release/ClueAI.dmg
-          done
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            if (fs.existsSync('release')) {
+              const files = fs.readdirSync('release');
+              const exe = files.find(f => f.startsWith('ClueAI-v') && f.endsWith('.exe'));
+              if (exe) {
+                fs.copyFileSync(path.join('release', exe), path.join('release', 'ClueAI.exe'));
+                console.log('Staged evergreen ClueAI.exe from', exe);
+              }
+              const dmg = files.find(f => f.startsWith('ClueAI-v') && f.endsWith('.dmg'));
+              if (dmg) {
+                fs.copyFileSync(path.join('release', dmg), path.join('release', 'ClueAI.dmg'));
+                console.log('Staged evergreen ClueAI.dmg from', dmg);
+              }
+            }
+          "
 
       - name: Generate Release Notes
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
