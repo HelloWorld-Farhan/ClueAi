@@ -13,6 +13,16 @@ try {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
   autoUpdater.disableDifferentialDownload = true;
+  try {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'HelloWorld-Farhan',
+      repo: 'ClueAi',
+      releaseType: 'release'
+    });
+  } catch (feedErr) {
+    console.warn('setFeedURL notice:', feedErr.message);
+  }
 } catch (e) {
   console.warn('electron-updater failed to load:', e.message);
 }
@@ -685,26 +695,167 @@ function createWindow() {
     }
   });
 
+  
+let directDownloadedInstallerPath = null;
+let isActivelyDownloadingUpdate = false;
+
+async function downloadReleaseAssetDirect(latestVersion) {
+  const https = require('https');
+  const fs = require('fs');
+  return new Promise((resolve, reject) => {
+    const tag = latestVersion ? (latestVersion.startsWith('v') ? latestVersion : 'v' + latestVersion) : 'latest';
+    const apiUrl = tag === 'latest'
+      ? 'https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/latest'
+      : `https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/tags/${tag}`;
+
+    https.get(apiUrl, { headers: { 'User-Agent': 'ClueAI-Client' } }, (res) => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try {
+          const release = JSON.parse(raw);
+          if (!release || !release.assets || release.assets.length === 0) {
+            return reject(new Error('No binary release assets found for ' + tag));
+          }
+          const isWin = process.platform === 'win32';
+          const targetAsset = release.assets.find(a => isWin ? a.name.endsWith('.exe') : (a.name.endsWith('.dmg') || a.name.endsWith('.zip')));
+          if (!targetAsset) {
+            return reject(new Error('No executable installer asset in release ' + (release.tag_name || tag)));
+          }
+
+          const destPath = path.join(app.getPath('temp'), targetAsset.name);
+          const fileStream = fs.createWriteStream(destPath);
+
+          const downloadFile = (url) => {
+            https.get(url, { headers: { 'User-Agent': 'ClueAI-Client' } }, (dlRes) => {
+              if (dlRes.statusCode >= 300 && dlRes.statusCode < 400 && dlRes.headers.location) {
+                return downloadFile(dlRes.headers.location);
+              }
+              if (dlRes.statusCode !== 200) {
+                return reject(new Error('Download HTTP status: ' + dlRes.statusCode));
+              }
+
+              const total = parseInt(dlRes.headers['content-length'] || '0', 10) || targetAsset.size || 0;
+              let transferred = 0;
+              let lastTime = Date.now();
+              let lastTransferred = 0;
+
+              dlRes.on('data', chunk => {
+                transferred += chunk.length;
+                const now = Date.now();
+                if (now - lastTime >= 200) {
+                  const bytesPerSec = Math.round(((transferred - lastTransferred) / (now - lastTime)) * 1000);
+                  lastTime = now;
+                  lastTransferred = transferred;
+                  const percent = total > 0 ? Math.min(100, Math.round((transferred / total) * 100)) : 0;
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('updater-status', {
+                      status: 'downloading',
+                      percent,
+                      bytesPerSecond: bytesPerSec,
+                      transferred,
+                      total
+                    });
+                  }
+                }
+              });
+
+              dlRes.pipe(fileStream);
+
+              fileStream.on('finish', () => {
+                fileStream.close();
+                directDownloadedInstallerPath = destPath;
+                isActivelyDownloadingUpdate = false;
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('updater-status', {
+                    status: 'downloaded',
+                    version: release.tag_name || tag
+                  });
+                }
+                resolve({ success: true, path: destPath });
+              });
+
+              fileStream.on('error', err => {
+                isActivelyDownloadingUpdate = false;
+                fs.unlink(destPath, () => {});
+                reject(err);
+              });
+            }).on('error', err => {
+              isActivelyDownloadingUpdate = false;
+              reject(err);
+            });
+          };
+
+          downloadFile(targetAsset.browser_download_url);
+        } catch (parseErr) {
+          isActivelyDownloadingUpdate = false;
+          reject(parseErr);
+        }
+      });
+    }).on('error', err => {
+      isActivelyDownloadingUpdate = false;
+      reject(err);
+    });
+  });
+}
+
   // --- AUTO-UPDATER IPC HANDLERS ---
   ipcMain.handle('check-for-updates', async () => {
-    if (!autoUpdater) return { error: 'Updater not available' };
     try {
-      const res = await autoUpdater.checkForUpdates();
-      return { success: true, updateInfo: res ? res.updateInfo : null };
+      if (autoUpdater) {
+        const res = await autoUpdater.checkForUpdates();
+        return { success: true, updateInfo: res ? res.updateInfo : null };
+      }
     } catch (e) {
-      console.warn('check-for-updates error:', e.message);
-      return { error: e.message };
+      console.warn('Native check-for-updates notice:', e.message);
     }
+    // Fallback directly to GitHub release metadata
+    return new Promise((resolve) => {
+      const https = require('https');
+      https.get('https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/latest', { headers: { 'User-Agent': 'ClueAI-Client' } }, (res) => {
+        let raw = '';
+        res.on('data', c => raw += c);
+        res.on('end', () => {
+          try {
+            const release = JSON.parse(raw);
+            if (release && release.tag_name) {
+              const version = release.tag_name.replace(/^v/, '');
+              resolve({
+                success: true,
+                updateInfo: {
+                  version,
+                  releaseNotes: release.body,
+                  releaseDate: release.published_at
+                }
+              });
+            } else {
+              resolve({ success: false, error: 'No releases available' });
+            }
+          } catch {
+            resolve({ success: false, error: 'Failed to parse releases' });
+          }
+        });
+      }).on('error', err => resolve({ success: false, error: err.message }));
+    });
   });
 
-  ipcMain.handle('download-update', async () => {
-    if (!autoUpdater) return { error: 'Updater not available' };
+  ipcMain.handle('download-update', async (_event, targetVersion) => {
+    isActivelyDownloadingUpdate = true;
     try {
-      await autoUpdater.downloadUpdate();
-      return { success: true };
+      if (autoUpdater) {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
+      }
     } catch (e) {
-      console.warn('download-update error:', e.message);
-      return { error: e.message };
+      console.warn('autoUpdater.downloadUpdate fallback to direct asset stream:', e.message);
+    }
+    try {
+      await downloadReleaseAssetDirect(targetVersion);
+      return { success: true };
+    } catch (directErr) {
+      console.error('All update download methods failed:', directErr.message);
+      isActivelyDownloadingUpdate = false;
+      return { error: directErr.message };
     }
   });
 
@@ -1126,7 +1277,7 @@ if (!gotTheLock) {
 
       autoUpdater.on('error', (err) => {
         console.warn('Updater background notice:', err ? err.message : err);
-        if (mainWindow && !mainWindow.isDestroyed()) {
+        if (isActivelyDownloadingUpdate && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('updater-status', {
             status: 'error',
             message: err ? err.message : 'Update check failed',

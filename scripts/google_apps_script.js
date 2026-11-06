@@ -18,7 +18,51 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.8.0";
+const DEFAULT_VERSION = "5.8.3";
+
+/**
+ * Zero-argument Test Runner for Google Apps Script IDE
+ * Select this function and click "Run" in Apps Script editor to verify without errors.
+ */
+function testRun() {
+  Logger.log("Testing Clue AI Google Apps Script Engine...");
+  const users = getRegisteredUsers();
+  Logger.log("Found " + users.length + " registered users: " + users.join(", "));
+  const sampleLayout = getEmailLayout();
+  Logger.log("getEmailLayout() executed successfully. HTML output generated. Length: " + sampleLayout.length);
+  return "OK";
+}
+
+/**
+ * Broadcast New Update to ALL Registered Clue AI Users (No Links, Pure Greeting Announcement)
+ * Can be run directly from Google Apps Script Editor or triggered via Webhook POST.
+ */
+function broadcastNewUpdate(version, summary) {
+  const appVersion = version || DEFAULT_VERSION;
+  const highlights = summary || "Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.";
+  const users = getRegisteredUsers();
+  Logger.log("Broadcasting update V" + appVersion + " to " + users.length + " registered users: " + users.join(", "));
+  let sentCount = 0;
+
+  users.forEach(uEmail => {
+    try {
+      const bodyHtml = getUpdateBroadcastEmailHtml("Clue AI User", appVersion, highlights);
+      MailApp.sendEmail({
+        to: uEmail,
+        subject: "Clue AI V" + appVersion + " Update Announcement",
+        htmlBody: bodyHtml,
+        name: "Clue AI Updates"
+      });
+      sentCount++;
+      Logger.log("Dispatched update announcement to: " + uEmail);
+    } catch(err) {
+      Logger.log("Failed to send update to " + uEmail + ": " + (err ? err.message : err));
+    }
+  });
+
+  return "Broadcast sent to " + sentCount + " users";
+}
+
 
 /**
  * Register User in Persistent Properties Storage for Update Broadcasts
@@ -77,6 +121,7 @@ function getRegisteredUsers() {
  * Premium Dark-Mode Clue AI Master Layout Generator (Matching User's Claude System)
  */
 function getEmailLayout(opts) {
+  opts = opts || {};
   const version = opts.appVersion || DEFAULT_VERSION;
   const year = new Date().getFullYear();
   const heroGradient = opts.heroGradient || "linear-gradient(135deg,#3b82f6 0%,#2563eb 50%,#1d4ed8 100%)";
@@ -92,6 +137,8 @@ function getEmailLayout(opts) {
   const extraHtml = opts.extraHtml || "";
   const buttonText = opts.buttonText || "Open Clue AI";
   const buttonUrl = opts.buttonUrl || PORTFOLIO_URL;
+  const showButton = opts.showButton !== undefined ? opts.showButton : true;
+  const showPortfolioLink = opts.showPortfolioLink !== undefined ? opts.showPortfolioLink : true;
   const footerNote = opts.footerNote || "You received this email because of your Clue AI account settings.";
 
   return `<!DOCTYPE html>
@@ -194,7 +241,7 @@ function getEmailLayout(opts) {
     ${extraHtml}
  
     <!-- ============ BUTTON ============ -->
-    <tr>
+    ${showButton ? `<tr>
       <td align="center" class="px" style="padding:22px 28px 6px 28px;">
         <table role="presentation" class="btn-full" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
           <tr>
@@ -204,7 +251,7 @@ function getEmailLayout(opts) {
           </tr>
         </table>
       </td>
-    </tr>
+    </tr>` : ''}
  
     <!-- ============ MADE BY CARD ============ -->
     <tr>
@@ -214,13 +261,13 @@ function getEmailLayout(opts) {
             <td align="center" style="padding:24px 20px;">
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#ffffff;">Made by Farhan Khalid</div>
               <div style="margin-top:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:21px;color:#94a3b8;">Developer &amp; Engineer<br>Development driven by real users &bull; Faster iteration on features</div>
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:16px;">
+              ${showPortfolioLink ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:16px;">
                 <tr>
                   <td align="center" bgcolor="#fcd34d" style="background-color:#fcd34d;border-radius:999px;">
                     <a href="${PORTFOLIO_URL}" target="_blank" style="display:inline-block;padding:11px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:800;color:#3b2a00;border-radius:999px;">&#10024; View Portfolio &rarr;</a>
                   </td>
                 </tr>
-              </table>
+              </table>` : ''}
             </td>
           </tr>
         </table>
@@ -439,10 +486,17 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
           <tr>
             <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
-            <td style="padding:18px 20px;">
-              <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What's New in V${appVersion}</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:24px;color:#e5e7eb;">
-                ${releaseHighlights || 'Performance optimizations, enhanced voice-gated teleprompter scrolling, and improved dark-mode email layouts.'}
+            <td style="padding:20px 22px;">
+              <div style="margin:0 0 10px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;">Hello ${userName || 'Clue AI User'},</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:23px;color:#e5e7eb;margin-bottom:14px;">
+                Greetings from the Clue AI team! We are pleased to notify you that a new software update (Version ${appVersion}) has just arrived for Clue AI.
+              </div>
+              <div style="margin:0 0 6px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">What's New in V${appVersion}</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13.5px;line-height:22px;color:#cbd5e1;">
+                ${releaseHighlights || 'Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.'}
+              </div>
+              <div style="margin-top:16px;padding:12px 14px;background-color:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.25);border-radius:10px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#93c5fd;">
+                <strong>How to update:</strong> Simply open Clue AI on your device and click the Update button to upgrade seamlessly.
               </div>
             </td>
           </tr>
@@ -464,12 +518,12 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
                 </tr>
                 <tr>
                   <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Availability</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">Instant In-App / GitHub Release</td>
+                  <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">Instant In-App / Automatic Upgrade</td>
                 </tr>
                 <tr>
                   <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
                   <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">RELEASE PUBLISHED</span>
+                    <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">RELEASE ACTIVE</span>
                   </td>
                 </tr>
               </table>
@@ -482,16 +536,19 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
 
   return getEmailLayout({
     appVersion: appVersion,
-    heroChip: "● Official Release Update",
-    headline: `Clue AI V${appVersion} Released!`,
-    subheadline: `Hello ${userName || 'ClueAI User'}, a powerful new release of Clue AI is now ready to download.`,
-    previewText: `Clue AI V${appVersion} is here! Discover what's new.`,
+    heroChip: "🚀 Official Update Announcement",
+    heroChipBg: "rgba(59,130,246,.25)",
+    heroGradient: "linear-gradient(135deg,#0284c7 0%,#2563eb 50%,#1d4ed8 100%)",
+    accentGradient: "linear-gradient(90deg,#06b6d4 0%,#3b82f6 55%,#2563eb 100%)",
+    headline: `Clue AI V${appVersion} is Here`,
+    subheadline: `A new software release has arrived for your interview intelligence copilot.`,
+    previewText: `Greetings! Clue AI V${appVersion} update announcement.`,
     centralBoxHtml: centralBox,
     messageCardHtml: messageCard,
     detailsRowsHtml: detailsRows,
-    buttonText: "Download & Upgrade Clue AI",
-    buttonUrl: "https://github.com/HelloWorld-Farhan/ClueAi/releases",
-    footerNote: "You received this email because you are a registered user of Clue AI."
+    showButton: false, // NO LINK
+    showPortfolioLink: false, // NO LINK
+    footerNote: "You received this greeting email because your email is registered in Clue AI."
   });
 }
 
@@ -557,26 +614,10 @@ function doPost(e) {
     // ACTION 3: BROADCAST UPDATE NOTIFICATION TO ALL USERS
     // ----------------------------------------------------
     if (type === 'broadcast_update') {
-      const users = getRegisteredUsers();
-      const highlights = data.highlights || data.release_notes || "Performance optimizations, refreshed dark-mode email layouts, and new onboarding experience.";
-      let sentCount = 0;
-
-      users.forEach(uEmail => {
-        try {
-          const bodyHtml = getUpdateBroadcastEmailHtml("ClueAI User", appVersion, highlights);
-          MailApp.sendEmail({
-            to: uEmail,
-            subject: `Clue AI V${appVersion} is Here! 🚀 Upgrade Your Copilot`,
-            htmlBody: bodyHtml,
-            name: "ClueAI Releases"
-          });
-          sentCount++;
-        } catch(broadcastErr) {
-          console.warn("Failed broadcast to:", uEmail, broadcastErr);
-        }
-      });
-
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: `Broadcast sent to ${sentCount} users`, count: sentCount }))
+      const version = data.version || data.app_version || DEFAULT_VERSION;
+      const highlights = data.highlights || data.release_notes || data.summary || "Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.";
+      const msg = broadcastNewUpdate(version, highlights);
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: msg }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -927,6 +968,7 @@ function doPost(e) {
     // ACTION 6: INTERVIEW NOTES
     // ----------------------------------------------------
     if (type === 'note') {
+      if (data.email) registerUserEmail(data.email, data.to_name || 'Candidate');
       const targetDate = parseTargetDate(data.date, data.time);
       const triggerId = data.id || Utilities.getUuid();
       PropertiesService.getUserProperties().setProperty(triggerId, JSON.stringify(data));
@@ -946,6 +988,8 @@ function doPost(e) {
     // ACTION 7: INTERVIEW REMINDER
     // ----------------------------------------------------
     const toName = data.to_name || "Candidate";
+    const reminderEmail = (data.to_email || data.email || '').trim();
+    if (reminderEmail) registerUserEmail(reminderEmail, toName);
     const company = data.company_name || "Upcoming Interview";
     const role = data.job_title || "Technical Role";
 

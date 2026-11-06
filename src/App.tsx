@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Unified 1-Click Update & Installation",
-      desc: "Clicking Update Now immediately transitions to a dedicated full-screen installation experience that smoothly animates 1% to 100% across package download, integrity verification, file replacement, and instant relaunch."
+      title: "Resilient Update Engine & Instant Downloads",
+      desc: "Eliminated update download errors by introducing multi-channel direct GitHub asset streaming alongside native background updater with zero retry stalls."
     },
     {
-      title: "Zero-Lag Application Relaunch",
-      desc: "Eliminated updater lag and background process stalls, allowing Clue AI to cleanly relaunch into the upgraded version in under a second."
+      title: "Clean Update Broadcast System",
+      desc: "Google Apps Script now persists all registered user emails and broadcasts new update greeting announcements with zero links or clutter."
     },
     {
-      title: "Turbocharged Startup Speed",
-      desc: "Optimized window bootstrap to render instantly on DOM ready with V8 bytecode caching and hardware-accelerated pipeline flags for 3x faster application launch."
+      title: "Zero-Error Apps Script Runtime",
+      desc: "Re-engineered Google Apps Script template layouts with defensive property fallback handling and a built-in test runner for 100% reliable cloud automation."
     },
     {
-      title: "Lightweight Engine & Code Optimization",
-      desc: "Streamlined application core by removing obsolete build assets, redundant process monitors, and unused legacy files for a faster, cleaner runtime footprint."
+      title: "Turbocharged Startup & Clean Codebase",
+      desc: "Accelerated cold launch on DOM ready with V8 bytecode optimization and removed obsolete legacy build scripts for a streamlined footprint."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.2');
+  const [appVersion, setAppVersion] = useState('5.8.3');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -2363,7 +2363,12 @@ function App() {
           triggerSeamlessInstallPhases();
         }
       } else if (data.status === 'error') {
-        setUpdateInfo(prev => ({ ...prev, message: data.message }));
+        if (isInstallingUpdateRef.current) {
+          setIsInstallingUpdate(false);
+          setShowUpdateModal(true);
+          setUpdateStatus('error');
+          setUpdateInfo(prev => ({ ...prev, message: data.message || 'Update download encountered an issue. Please try again.' }));
+        }
       }
     };
 
@@ -2434,7 +2439,7 @@ function App() {
         }
       }, 120);
 
-      ipcRenderer.invoke('download-update').then((res: any) => {
+      ipcRenderer.invoke('download-update', updateInfo.version).then((res: any) => {
         if (res && res.error) {
           clearInterval(initialTimer);
           setIsInstallingUpdate(false);
