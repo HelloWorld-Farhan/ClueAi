@@ -14,46 +14,75 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 
 
 
-// Clean plain-English bullet point release notes formatter without any raw tags
+// Clean plain-English release notes formatter with top heading and description below
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
-    { title: "Native macOS & Windows Support", desc: "Added full macOS DMG installer and universal multi-platform release pipeline alongside Windows." },
-    { title: "Zero Code Overlap", desc: "Language selector dropdown and copy button reside in a dedicated editor header above the code, never covering code lines." },
-    { title: "Split View & Text Size Harmony", desc: "Split View toggle and high-contrast font size controls are aligned side-by-side in a unified toolbar with zero button collisions." },
-    { title: "MCQ-Only Option Detection", desc: "Coding problems provide direct algorithm solutions without dummy Option A banners; MCQ quiz questions prominently show the selected choice." },
-    { title: "Fluid Spring Transitions", desc: "Framer Motion animated page navigation across Dashboard, Session Selector, Live Command Dock, and AI Answer views." },
-    { title: "Taskbar Protection", desc: "Optimized window height and strict modal mouse gating prevent Windows Start button tooltips from bleeding through during popups." },
-    { title: "Vibrant Electric Blue Theme", desc: "Top bar update button and controls match the signature ClueAI glowing cyan-blue UI." }
+    {
+      title: "Full-Screen Animated Update Installation",
+      desc: "Clean Samsung-style full-screen installation experience showing live extraction and file verification progress from 1% to 100% before relaunching."
+    },
+    {
+      title: "Word-Detecting Voice Scroll Teleprompter",
+      desc: "Follows your spoken words in real time, automatically softly blurring read words while brightly highlighting your current word and scrolling smoothly."
+    },
+    {
+      title: "Real-Time Spoken Word Feedback",
+      desc: "Floating live transcription indicator confirms recognized speech instantly so you always see what the software hears."
+    },
+    {
+      title: "Enhanced Microphone Sensitivity & Auto Gain",
+      desc: "Hardware-level automatic gain control and audio boosting captures normal and quiet speech effortlessly without needing to speak loudly."
+    },
+    {
+      title: "Accurate Release Notes in Update Center",
+      desc: "Update dialog always presents real, user-perspective feature summaries with dedicated headings and clear descriptions."
+    }
   ];
 
   let points: { title: string, desc: string }[] = [];
 
   if (notes) {
     let text = typeof notes === 'string' ? notes : Array.isArray(notes) ? notes.map(n => n.note || n).join('\n') : JSON.stringify(notes);
-    // Replace HTML entities
     text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
 
-    // Extract list items
-    const liMatches = text.match(/<li[^>]*>([\s\S]*?)<\/li>/gi);
-    if (liMatches && liMatches.length > 0) {
-      liMatches.forEach(item => {
-        const clean = item.replace(/<[^>]+>/g, '').replace(/\?\?/g, '').trim();
-        if (!clean) return;
-        const colonIdx = clean.indexOf(':');
-        if (colonIdx > 0 && colonIdx < 50) {
-          points.push({ title: clean.substring(0, colonIdx).trim(), desc: clean.substring(colonIdx + 1).trim() });
-        } else {
-          points.push({ title: clean, desc: '' });
-        }
-      });
-    } else {
-      // Split by markdown lines
+    // 1. Check for numbered blocks: e.g. "1. **Title**\n   - desc" or "1. Title: desc"
+    const numberedRegex = /(?:^|\n)\s*\d+[\.\)]\s*(?:\*\*)?([^\n\*\:]+)(?:\*\*)?\s*[\:\-]?\s*([^\n]*(?:\n\s*[-*•]\s*[^\n]+)*)/g;
+    let match;
+    while ((match = numberedRegex.exec(text)) !== null) {
+      const title = match[1].replace(/<[^>]+>/g, '').trim();
+      let rawDesc = (match[2] || '').trim();
+      // Clean leading bullet points or indentations from description
+      const desc = rawDesc.replace(/^\s*[-*•]\s*/gm, '').replace(/\n+/g, ' ').replace(/<[^>]+>/g, '').replace(/\*\*/g, '').trim();
+      if (title.length > 2 && !title.toLowerCase().startsWith("what's new") && !title.toLowerCase().startsWith("release notes")) {
+        points.push({ title, desc });
+      }
+    }
+
+    // 2. If numbered didn't match, check HTML list items
+    if (points.length === 0) {
+      const liMatches = text.match(/<li[^>]*>([\s\S]*?)<\/li>/gi);
+      if (liMatches && liMatches.length > 0) {
+        liMatches.forEach(item => {
+          const clean = item.replace(/<[^>]+>/g, '').replace(/\?\?/g, '').trim();
+          if (!clean) return;
+          const colonIdx = clean.indexOf(':');
+          if (colonIdx > 0 && colonIdx < 60) {
+            points.push({ title: clean.substring(0, colonIdx).trim(), desc: clean.substring(colonIdx + 1).trim() });
+          } else {
+            points.push({ title: clean, desc: '' });
+          }
+        });
+      }
+    }
+
+    // 3. Fallback to standard bullet points
+    if (points.length === 0) {
       const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.startsWith('-') || l.startsWith('*') || l.startsWith('•'));
       lines.forEach(l => {
         const clean = l.replace(/^[-*•]\s*/, '').replace(/<[^>]+>/g, '').replace(/\*\*/g, '').replace(/\?\?/g, '').trim();
         if (!clean) return;
         const colonIdx = clean.indexOf(':');
-        if (colonIdx > 0 && colonIdx < 50) {
+        if (colonIdx > 0 && colonIdx < 60) {
           points.push({ title: clean.substring(0, colonIdx).trim(), desc: clean.substring(colonIdx + 1).trim() });
         } else {
           points.push({ title: clean, desc: '' });
@@ -65,14 +94,18 @@ const renderReleaseNotes = (notes: any) => {
   const listToRender = points.length > 0 ? points : defaultHighlights;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {listToRender.map((p, idx) => (
-        <div key={idx} className="flex items-start gap-2.5 bg-white/[0.03] border border-white/5 rounded-xl p-2.5 hover:border-cyan-500/30 transition-colors">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-          <div className="text-xs leading-relaxed">
-            <span className="font-bold text-white tracking-wide">{p.title}</span>
-            {p.desc && <span className="text-white/70">: {p.desc}</span>}
+        <div key={idx} className="flex flex-col bg-white/[0.03] border border-white/5 rounded-xl p-3 hover:border-cyan-500/30 transition-all shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+            <span className="font-bold text-white text-xs tracking-wide">{p.title}</span>
           </div>
+          {p.desc && (
+            <div className="text-[11px] text-white/70 leading-relaxed pl-4">
+              {p.desc}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -463,7 +496,10 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.7.3');
+  const [appVersion, setAppVersion] = useState('5.7.4');
+  const [liveSpokenText, setLiveSpokenText] = useState<string>('');
+  const liveSpokenTextRef = useRef<string>('');
+  const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
   const [sessionModalMode, setSessionModalMode] = useState<'new' | 'resume'>('new');
   const [sessionSearchTerm, setSessionSearchTerm] = useState('');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
@@ -1860,15 +1896,28 @@ function App() {
 
   const handleRestartToInstall = () => {
     setIsInstallingUpdate(true);
-    setInstallProgress(15);
-    setTimeout(() => setInstallProgress(45), 350);
-    setTimeout(() => setInstallProgress(85), 750);
-    setTimeout(() => {
-      setInstallProgress(100);
-      setTimeout(() => {
-        ipcRenderer.invoke('quit-and-install-update');
-      }, 500);
-    }, 1200);
+    setInstallProgress(1);
+    setInstallStageText("Extracting update packages...");
+
+    let current = 1;
+    const interval = setInterval(() => {
+      current += 1;
+      setInstallProgress(current);
+
+      if (current <= 30) {
+        setInstallStageText("Extracting update packages...");
+      } else if (current <= 75) {
+        setInstallStageText("Verifying integrity & replacing files...");
+      } else if (current < 100) {
+        setInstallStageText("Finalizing installation...");
+      } else {
+        clearInterval(interval);
+        setInstallStageText("Update complete! Relaunching Clue AI...");
+        setTimeout(() => {
+          ipcRenderer.invoke('quit-and-install-update');
+        }, 600);
+      }
+    }, 40);
   };
 
   // Auto-scroll transcript box to bottom as words stream in
@@ -2280,9 +2329,9 @@ function App() {
       // 2. Attempt Microphone Capture with safety timeout
       try {
         const micConstraints: MediaTrackConstraints = {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
         };
         if (selectedMicId && selectedMicId !== 'default') {
           micConstraints.deviceId = { exact: selectedMicId };
@@ -2404,7 +2453,7 @@ function App() {
         try {
           const micSource = audioCtx.createMediaStreamSource(micStream);
           const micGain = audioCtx.createGain();
-          micGain.gain.value = 1.35; // Crystal-clear capture for quiet and normal speech
+          micGain.gain.value = 2.0; // Boost microphone capture so quiet speech is heard clearly
           micSource.connect(micGain);
           micGain.connect(mixer);
         } catch (errConnectMic) {
@@ -2433,8 +2482,8 @@ function App() {
         }
         const frameRms = Math.sqrt(frameSumSquares / inputData.length);
 
-        // Ambient noise threshold: sound above 0.02 or RMS above 0.007
-        if (frameMax > 0.020 || frameRms > 0.007) {
+        // Ambient noise threshold: sound above 0.015 or RMS above 0.005 (captures quiet speech)
+        if (frameMax > 0.015 || frameRms > 0.005) {
           lastSpokenTimestampRef.current = Date.now();
         }
 
@@ -2445,8 +2494,8 @@ function App() {
           setIsSpeakingLive(isSpeaking);
         }
 
-        // When paused or showing AI answer, do not buffer speech for STT (Voice Scroll runs 100% offline via volume gate)
-        if (isPausedRef.current || isAiFullscreenRef.current) return;
+        // If paused, or if in AI answer view and Voice Scroll is not enabled, do not buffer speech
+        if (isPausedRef.current || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) return;
 
         let resampled: Float32Array;
 
@@ -2468,6 +2517,11 @@ function App() {
 
         audioChunksRef.current.push(resampled);
         totalAudioSamplesRef.current += resampled.length;
+
+        // If Voice Scroll is active, trigger real-time chunk recognition as soon as ~350ms is captured
+        if (isAiFullscreenRef.current && isVoiceScrollRef.current && totalAudioSamplesRef.current >= 16000 * 0.35 && !isProcessingRef.current) {
+          processAudioRef.current();
+        }
       };
 
       mixer.connect(processor);
@@ -2528,12 +2582,13 @@ function App() {
     if (!streamRef.current) return;
     // When manual edit section is open, do not transcribe or inject words
     if (showVirtualKeyboardRef.current) return;
-    if (isPausedRef.current || isAiFullscreenRef.current) {
+    if (isPausedRef.current || (isAiFullscreenRef.current && !isVoiceScrollRef.current)) {
       return;
     }
     if (isProcessingRef.current) return;
 
-    const minSamples = 16000 * 0.8;
+    const isVoiceScrollMode = Boolean(isAiFullscreenRef.current && isVoiceScrollRef.current);
+    const minSamples = isVoiceScrollMode ? (16000 * 0.35) : (16000 * 0.8);
     if (totalAudioSamplesRef.current < minSamples) {
       return;
     }
@@ -2568,9 +2623,9 @@ function App() {
       const rms = Math.sqrt(sumSquares / (recentAudio.length || 1));
 
       // Sensitive Vocal Gate: Captures quiet/soft voices without capturing ambient static
-      // Ambient fan/room noise: maxVal < 0.015, rms < 0.005
-      // Human speech (including soft speech): maxVal >= 0.020 or rms >= 0.007
-      const isVoiceActive = (maxVal >= 0.020 || rms >= 0.007);
+      // Ambient fan/room noise: maxVal < 0.012, rms < 0.004
+      // Human speech (including quiet and soft speech): maxVal >= 0.015 or rms >= 0.005
+      const isVoiceActive = (maxVal >= 0.015 || rms >= 0.005);
 
       if (!isVoiceActive) {
         silenceFramesRef.current += 1;
@@ -2578,7 +2633,7 @@ function App() {
         if (silenceFramesRef.current >= 4 && totalAudioSamplesRef.current > 0) {
           logEvent("Silence detected. Committing sentence and flushing STT buffer.");
 
-          if (interimTranscriptRef.current) {
+          if (!isVoiceScrollMode && interimTranscriptRef.current) {
             finalizedTranscriptRef.current = (finalizedTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
           }
 
@@ -2586,7 +2641,7 @@ function App() {
           interimTranscriptRef.current = ''; // Reset interim
           silenceFramesRef.current = 0;
 
-          if (!isPausedRef.current) {
+          if (!isPausedRef.current && !isVoiceScrollMode) {
             setFinalizedText(finalizedTranscriptRef.current);
             setInterimText('');
             setTranscript(finalizedTranscriptRef.current);
@@ -2596,8 +2651,76 @@ function App() {
         return;
       }
 
-      logEvent(`Triggering STT. Buffer size: ${(currentAudio.length / 16000).toFixed(2)}s, Max Volume: ${maxVal.toFixed(4)}`);
       silenceFramesRef.current = 0; // Reset silence counter since they are speaking
+
+      // Special handling for Voice Scroll (Real-Time Word Detection & Blurring Teleprompter)
+      if (isVoiceScrollMode) {
+        if (!aiAnswerRef.current) {
+          clearAudioBuffer();
+          isProcessingRef.current = false;
+          return;
+        }
+
+        const cleanAnswer = aiAnswerRef.current.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
+        const allWords = cleanAnswer.split(/\s+/).filter(Boolean);
+        const curWordIdx = readWordIndexRef.current || 0;
+
+        // Extract upcoming words as targeted context prompt for Whisper
+        const upcomingWords = allWords.slice(curWordIdx, curWordIdx + 15).map(w => w.replace(/[^a-zA-Z0-9]/g, '')).filter(Boolean);
+        const promptSnippet = upcomingWords.slice(0, 8).join(' ');
+
+        const spokenChunk = await transcribeAudioChunk(currentAudio, promptSnippet);
+        clearAudioBuffer(); // Keep buffer short (~350ms) for real-time responsiveness
+
+        if (spokenChunk && !spokenChunk.startsWith('ERR:') && spokenChunk.trim().length > 0) {
+          const cleanSpoken = spokenChunk.trim();
+          setLiveSpokenText(cleanSpoken);
+          liveSpokenTextRef.current = cleanSpoken;
+
+          const spokenWords = cleanSpoken.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+          if (spokenWords.length > 0 && allWords.length > 0) {
+            let newWordIdx = curWordIdx;
+            const lookaheadMax = Math.min(allWords.length, curWordIdx + 10);
+
+            const isMatch = (target: string, spoken: string) => {
+              if (!target || !spoken) return false;
+              const t = target.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const s = spoken.toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (!t || !s) return false;
+              if (t === s) return true;
+              if (t.length > 3 && s.length > 3 && (t.includes(s) || s.includes(t))) return true;
+              if (t.length >= 4 && s.length >= 4 && t.slice(0, 3) === s.slice(0, 3)) return true;
+              return false;
+            };
+
+            for (let i = curWordIdx; i < lookaheadMax; i++) {
+              for (let s = 0; s < spokenWords.length; s++) {
+                if (isMatch(allWords[i], spokenWords[s])) {
+                  newWordIdx = Math.max(newWordIdx, i + 1);
+                  break;
+                }
+              }
+            }
+
+            if (newWordIdx > curWordIdx) {
+              const boundedIdx = Math.min(allWords.length - 1, newWordIdx);
+              setReadWordIndex(boundedIdx);
+              readWordIndexRef.current = boundedIdx;
+              readWordProgressRef.current = boundedIdx;
+
+              const el = document.getElementById(`teleprompter-word-${boundedIdx}`);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+          }
+        }
+
+        isProcessingRef.current = false;
+        return;
+      }
+
+      logEvent(`Triggering STT. Buffer size: ${(currentAudio.length / 16000).toFixed(2)}s, Max Volume: ${maxVal.toFixed(4)}`);
 
       // FORCE COMMIT: If the buffer exceeds 12 seconds, Whisper large-v3-turbo might start dropping earlier sentences.
       // We force a commit here to start a fresh sentence chunk.
@@ -4421,6 +4544,61 @@ function App() {
                                 </div>
                               );
                             })()
+                          ) : isVoiceScroll ? (
+                            (() => {
+                              const cleanAnswer = aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim();
+                              const paragraphs = cleanAnswer.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+                              let globalWordCounter = 0;
+                              const parsedParas = paragraphs.map((para, pIdx) => {
+                                const words = para.split(/\s+/).filter(Boolean).map(w => {
+                                  const wordObj = { raw: w, idx: globalWordCounter, pIdx };
+                                  globalWordCounter++;
+                                  return wordObj;
+                                });
+                                return { pIdx, para, words };
+                              });
+
+                              return (
+                                <div className="space-y-4">
+                                  {liveSpokenText && (
+                                    <div className="sticky top-0 z-20 flex items-center gap-2 px-3.5 py-1.5 bg-[#0a0c16]/95 border border-cyan-400/50 rounded-full text-xs text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-md mb-2 w-fit">
+                                      <Mic size={13} className="text-emerald-400 animate-pulse" />
+                                      <span className="text-[10px] uppercase font-bold text-cyan-400/70">Heard:</span>
+                                      <span className="font-semibold text-white truncate max-w-lg">"{liveSpokenText}"</span>
+                                    </div>
+                                  )}
+                                  {parsedParas.map(({ pIdx, words }) => (
+                                    <div key={pIdx} className="leading-relaxed flex flex-wrap gap-x-2 gap-y-1.5 p-3 rounded-2xl bg-white/[0.01] border border-white/5">
+                                      {words.map((w) => {
+                                        const isPast = w.idx < readWordIndex;
+                                        const isCurrent = w.idx === readWordIndex;
+                                        return (
+                                          <span
+                                            key={w.idx}
+                                            id={`teleprompter-word-${w.idx}`}
+                                            onClick={() => {
+                                              setReadWordIndex(w.idx);
+                                              readWordIndexRef.current = w.idx;
+                                              readWordProgressRef.current = w.idx;
+                                            }}
+                                            className={`cursor-pointer transition-all duration-200 select-text ${
+                                              isCurrent
+                                                ? 'text-cyan-300 font-black bg-cyan-400/25 px-1.5 py-0.5 rounded-lg ring-2 ring-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.6)] scale-105 inline-block'
+                                                : isPast
+                                                ? 'filter blur-[0.6px] opacity-35 text-white/50 select-none hover:opacity-80 hover:blur-none'
+                                                : 'text-white/95 font-semibold hover:text-cyan-200'
+                                            }`}
+                                          >
+                                            {w.raw}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()
                           ) : (
                             <ReactMarkdown components={markdownComponents}>
                               {aiAnswer.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/(?:\r?\n){3,}/g, '\n\n').trim()}
@@ -5167,7 +5345,7 @@ function App() {
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="font-bold text-white flex items-center gap-2">
                                     <Sparkles size={16} className="text-cyan-400 animate-spin" />
-                                    {installProgress < 40 ? 'Extracting Update Files...' : installProgress < 85 ? 'Applying ClueAI Files...' : 'Launching ClueAI v5.6.4...'}
+                                    {installStageText}
                                   </span>
                                   <span className="font-mono text-cyan-300 font-black px-2.5 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/40 text-xs">
                                     {installProgress}%
@@ -8685,6 +8863,63 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+        {/* Full-Screen Samsung One UI Style Update Installation Screen */}
+        <AnimatePresence>
+          {isInstallingUpdate && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[99999] bg-[#05060b] flex flex-col items-center justify-center p-8 select-none text-white overflow-hidden pointer-events-auto"
+            >
+              {/* Ambient radial glow */}
+              <div className="absolute w-[600px] h-[600px] rounded-full bg-cyan-500/15 blur-[140px] pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col items-center max-w-md w-full text-center">
+                {/* Glowing Clue AI emblem */}
+                <div className="relative mb-8">
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500/20 via-blue-500/30 to-indigo-500/20 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_60px_rgba(6,182,212,0.4)] animate-pulse">
+                    <Sparkles size={44} className="text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+                  </div>
+                  <div className="absolute -inset-2 rounded-3xl border border-cyan-500/20 animate-ping" style={{ animationDuration: '3s' }} />
+                </div>
+
+                <h2 className="text-2xl font-black text-white tracking-tight mb-1">
+                  Installing Clue AI Update
+                </h2>
+                <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
+                  Upgrading to Version 5.7.4
+                </p>
+
+                {/* High-tech Progress Bar */}
+                <div className="w-full bg-black/80 rounded-full border border-cyan-500/40 p-1 mb-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)]">
+                  <div
+                    className="h-3.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full transition-all duration-100 shadow-[0_0_20px_rgba(6,182,212,0.9)] relative"
+                    style={{ width: `${Math.max(installProgress, 2)}%` }}
+                  >
+                    <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-white rounded-full shadow-[0_0_8px_white]" />
+                  </div>
+                </div>
+
+                {/* Percentage & Live Stage Text */}
+                <div className="flex items-center justify-between w-full text-xs font-mono mb-2">
+                  <span className="text-white/80 font-medium text-left">
+                    {installStageText}
+                  </span>
+                  <span className="text-cyan-300 font-black text-sm">
+                    {installProgress}%
+                  </span>
+                </div>
+
+                <div className="mt-8 text-[11px] text-white/50 flex items-center gap-2 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  Please do not close Clue AI. Relaunching automatically upon completion.
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {modelChangeMsg && (
           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
             <span className="text-emerald-400 text-sm font-bold animate-in zoom-in slide-in-from-bottom-5 duration-150 flex items-center gap-2 bg-black/90 px-4 py-2 rounded-xl border border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] backdrop-blur-xl">
