@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * CLUE AI - Google Apps Script Backend (v5.9.1)
+ * CLUE AI - Google Apps Script Backend (v5.9.2)
  * =========================================================================
  * Handles:
  *  1. Universal 6-Digit Email OTP Verification (Dark Mode)
@@ -18,7 +18,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.9.1";
+const DEFAULT_VERSION = "5.9.2";
 
 /**
  * Zero-argument Test Runner for Google Apps Script IDE
@@ -43,6 +43,7 @@ function broadcastNewUpdate(version, summary) {
   const users = getRegisteredUsers();
   Logger.log("Broadcasting update V" + appVersion + " to " + users.length + " registered users: " + users.join(", "));
   let sentCount = 0;
+  let sentEmails = [];
 
   users.forEach(uEmail => {
     try {
@@ -54,13 +55,18 @@ function broadcastNewUpdate(version, summary) {
         name: "Clue AI Updates"
       });
       sentCount++;
+      sentEmails.push(uEmail);
       Logger.log("Dispatched update announcement to: " + uEmail);
     } catch(err) {
       Logger.log("Failed to send update to " + uEmail + ": " + (err ? err.message : err));
     }
   });
 
-  return "Broadcast sent to " + sentCount + " users";
+  return {
+    sentCount: sentCount,
+    sentEmails: sentEmails,
+    message: "Broadcast sent to " + sentCount + " users: (" + sentEmails.join(", ") + ")"
+  };
 }
 
 
@@ -583,8 +589,15 @@ function doPost(e) {
     if (type === 'broadcast_update') {
       const version = data.version || data.app_version || DEFAULT_VERSION;
       const highlights = data.highlights || data.release_notes || data.summary || "Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.";
-      const msg = broadcastNewUpdate(version, highlights);
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: msg }))
+      const res = broadcastNewUpdate(version, highlights);
+      const msg = typeof res === 'object' ? res.message : res;
+      const recipients = typeof res === 'object' ? res.sentEmails : [];
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: msg,
+        recipients: recipients,
+        sent_count: typeof res === 'object' ? res.sentCount : 0
+      }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 

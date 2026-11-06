@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Reliable Instant Cold Boot & Single Instance",
-      desc: "Fixed process lock contention so Clue AI always opens instantly and reliably on cold boot, installer completions, and shortcut launches."
+      title: "Direct In-App Installer Upgrade",
+      desc: "In-app updates now reliably execute the downloaded installer directly with automated relaunch, guaranteeing you upgrade to the new version without getting stuck."
+    },
+    {
+      title: "Distinct Versioned Release Binaries",
+      desc: "GitHub releases and download targets now feature distinct versioned installer files (e.g. ClueAI-v5.9.2.exe & ClueAI-v5.9.2.dmg) alongside evergreen links."
+    },
+    {
+      title: "Automated Broadcast Recipient Transparency",
+      desc: "Automated GitHub Actions release workflows explicitly log all user recipient email addresses that receive the release broadcast notification."
     },
     {
       title: "Centered Storage Modal with Balanced Padding",
-      desc: "The Storage & Disk Center modal is now beautifully fitted and centered in the middle of your screen with generous horizontal padding."
-    },
-    {
-      title: "Streamlined Minimal Announcement Emails",
-      desc: "Update notifications are ultra-compact with only the official blue hero banner and a concise greeting for maximum clarity."
-    },
-    {
-      title: "Universal Portfolio Website Redirection",
-      desc: "All email templates feature a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website."
+      desc: "Storage & Disk Center modal is centered and fitted with balanced padding for optimal focus and layout harmony."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.1');
+  const [appVersion, setAppVersion] = useState('5.9.2');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');

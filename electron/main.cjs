@@ -814,12 +814,19 @@ async function downloadReleaseAssetDirect(latestVersion) {
             return reject(new Error('No binary release assets found for ' + tag));
           }
           const isWin = process.platform === 'win32';
-          const targetAsset = release.assets.find(a => isWin ? a.name.endsWith('.exe') : (a.name.endsWith('.dmg') || a.name.endsWith('.zip')));
+          // Prefer version-specific installer if available (e.g. ClueAI-v5.9.2.exe), otherwise any .exe / .dmg
+          const targetAsset = release.assets.find(a => isWin ? (a.name.toLowerCase().includes('v') && a.name.endsWith('.exe')) : (a.name.toLowerCase().includes('v') && a.name.endsWith('.dmg')))
+            || release.assets.find(a => isWin ? a.name.endsWith('.exe') : (a.name.endsWith('.dmg') || a.name.endsWith('.zip')));
           if (!targetAsset) {
             return reject(new Error('No executable installer asset in release ' + (release.tag_name || tag)));
           }
 
           const destPath = path.join(app.getPath('temp'), targetAsset.name);
+          try {
+            if (fs.existsSync(destPath)) {
+              fs.unlinkSync(destPath);
+            }
+          } catch (e) { }
           const fileStream = fs.createWriteStream(destPath);
 
           const downloadFile = (url) => {
@@ -967,25 +974,67 @@ async function downloadReleaseAssetDirect(latestVersion) {
       }
     } catch (e) { }
 
+    const fs = require('fs');
+    try {
+      const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
+      fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
+    } catch (err) { }
+
+    // Priority 1: Check if we downloaded an installer directly via direct GitHub release asset stream
+    let targetInstaller = null;
+    if (directDownloadedInstallerPath && fs.existsSync(directDownloadedInstallerPath)) {
+      targetInstaller = directDownloadedInstallerPath;
+    } else {
+      // Check temp directory for any downloaded ClueAI installer
+      try {
+        const tempDir = app.getPath('temp');
+        const files = fs.readdirSync(tempDir);
+        const matches = files
+          .filter(f => f.toLowerCase().includes('clueai') && f.toLowerCase().endsWith('.exe'))
+          .map(f => path.join(tempDir, f))
+          .filter(p => fs.existsSync(p))
+          .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+        if (matches.length > 0) {
+          targetInstaller = matches[0];
+        }
+      } catch (e) { }
+    }
+
+    if (targetInstaller && fs.existsSync(targetInstaller)) {
+      console.log('Spawning downloaded installer directly:', targetInstaller);
+      const { spawn } = require('child_process');
+      if (process.platform === 'win32') {
+        // Run NSIS installer detached with --updated, /S (silent), and --force-run to install and auto-launch
+        const child = spawn(targetInstaller, ['--updated', '/S', '--force-run'], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        child.unref();
+      } else if (process.platform === 'darwin') {
+        const child = spawn('open', [targetInstaller], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        child.unref();
+      }
+      // Exit immediately so that file locks on ClueAI.exe are released for the installer
+      app.exit(0);
+      return;
+    }
+
+    // Priority 2: Use electron-updater native quitAndInstall if active
     if (autoUpdater) {
       try {
-        const fs = require('fs');
-        const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
-        fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
-      } catch (err) { }
-
-      try {
-        // Run silent update and force relaunch
         autoUpdater.quitAndInstall(true, true);
+        return;
       } catch (err) {
-        console.error('quitAndInstall error:', err);
-        app.relaunch();
-        app.exit(0);
+        console.error('autoUpdater.quitAndInstall error:', err);
       }
-    } else {
-      app.relaunch();
-      app.exit(0);
     }
+
+    // Fallback: Relaunch app
+    app.relaunch();
+    app.exit(0);
   });
 
   ipcMain.handle('get-app-version', () => {

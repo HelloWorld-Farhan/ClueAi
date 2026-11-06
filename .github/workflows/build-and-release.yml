@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Target Release Tag'
         required: false
-        default: 'v5.9.1'
+        default: 'v5.9.2'
 
 permissions:
   contents: write
@@ -44,6 +44,16 @@ jobs:
           npm run build
           npx electron-builder --publish never
 
+      - name: Stage Evergreen Artifacts
+        shell: bash
+        run: |
+          for f in release/ClueAI-v*.exe; do
+            [ -f "$f" ] && cp "$f" release/ClueAI.exe
+          done
+          for f in release/ClueAI-v*.dmg; do
+            [ -f "$f" ] && cp "$f" release/ClueAI.dmg
+          done
+
       - name: Generate Release Notes
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         run: |
@@ -65,8 +75,8 @@ jobs:
           ---
 
           ### 📦 Installation
-          - **Windows**: Download ``ClueAI.exe`` from Assets below or update seamlessly within Clue AI.
-          - **macOS**: Download ``ClueAI.dmg`` and drag to Applications.
+          - **Windows**: Download ``ClueAI-v$ver.exe`` (or ``ClueAI.exe``) from Assets below or update seamlessly within Clue AI.
+          - **macOS**: Download ``ClueAI-v$ver.dmg`` (or ``ClueAI.dmg``) and drag to Applications.
 
           ---
           *Official Release &bull; Powered by Clue AI Engineering &bull; Developed by [Farhan Khalid](https://farhan-khalid-portfolio.vercel.app/)*
@@ -102,11 +112,17 @@ jobs:
             action = "broadcast_update"
             version = $ver
             app_version = $ver
-            highlights = "• Clean White High-Contrast Email Theme with superior text visibility and crisp layout`n• Automated Release Announcement Delivery on GitHub update release`n• Streamlined Update Center and instant session exports`n• Seamless performance and startup optimizations"
+            highlights = "• Direct In-App Update Execution: Updater directly runs downloaded installer with auto-relaunch`n• Versioned Release Binaries: Standalone ClueAI-v$ver.exe & ClueAI-v$ver.dmg artifacts`n• Broadcast Recipient Transparency: GitHub release workflow logs all delivered recipient emails`n• Ultra-fast Cold Boot and Rock-solid Process Management"
           } | ConvertTo-Json
           try {
             $resp = Invoke-RestMethod -Uri "https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec" -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 30
-            Write-Host "Broadcast webhook successfully invoked: $resp"
+            Write-Host "Broadcast webhook successfully invoked: $($resp | ConvertTo-Json -Compress)"
+            if ($resp.message) {
+              Write-Host "Broadcast Result: $($resp.message)"
+            }
+            if ($resp.recipients) {
+              Write-Host "Recipient Email IDs: $($resp.recipients -join ', ')"
+            }
           } catch {
             Write-Host "Broadcast webhook notification notice: $_"
           }

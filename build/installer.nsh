@@ -2,9 +2,8 @@
 !include "LogicLib.nsh"
 
 !macro customInit
-  ; Automatically terminate any lingering ClueAI instances to prevent file locks or "ClueAI cannot be closed" prompts
-  nsExec::ExecToLog 'cmd.exe /C taskkill /F /IM "ClueAI.exe" /T'
-  nsExec::ExecToLog 'cmd.exe /C taskkill /F /IM "clueai.exe" /T'
+  ; Terminate running installed ClueAI instances without killing the running installer itself
+  nsExec::ExecToLog 'powershell.exe -NoProfile -Command "Get-Process ClueAI,clueai -ErrorAction SilentlyContinue | ? Path -like ''*Programs*'' | Stop-Process -Force"'
   Sleep 1000
 !macroend
 

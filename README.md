@@ -20,15 +20,14 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.1)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.2)
 
-### 🚀 What's New in v5.9.1
-- 🚀 **Reliable Instant Cold Boot & Single Instance**: Fixed process lock race condition so Clue AI always opens instantly and reliably on cold boot, installer completions, and desktop shortcut clicks without mutual process termination.
-- 🪟 **Centered Storage Modal with Balanced Padding**: The Storage & Disk Center modal is now fitted and centered in the middle of your screen with generous horizontal padding (`px-6 sm:px-12 md:px-20`) for optimal aesthetic balance.
-- ✉️ **Streamlined Minimal Update Emails**: Update notifications are now ultra-compact with only the official blue hero banner and a concise greeting, removing noisy changelog dumps for maximum clarity and mobile readability.
-- 🌐 **Universal Portfolio Website Redirection**: Added a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website (`https://farhan-khalid-portfolio.vercel.app/`) across all email templates and developer cards.
-- ⚡ **Instant Global CDN Edge Logo Delivery**: Migrated email logo assets to high-speed jsDelivr CDN edge nodes, ensuring immediate and crisp logo rendering across all email clients without delayed placeholders.
-- 🛑 **Emergency Background Kill Shortcut (`Ctrl + Shift + X`)**: Terminates all Clue AI background processes immediately. Strict shortcut isolation ensures only `Ctrl + Shift + K` responds when minimized.
+### 🚀 What's New in v5.9.2
+- 🔄 **Direct In-App Installer Upgrade**: In-app updates now directly execute the downloaded installer binary detached with automated relaunch, guaranteeing you upgrade to the new version without getting stuck or restarting into the old build.
+- 📦 **Distinct Versioned Release Binaries**: GitHub Releases and download targets now feature distinct versioned installer files (e.g. `ClueAI-v5.9.2.exe` & `ClueAI-v5.9.2.dmg`) alongside evergreen links (`ClueAI.exe` & `ClueAI.dmg`), allowing users to download any specific release version reliably.
+- ✉️ **Automated Broadcast Recipient Transparency**: GitHub Actions release workflows and Google Apps Script now report and display the exact recipient email addresses that receive update broadcast announcements.
+- 🚀 **Rock-solid Process Lifecycle & Instant Cold Boot**: Enhanced NSIS installer routines cleanly terminate previous application processes without installer conflicts or file locks.
+- 🪟 **Centered Storage Modal with Balanced Padding**: Storage & Disk Center modal is centered and fitted with balanced horizontal padding for optimal focus and layout harmony.
 
 ### 🪟 1. For Windows
 
