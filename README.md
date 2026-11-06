@@ -20,15 +20,15 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.8.10)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.0)
 
-### 🚀 What's New in v5.8.10
-- 🛡️ **Instant Single-Instance Replacement & Zombie Killer**: Launching Clue AI automatically and cleanly terminates any previous or stuck background instances, ensuring only one instance runs at any time without process locking or lingering threads.
-- ⚡ **Sub-Second Cold Boot Speed**: Streamlined Electron initialization, deferred background tasks, and asynchronous audio boot to get the dashboard live on your screen in milliseconds.
-- 👤 **Permanent One-Time Device Setup**: The candidate onboarding profile setup only appears once per device installation. Once configured or dismissed, it will never show again unless explicitly uninstalled and reinstalled.
-- 🪟 **Top-Right Window Controls in Starting Panel**: Added Minimize and Close window control buttons directly to the onboarding starting panel with smooth frosted glass styling.
-- 🛑 **Emergency Background Kill Shortcut (`Ctrl + Shift + X`)**: Added `Ctrl + Shift + X` to terminate all Clue AI background processes immediately. When Clue AI is minimized, strict hotkey isolation ensures only `Ctrl + Shift + K` responds.
-- 📄 **Direct PDF Downloads & Safe Data Reload**: Direct zero-freeze PDF exports via Chromium IPC, safe reload on `Ctrl + Shift + R`, and gentle backdrop blur across all modals.
+### 🚀 What's New in v5.9.0
+- ✉️ **Streamlined Minimal Update Emails**: Update notifications are now ultra-compact with only the official blue hero banner and a concise greeting, removing noisy changelog dumps for maximum clarity and mobile readability.
+- 🌐 **Universal Portfolio Website Redirection**: Added a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website (`https://farhan-khalid-portfolio.vercel.app/`) across all email templates and developer cards.
+- ⚡ **Instant Global CDN Edge Logo Delivery**: Migrated email logo assets to high-speed jsDelivr CDN edge nodes, ensuring immediate and crisp logo rendering across all email clients without delayed placeholders.
+- 🛡️ **Instant Single-Instance Replacement & Zombie Killer**: Launching Clue AI automatically terminates any previous or stuck background instances, ensuring only one instance runs at any time.
+- 🛑 **Emergency Background Kill Shortcut (`Ctrl + Shift + X`)**: Terminates all Clue AI background processes immediately. Strict shortcut isolation ensures only `Ctrl + Shift + K` responds when minimized.
+- 👤 **Permanent One-Time Device Setup**: Onboarding candidate setup strictly opens once per device installation. Added top-right minimize and close controls directly to the starting panel.
 
 ### 🪟 1. For Windows
 

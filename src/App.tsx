@@ -18,20 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Instant Single-Instance Replacement & Zombie Killer",
-      desc: "Opening Clue AI instantly terminates any previous background instances and launches fresh in milliseconds, preventing duplicate processes or file locking."
+      title: "Streamlined Minimal Announcement Emails",
+      desc: "Update notifications are now ultra-compact with only the official blue hero banner and a concise greeting, removing noisy changelogs for maximum clarity."
     },
     {
-      title: "Permanent One-Time Device Setup & Top Window Controls",
-      desc: "Onboarding candidate setup only opens once per device. The starting panel now features built-in minimize and close window controls with frosted cyberpunk accents."
+      title: "Universal Portfolio Website Redirection",
+      desc: "All email templates now feature a dedicated, high-contrast button redirecting directly to Farhan Khalid's portfolio website."
     },
     {
-      title: "Emergency Process Termination Shortcut (Ctrl + Shift + X)",
-      desc: "Use Ctrl + Shift + X to immediately kill all running Clue AI processes. When minimized, strict shortcut isolation ensures only Ctrl + Shift + K is active."
+      title: "Instant Global CDN Edge Logo Delivery",
+      desc: "Migrated official Clue AI email assets to high-speed CDN edge nodes, ensuring immediate and crisp logo rendering across all email clients."
     },
     {
-      title: "Sub-Second Startup Optimization & Silent Auto-Update",
-      desc: "Cold boots now initialize in milliseconds with deferred non-critical background jobs, and updates terminate previous processes cleanly without dialog errors."
+      title: "Process Resilience & Zombie Process Elimination",
+      desc: "Starting Clue AI cleanly kills previous lingering processes, boots in milliseconds, and provides Ctrl+Shift+X emergency termination."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.10');
+  const [appVersion, setAppVersion] = useState('5.9.0');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');

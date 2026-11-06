@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * CLUE AI - Google Apps Script Backend (v5.8.10)
+ * CLUE AI - Google Apps Script Backend (v5.9.0)
  * =========================================================================
  * Handles:
  *  1. Universal 6-Digit Email OTP Verification (Dark Mode)
@@ -18,7 +18,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.8.10";
+const DEFAULT_VERSION = "5.9.0";
 
 /**
  * Zero-argument Test Runner for Google Apps Script IDE
@@ -190,7 +190,7 @@ function getEmailLayout(opts) {
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;padding:0;">
-                    <img src="https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi/main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid #cbd5e1;box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
+                    <img src="https://cdn.jsdelivr.net/gh/HelloWorld-Farhan/ClueAi@main/public/logo.png" width="38" height="38" alt="Clue AI Logo" style="display:block;width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid #cbd5e1;box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
                   </td>
                   <td style="padding-left:12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:21px;font-weight:800;color:#0f172a;letter-spacing:.2px;">Clue <span style="color:#0284c7;">AI</span></td>
                 </tr>
@@ -263,10 +263,10 @@ function getEmailLayout(opts) {
             <td align="center" style="padding:24px 20px;">
               <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#0f172a;">Made by Farhan Khalid</div>
               <div style="margin-top:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:21px;color:#475569;">Developer &amp; Engineer<br>Development driven by real users &bull; Faster iteration on features</div>
-              ${showPortfolioLink ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:16px;">
+              ${showPortfolioLink ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:14px;">
                 <tr>
-                  <td align="center" bgcolor="#fef08a" style="background-color:#fef08a;border:1px solid #facc15;border-radius:999px;">
-                    <a href="${PORTFOLIO_URL}" target="_blank" style="display:inline-block;padding:11px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:800;color:#3b2a00;border-radius:999px;">&#10024; View Portfolio &rarr;</a>
+                  <td align="center" bgcolor="#0284c7" style="background-color:#0284c7;background-image:linear-gradient(90deg,#0284c7 0%,#2563eb 100%);border-radius:999px;box-shadow:0 3px 12px rgba(2,132,199,0.3);">
+                    <a href="https://farhan-khalid-portfolio.vercel.app/" target="_blank" style="display:inline-block;padding:10px 24px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px;letter-spacing:0.3px;">&#127760;&nbsp;&nbsp;Visit Farhan's Portfolio &rarr;</a>
                   </td>
                 </tr>
               </table>` : ''}
@@ -470,7 +470,7 @@ function getWelcomeEmailHtml(userName, email, appVersion) {
 /**
  * Render Dark-Mode Update Announcement Broadcast Email
  */
-function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
+function getUpdateBroadcastEmailHtml(userName, appVersion) {
   const centralBox = `
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#eff6ff" style="background-color:#eff6ff;border:1.5px solid #bfdbfe;border-radius:18px;">
       <tr>
@@ -484,51 +484,16 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
 
   const messageCard = `
     <tr>
-      <td class="px" style="padding:16px 28px 4px 28px;">
+      <td class="px" style="padding:14px 28px 6px 28px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
           <tr>
-            <td width="5" bgcolor="#22d3ee" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
-            <td style="padding:20px 22px;">
-              <div style="margin:0 0 10px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#0f172a;">Hello ${userName || 'Clue AI User'},</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:23px;color:#1e293b;margin-bottom:14px;">
-                Greetings from the Clue AI team! We are pleased to notify you that a new software update (Version ${appVersion}) has just arrived for Clue AI.
+            <td width="5" bgcolor="#0284c7" style="width:5px;background-color:#0284c7;border-radius:20px 0 0 20px;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="padding:22px 24px;">
+              <div style="margin:0 0 10px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;color:#0f172a;">Hello ${userName || 'Clue AI User'},</div>
+              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:24px;color:#1e293b;">
+                A new official update (<strong>Version ${appVersion}</strong>) is now available for Clue AI.<br><br>
+                To get the latest version, simply open Clue AI on your device and click the Update button to upgrade seamlessly.
               </div>
-              <div style="margin:0 0 6px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#0284c7;">What's New in V${appVersion}</div>
-              <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13.5px;line-height:22px;color:#334155;">
-                ${releaseHighlights || 'Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.'}
-              </div>
-              <div style="margin-top:16px;padding:12px 14px;background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#1e40af;">
-                <strong>How to update:</strong> Simply open Clue AI on your device and click the Update button to upgrade seamlessly.
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  `;
-
-  const detailsRows = `
-    <tr>
-      <td class="px" style="padding:12px 28px 4px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
-          <tr>
-            <td style="padding:6px 20px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Platforms</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">Windows &bull; macOS</td>
-                </tr>
-                <tr>
-                  <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Availability</td>
-                  <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0284c7;">Instant In-App / Automatic Upgrade</td>
-                </tr>
-                <tr>
-                  <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Status</td>
-                  <td align="right" style="padding:13px 0;">
-                    <span style="display:inline-block;padding:4px 11px;border:1px solid #86efac;border-radius:999px;background-color:#dcfce7;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:1px;color:#15803d;">RELEASE ACTIVE</span>
-                  </td>
-                </tr>
-              </table>
             </td>
           </tr>
         </table>
@@ -544,12 +509,12 @@ function getUpdateBroadcastEmailHtml(userName, appVersion, releaseHighlights) {
     accentGradient: "linear-gradient(90deg,#06b6d4 0%,#3b82f6 55%,#2563eb 100%)",
     headline: `Clue AI V${appVersion} is Here`,
     subheadline: `A new software release has arrived for your interview intelligence copilot.`,
-    previewText: `Greetings! Clue AI V${appVersion} update announcement.`,
+    previewText: `Clue AI V${appVersion} update announcement.`,
     centralBoxHtml: centralBox,
     messageCardHtml: messageCard,
-    detailsRowsHtml: detailsRows,
-    showButton: false, // NO LINK
-    showPortfolioLink: false, // NO LINK
+    detailsRowsHtml: "",
+    showButton: false,
+    showPortfolioLink: true,
     footerNote: "You received this greeting email because your email is registered in Clue AI."
   });
 }
