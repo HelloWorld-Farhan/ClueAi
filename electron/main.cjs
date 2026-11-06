@@ -796,12 +796,21 @@ function createWindow() {
         usedPercent = totalBytes > 0 ? Number(((usedBytes / totalBytes) * 100).toFixed(1)) : 0;
       }
 
-      // 2. ClueAI Application & UserData Size
+      // 2. ClueAI Software Installation & UserData Breakdown
       const userDataBytes = getDirectorySize(userDataPath);
       let appBytes = 0;
       if (app.isPackaged) {
         appBytes = getDirectorySize(appInstallPath);
+      } else {
+        appBytes = 820 * 1024 * 1024;
       }
+
+      const softwareSizeMB = Math.round(appBytes / (1024 ** 2));
+      const softwareStorageFormatted = softwareSizeMB >= 1024 ? (softwareSizeMB / 1024).toFixed(1) + ' GB' : softwareSizeMB + ' MB';
+
+      const userDataSizeMB = Math.round(userDataBytes / (1024 ** 2));
+      const userDataStorageFormatted = userDataSizeMB >= 1024 ? (userDataSizeMB / 1024).toFixed(1) + ' GB' : userDataSizeMB + ' MB';
+
       const totalClueBytes = userDataBytes + appBytes;
       const appSizeMB = Math.round(totalClueBytes / (1024 ** 2));
       let appStorageFormatted = appSizeMB >= 1024 ? (appSizeMB / 1024).toFixed(2) + ' GB' : appSizeMB + ' MB';
@@ -812,6 +821,10 @@ function createWindow() {
       return {
         appSizeMB,
         appStorageFormatted,
+        softwareSizeMB,
+        softwareStorageFormatted,
+        userDataSizeMB,
+        userDataStorageFormatted,
         totalStorageGB: totalGB,
         freeStorageGB: freeGB,
         usedStorageGB: usedGB,
@@ -822,8 +835,12 @@ function createWindow() {
     } catch (err) {
       console.warn('get-storage-info error:', err.message);
       return {
-        appSizeMB: 120,
-        appStorageFormatted: '120 MB',
+        appSizeMB: 875,
+        appStorageFormatted: '875 MB',
+        softwareSizeMB: 830,
+        softwareStorageFormatted: '830 MB',
+        userDataSizeMB: 45,
+        userDataStorageFormatted: '45 MB',
         totalStorageGB: 500,
         freeStorageGB: 150,
         usedStorageGB: 350,
@@ -848,6 +865,50 @@ function createWindow() {
       }
       return { success: true };
     } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('delete-user-data', async () => {
+    try {
+      const userDataPath = app.getPath('userData');
+
+      // Clear session web storage (IndexedDB, LocalStorage, Cookies, etc.)
+      try {
+        const ses = session.defaultSession;
+        if (ses && ses.clearStorageData) {
+          await ses.clearStorageData({
+            storages: ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+          });
+        }
+      } catch (e) { }
+
+      const targetFolders = [
+        'Cache',
+        'Code Cache',
+        'GPUCache',
+        'DawnGraphiteCache',
+        'DawnWebGPUCache',
+        'blob_storage',
+        'Local Storage',
+        'IndexedDB',
+        'Session Storage',
+        'logs',
+        'Crashpad'
+      ];
+
+      for (const folder of targetFolders) {
+        const p = path.join(userDataPath, folder);
+        try {
+          if (fs.existsSync(p)) {
+            fs.rmSync(p, { recursive: true, force: true });
+          }
+        } catch (e) { }
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.warn('delete-user-data error:', err.message);
       return { success: false, error: err.message };
     }
   });
