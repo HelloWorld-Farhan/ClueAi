@@ -581,6 +581,111 @@ function doPost(e) {
     }
 
     // ----------------------------------------------------
+    // ACTION 3.5: SESSION EXPORT REPORT DISPATCH
+    // ----------------------------------------------------
+    if (type === 'session_export') {
+      const email = (data.to_email || data.email || data.user_email || '').trim();
+      const userName = (data.user_name || data.name || '').trim() || 'Candidate';
+      const sessionName = data.session_name || 'Interview Session';
+      const sessionDate = data.session_date || new Date().toLocaleDateString();
+      const sessionTime = data.session_time || new Date().toLocaleTimeString();
+      const questionCount = data.question_count || (data.interactions ? data.interactions.length : 1);
+      const sessionContentHtml = data.html_content || data.content || '<p>No transcript content recorded.</p>';
+
+      if (!email || !email.includes('@')) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Missing valid recipient email' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      registerUserEmail(email, userName);
+
+      const centralBox = `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#1e48b8" style="background-color:rgba(8,20,60,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;">
+          <tr>
+            <td align="center" style="padding:10px 24px;">
+              <div style="font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:18px;font-weight:700;letter-spacing:1px;color:#ffffff;">${questionCount} Questions &amp; Solutions</div>
+              <div style="margin-top:3px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.4px;color:#bcd2ff;text-transform:uppercase;">Date: ${sessionDate} &bull; ${sessionTime}</div>
+            </td>
+          </tr>
+        </table>
+      `;
+
+      const detailsRows = `
+        <tr>
+          <td class="px" style="padding:12px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td style="padding:6px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Candidate Name</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${userName}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Session Title</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;">${sessionName}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Exported To</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #1c2433;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#22d3ee;">${email}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#7b8798;">Status</td>
+                      <td align="right" style="padding:13px 0;">
+                        <span style="display:inline-block;padding:4px 11px;border:1px solid #14664f;border-radius:6px;background-color:#0f3a30;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:#34d399;">EXPORT DELIVERED</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const messageCard = `
+        <tr>
+          <td class="px" style="padding:16px 28px 4px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#111722" style="background-color:#111722;border:1px solid #1f2937;border-radius:16px;">
+              <tr>
+                <td width="4" bgcolor="#22d3ee" style="width:4px;background-color:#22d3ee;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:18px 20px;">
+                  <div style="margin:0 0 10px 0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#22d3ee;">Questions &amp; AI Solutions:</div>
+                  <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:24px;color:#e5e7eb;">
+                    ${sessionContentHtml}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+
+      const exportEmailHtml = getEmailLayout({
+        appVersion: appVersion,
+        heroChip: "● Interview Session Export",
+        headline: sessionName,
+        subheadline: `Hi ${userName}, here is your exported session report with AI solutions & code.`,
+        previewText: `Your interview session export for ${sessionName} is ready.`,
+        centralBoxHtml: centralBox,
+        detailsRowsHtml: detailsRows,
+        messageCardHtml: messageCard,
+        buttonText: "Launch Clue AI Copilot",
+        footerNote: "You received this email because you requested a session export in Clue AI."
+      });
+
+      MailApp.sendEmail({
+        to: email,
+        subject: `ClueAI Session Export: ${sessionName}`,
+        htmlBody: exportEmailHtml,
+        name: "ClueAI Sessions"
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Session exported to email successfully" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ----------------------------------------------------
     // ACTION 4: DELETE SCHEDULED ITEM
     // ----------------------------------------------------
     if (data.action === 'delete' && data.id) {

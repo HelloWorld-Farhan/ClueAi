@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive, MessageSquareShare, Image as ImageIcon, Send } from 'lucide-react';
+import { Sparkles, Play, Square, Mic, Upload, Cpu, FileText, Pause, Settings, LayoutPanelTop, Trash2, X, Minus, Loader2, Maximize, MoreVertical, Download, Plus, Move, Eye, EyeOff, ChevronDown, ChevronUp, ChevronRight, Save, Crop, CheckCircle2, XCircle, AlertTriangle, Info, Edit2, Layout, ZoomIn, ZoomOut, Key, RefreshCcw, RefreshCw, ArrowDown, User, Clock, Keyboard, ClipboardPaste, Copy, Shield, ShieldAlert, ShieldCheck, Code2, BookOpen, Columns, Minimize2, HardDrive, MessageSquareShare, Image as ImageIcon, Send, Mail, FileCode, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initAIClient, getInterviewAnswer, switchProvider } from './AIClient';
 import type { TimedApiKey } from './AIClient';
@@ -18,24 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
-      title: "Claude Dark-Mode Email Architecture",
-      desc: "Re-engineered all system email notifications into a unified, responsive dark-mode layout matching Clue AI's desktop interface with dynamic version branding and developer portfolio links."
+      title: "In-App Session Export Center",
+      desc: "Clicking Export in the sessions list opens an in-app blur-backdrop modal offering direct offline downloads or instant email delivery."
     },
     {
-      title: "First-Time Candidate Onboarding & Email Verification",
-      desc: "Smooth first-time setup capturing candidate name and email with instantaneous 6-digit OTP authentication before entering the dashboard."
+      title: "Instant Local Download in HTML & PDF",
+      desc: "Export complete sessions offline as interactive dark-mode HTML documents with code highlighting, or as clean paginated PDF documents ready for printing and archiving."
     },
     {
-      title: "Automated Welcome Email Delivery",
-      desc: "Newly verified candidates receive an official dark-mode Welcome Email detailing stealth shortcuts, real-time AI streaming, and voice-gated teleprompter features."
+      title: "Direct Email Dispatch with OTP Authentication",
+      desc: "Dispatch full session transcripts directly to your inbox with saved email autocomplete and 6-digit OTP verification for unverified addresses."
     },
     {
-      title: "Cross-Feature Verified Email Pre-Selection",
-      desc: "Verified email is permanently trusted and automatically pre-filled across Feedback, Interview Reminders, Notes, and Settings with green checkmark security status."
-    },
-    {
-      title: "Release Announcement Email Broadcasting",
-      desc: "Built-in release broadcast engine enables all registered candidates to receive dark-mode update notifications whenever a new version of Clue AI is launched."
+      title: "Dark-Mode Session Email Layout",
+      desc: "Delivered session emails feature dark-mode cards with structured questions, AI model attribution, and complete response logs."
     }
   ];
 
@@ -496,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.8.0');
+  const [appVersion, setAppVersion] = useState('5.8.1');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -578,7 +574,15 @@ function App() {
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [expectedOtp, setExpectedOtp] = useState<string>('');
   const [otpTargetEmail, setOtpTargetEmail] = useState<string>('');
-  const [otpPendingType, setOtpPendingType] = useState<'feedback' | 'reminder' | 'note' | 'onboarding' | 'settings' | null>(null);
+  const [otpPendingType, setOtpPendingType] = useState<'feedback' | 'reminder' | 'note' | 'onboarding' | 'settings' | 'export' | null>(null);
+
+  // --- SESSION EXPORT MODAL STATE ---
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportTargetSession, setExportTargetSession] = useState<any>(null);
+  const [exportEmailInput, setExportEmailInput] = useState('');
+  const [exportEmailStatus, setExportEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [exportEmailMsg, setExportEmailMsg] = useState('');
+  const [showExportEmailSuggest, setShowExportEmailSuggest] = useState(false);
   const [otpError, setOtpError] = useState(false);
   const [otpSuccess, setOtpSuccess] = useState(false);
   const [otpIsSending, setOtpIsSending] = useState(false);
@@ -628,7 +632,7 @@ function App() {
   }, [showOtpModal, otpCountdown]);
 
   const triggerOtpVerification = (
-    type: 'feedback' | 'reminder' | 'note' | 'onboarding' | 'settings',
+    type: 'feedback' | 'reminder' | 'note' | 'onboarding' | 'settings' | 'export',
     targetEmail: string,
     onVerifiedCallback: () => void
   ) => {
@@ -2148,7 +2152,7 @@ function App() {
 
       // 2. If AI fullscreen is open, or any modal dialog is active, or app is on the dashboard:
       // ALWAYS ensure the window is 100% interactive so the answer screen never gets stuck or locks out clicks!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || showExportModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (isAiFullscreen || isAnyModalActive || (!isRecording && !isAiFullscreen)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -2187,7 +2191,7 @@ function App() {
 
     const handleMouseLeave = () => {
       // If stealth mode is off, or AI answer is fullscreen, or any modal is open, or dashboard is visible: NEVER ignore mouse events!
-      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
+      const isAnyModalActive = showSettings || showInfo || showUpdateModal || showStorageModal || showClearStorageConfirm || showDeleteUserDataConfirm || showFeedbackModal || showOtpModal || showExportModal || storageInfo.isFull || showSessionPrompt || showReminderPopup || showNotesPopup || showStealthWarning || showPreviousQuestions || Boolean(previewSnapshot);
       if (!stealthMode || isAiFullscreen || isAnyModalActive || (!isAiFullscreen && !isRecording)) {
         if (currentIgnoreRef.current !== false) {
           currentIgnoreRef.current = false;
@@ -3516,213 +3520,412 @@ function App() {
     setEditingSessionId(null);
   };
 
-  const exportSession = (session: any) => {
-    const lines = session.transcript.split('\n');
-    interface Interaction {
-      question: string;
-      images: string[];
-      answer: string;
-      modelInfo: string;
-    }
-    let interactions: Interaction[] = [];
-    let currentInteraction: Interaction | null = null;
-    let block = '';
+  interface SessionExportInteraction {
+    question: string;
+    images: string[];
+    answer: string;
+    modelInfo: string;
+    timestamp?: string;
+  }
+
+  const parseSessionInteractions = (session: any): { interactions: SessionExportInteraction[]; sessionStart: string; sessionEnd: string } => {
+    let interactions: SessionExportInteraction[] = [];
     let sessionStart = '';
     let sessionEnd = '';
 
-    for (let line of lines) {
-      if (line.includes('[SESSION_START:')) {
-        sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
-      } else if (line.includes('[SESSION_END:')) {
-        const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
-        sessionEnd = match?.[1] || '';
-      } else if (line.includes('--- QUESTION ---')) {
-        if (currentInteraction) interactions.push(currentInteraction);
-        currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
-        block = 'question';
-      } else if (line.includes('--- AI ANSWER ---')) {
-        block = 'answer';
-      } else if (line.startsWith('[IMAGE_BASE64:')) {
-        const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
-        if (match && currentInteraction) currentInteraction.images.push(match[1]);
-      } else if (line.startsWith('[MODEL:')) {
-        const match = line.match(/\[MODEL:(.*?)\]/);
-        if (match && currentInteraction) currentInteraction.modelInfo = match[1];
-      } else {
-        if (currentInteraction) {
-          if (block === 'question') currentInteraction.question += line + '\n';
-          if (block === 'answer') currentInteraction.answer += line + '\n';
+    if (session?.history && Array.isArray(session.history) && session.history.length > 0) {
+      interactions = session.history.map((h: any) => ({
+        question: h.question || h.q || 'Session Question',
+        answer: h.answer || h.a || '',
+        images: Array.isArray(h.images) ? h.images : [],
+        modelInfo: h.modelInfo || h.provider || h.model || 'ClueAI Engine',
+        timestamp: h.timestamp || ''
+      }));
+    }
+
+    if (interactions.length === 0 && session?.transcript) {
+      const lines = session.transcript.split('\n');
+      let currentInteraction: SessionExportInteraction | null = null;
+      let block = '';
+
+      for (let line of lines) {
+        if (line.includes('[SESSION_START:')) {
+          sessionStart = line.match(/\[SESSION_START:(.*?)\]/)?.[1] || '';
+        } else if (line.includes('[SESSION_END:')) {
+          const match = line.match(/\[SESSION_END:(.*?)\|DURATION:(.*?)\]/);
+          sessionEnd = match?.[1] || '';
+        } else if (line.includes('--- QUESTION ---')) {
+          if (currentInteraction) interactions.push(currentInteraction);
+          currentInteraction = { question: '', images: [], answer: '', modelInfo: '' };
+          block = 'question';
+        } else if (line.includes('--- AI ANSWER ---')) {
+          block = 'answer';
+        } else if (line.startsWith('[IMAGE_BASE64:')) {
+          const match = line.match(/\[IMAGE_BASE64:(.*?)\]/);
+          if (match && currentInteraction) currentInteraction.images.push(match[1]);
+        } else if (line.startsWith('[MODEL:')) {
+          const match = line.match(/\[MODEL:(.*?)\]/);
+          if (match && currentInteraction) currentInteraction.modelInfo = match[1];
+        } else {
+          if (currentInteraction) {
+            if (block === 'question') currentInteraction.question += line + '\n';
+            if (block === 'answer') currentInteraction.answer += line + '\n';
+          }
         }
       }
+      if (currentInteraction) interactions.push(currentInteraction);
     }
-    if (currentInteraction) interactions.push(currentInteraction);
 
-    const formatMd = (content: string) => {
-      let formatted = content.trim();
-      formatted = formatted.replace(/```[a-z]*\n([\s\S]*?)```/gi, '<pre class="code-block">$1</pre>');
-      formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block">$1</pre>');
-      formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-      return formatted;
-    };
+    return { interactions, sessionStart, sessionEnd };
+  };
 
-    const reversedInteractions = [...interactions].reverse();
+  const downloadSessionHtml = (session: any) => {
+    const { interactions, sessionStart, sessionEnd } = parseSessionInteractions(session);
+    const sessionName = session.title || session.name || 'ClueAI_Session';
+    const dateStr = session.date || new Date().toLocaleDateString();
+    const timeStr = session.time || '';
 
-    let htmlContent = `
-<!DOCTYPE html>
+    const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClueAI Session - ${session.name}</title>
+  <title>${sessionName} - ClueAI Session Export</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #09090b; color: #ffffff; line-height: 1.6; margin: 0; padding: 0; }
-    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-    .header { text-align: center; border-bottom: 2px solid rgba(6, 182, 212, 0.3); padding-bottom: 30px; margin-bottom: 40px; }
-    .header h1 { color: #22d3ee; margin: 0 0 10px 0; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 2px; }
-    .meta { color: #a1a1aa; font-size: 0.9rem; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
-    .meta b { color: #e4e4e7; }
-    
-    .interaction-card { background: rgba(24, 24, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 30px; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
-    .interaction-header { background: rgba(255, 255, 255, 0.02); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); flex-wrap: wrap; gap: 15px; }
-    .interaction-title { font-weight: 900; color: #fff; font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase; }
-    
-    .interaction-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #e4e4e7; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: all 0.2s; }
-    .btn:hover { background: rgba(255, 255, 255, 0.1); }
-    .btn-q.active { background: rgba(6, 182, 212, 0.2); border-color: rgba(6, 182, 212, 0.5); color: #22d3ee; }
-    .btn-a.active { background: rgba(232, 121, 249, 0.2); border-color: rgba(232, 121, 249, 0.5); color: #e879f9; }
-    .btn-info.active { background: rgba(250, 204, 21, 0.2); border-color: rgba(250, 204, 21, 0.5); color: #facc15; }
-    
-    .section-content { padding: 20px; display: none; }
-    .section-content.active { display: block; }
-    .question-content { border-left: 4px solid #22d3ee; }
-    .answer-content { border-left: 4px solid #e879f9; background: rgba(232, 121, 249, 0.02); border-top: 1px solid rgba(255,255,255,0.05); }
-    
-    .images-container { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
-    .snapshot-thumb { width: 150px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: transform 0.2s; }
-    .snapshot-thumb:hover { transform: scale(1.05); border-color: #22d3ee; }
-    
-    .info-panel { background: rgba(0,0,0,0.5); padding: 15px 20px; font-family: monospace; font-size: 0.85rem; color: #a1a1aa; border-bottom: 1px solid rgba(255,255,255,0.05); display: none; }
-    .info-panel.active { display: block; }
-    
-    .text-content { white-space: pre-wrap; font-size: 0.95rem; }
-    .code-block { background-color: #000000; padding: 15px; border-radius: 8px; border: 1px solid #27272a; overflow-x: auto; font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin: 15px 0; }
-    .inline-code { background-color: #000000; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #38bdf8; border: 1px solid #27272a; }
-    
-    /* Lightbox */
-    #lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; cursor: zoom-out; }
-    #lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
-    
-    .footer { text-align: center; margin-top: 50px; color: #52525b; font-size: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; }
+    :root {
+      --bg: #09090b;
+      --card-bg: #121217;
+      --border: #27272a;
+      --accent: #06b6d4;
+      --accent-grad: linear-gradient(135deg, #06b6d4, #3b82f6);
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    .header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent-grad);
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 8px; font-weight: 800; }
+    .meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.85rem; color: var(--text-muted); }
+    .meta span b { color: var(--text); }
+    .interaction-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .card-header {
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge-q {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-model { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); }
+    .card-body { padding: 20px; }
+    .question-box { font-weight: 600; font-size: 1rem; color: #fff; margin-bottom: 16px; white-space: pre-wrap; }
+    .answer-box {
+      background: #070a12;
+      border-left: 3px solid var(--accent);
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+    }
+    .footer { text-align: center; margin-top: 40px; color: #71717a; font-size: 0.8rem; }
   </style>
 </head>
 <body>
-  <div id="lightbox" onclick="closeLightbox()">
-    <img src="" alt="Snapshot Fullscreen" />
-  </div>
-
   <div class="container">
     <div class="header">
-      <h1>ClueAI Session</h1>
+      <h1>${sessionName}</h1>
       <div class="meta">
-        <span><b>Name:</b> ${session.name}</span>
-        <span><b>Date:</b> ${session.date || new Date().toLocaleDateString()}</span>
-        <span><b>Time:</b> ${session.time}</span>
-        ${session.interviewTitle ? `<span><b>Interview:</b> ${session.interviewTitle}</span>` : ''}
+        <span><b>Date:</b> ${dateStr}</span>
+        <span><b>Time:</b> ${timeStr || 'N/A'}</span>
+        <span><b>Interactions:</b> ${interactions.length}</span>
+        ${sessionStart ? `<span><b>Started:</b> ${sessionStart}</span>` : ''}
+        ${sessionEnd ? `<span><b>Ended:</b> ${sessionEnd}</span>` : ''}
       </div>
     </div>
-    
-    <div class="transcript">
-    `;
-
-    reversedInteractions.forEach((int, index) => {
-      const originalIndex = interactions.length - index;
-      const qId = `q-${originalIndex}`;
-      const aId = `a-${originalIndex}`;
-      const iId = `i-${originalIndex}`;
-
-      htmlContent += `
-       <div class="interaction-card">
-         <div class="interaction-header">
-           <div class="interaction-title">Question ${originalIndex}</div>
-           <div class="interaction-actions">
-             <button class="btn btn-info" onclick="toggleSection('${iId}', this)">Info</button>
-             <button class="btn btn-q active" onclick="toggleSection('${qId}', this)">Transcript</button>
-             <button class="btn btn-a" onclick="toggleSection('${aId}', this)">ClueAI Answer ${originalIndex}</button>
-           </div>
-         </div>
-         
-         <div id="${iId}" class="info-panel">
-            <b>Model / API:</b> ${int.modelInfo || 'Unknown'} <br/>
-            <b>Session Time:</b> ${sessionStart} ${sessionEnd ? '- ' + sessionEnd : ''} <br/>
-            <b>Snapshots:</b> ${int.images.length}
-         </div>
-         
-         <div id="${qId}" class="section-content question-content active">
-           ${int.images.length > 0 ?
-          `<div class="images-container">
-                 ${int.images.map(img => `<img src="${img}" class="snapshot-thumb" onclick="openLightbox(this.src)" />`).join('')}
-               </div>` : ''}
-           <div class="text-content">${formatMd(int.question)}</div>
-         </div>
-         
-         <div id="${aId}" class="section-content answer-content">
-           <div class="text-content">${formatMd(int.answer)}</div>
-         </div>
-       </div>
-       `;
-    });
-
-    htmlContent += `
-    </div>
-    
+    ${interactions.map((it, idx) => `
+      <div class="interaction-card">
+        <div class="card-header">
+          <span class="badge-q">Question ${idx + 1}</span>
+          <span class="badge-model">${it.modelInfo || 'ClueAI Engine'}</span>
+        </div>
+        <div class="card-body">
+          <div class="question-box">${it.question || 'Session Question'}</div>
+          <div class="answer-box">${it.answer || 'No response recorded.'}</div>
+        </div>
+      </div>
+    `).join('')}
     <div class="footer">
-      Generated by Clue AI & Farhan Khalid &copy; ${new Date().getFullYear()} <br/>
-      <div style="margin-top: 8px;">
-        <a href="mailto:farhankhalid17968@gmail.com" style="color: #22d3ee; text-decoration: none;">Contact: farhankhalid17968@gmail.com</a> | 
-        <a href="#" onclick="openExternal('https://farhan-khalid-portfolio.vercel.app/')" style="color: #22d3ee; text-decoration: none;">Portfolio Website</a>
-      </div>
+      Generated by Clue AI • Interview Intelligence System
     </div>
   </div>
-
-  <script>
-    function toggleSection(id, btn) {
-      const el = document.getElementById(id);
-      if (el.classList.contains('active')) {
-        el.classList.remove('active');
-        btn.classList.remove('active');
-      } else {
-        el.classList.add('active');
-        btn.classList.add('active');
-      }
-    }
-    
-    function openLightbox(src) {
-      const lb = document.getElementById('lightbox');
-      const img = lb.querySelector('img');
-      img.src = src;
-      lb.style.display = 'flex';
-    }
-    
-    function closeLightbox() {
-      document.getElementById('lightbox').style.display = 'none';
-    }
-
-    function openExternal(url) {
-      window.open(url, '_blank');
-    }
-  </script>
 </body>
-</html>
-    `;
+</html>`;
 
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${session.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
+    a.download = `${sessionName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadSessionPdf = (session: any) => {
+    const { interactions } = parseSessionInteractions(session);
+    const sessionTitle = session.title || session.name || 'ClueAI Session';
+    const dateStr = session.date || new Date().toLocaleDateString();
+    const timeStr = session.time || '';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Pop-up was blocked. Please allow pop-ups for ClueAI to print or export PDF.');
+      return;
+    }
+
+    const itemsHtml = interactions.map((item, index) => `
+      <div class="interaction-block">
+        <div class="q-header">
+          <span class="q-num">QUESTION ${index + 1}</span>
+          <span class="q-model">${item.modelInfo || 'ClueAI Model'}</span>
+        </div>
+        <div class="question-text">${item.question.replace(/\n/g, '<br/>')}</div>
+        <div class="answer-box">
+          <div class="answer-label">AI RESPONSE / CODE:</div>
+          <div class="answer-text">${item.answer.replace(/\n/g, '<br/>')}</div>
+        </div>
+      </div>
+    `).join('');
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${sessionTitle} - Clue AI Report</title>
+  <style>
+    @page { margin: 15mm; size: A4; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background: #fff;
+      padding: 24px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .header {
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 22px;
+      margin: 0 0 6px 0;
+      color: #0f172a;
+    }
+    .meta {
+      color: #64748b;
+      font-size: 11px;
+      display: flex;
+      gap: 20px;
+    }
+    .interaction-block {
+      page-break-inside: avoid;
+      margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+    .q-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #0284c7;
+    }
+    .question-text {
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .answer-box {
+      background: #ffffff;
+      border-left: 3px solid #0284c7;
+      padding: 12px;
+      border-radius: 4px;
+    }
+    .answer-label {
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: #0284c7;
+      margin-bottom: 6px;
+    }
+    .answer-text {
+      color: #334155;
+      white-space: pre-wrap;
+    }
+    .footer {
+      margin-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      font-size: 10px;
+      color: #94a3b8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${sessionTitle}</h1>
+    <div class="meta">
+      <span>Date: ${dateStr}</span>
+      <span>Time: ${timeStr}</span>
+      <span>Interactions: ${interactions.length}</span>
+      <span>Clue AI Intelligence System</span>
+    </div>
+  </div>
+  ${itemsHtml}
+  <div class="footer">
+    Generated with Clue AI • Interview Intelligence System
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 300);
+    };
+  </script>
+</body>
+</html>`);
+    printWindow.document.close();
+  };
+
+  const generateSessionEmailBody = (session: any, interactions: SessionExportInteraction[]) => {
+    const sessionTitle = session.title || session.name || 'ClueAI Session';
+    const dateStr = session.date || new Date().toLocaleDateString();
+    const timeStr = session.time || '';
+
+    const cardsHtml = interactions.slice(0, 15).map((item, idx) => `
+      <div style="background:#0d121f;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-bottom:14px;text-align:left;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:11px;font-weight:700;color:#38bdf8;background:rgba(56,189,248,0.1);padding:2px 8px;border-radius:6px;border:1px solid rgba(56,189,248,0.2);">Q${idx + 1}</span>
+          <span style="font-size:10px;color:#64748b;font-family:monospace;">${item.modelInfo || 'ClueAI'}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:10px;line-height:1.5;">${item.question ? item.question.replace(/\n/g, '<br/>') : 'Session question'}</div>
+        <div style="background:#070a12;border-left:3px solid #06b6d4;padding:12px;border-radius:6px;font-size:12px;color:#cbd5e1;line-height:1.6;white-space:pre-wrap;">${item.answer ? (item.answer.length > 800 ? item.answer.substring(0, 800) + '...' : item.answer) : 'No response recorded.'}</div>
+      </div>
+    `).join('');
+
+    return `
+      <div style="text-align:left;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:10px;">
+          <div style="font-size:14px;font-weight:700;color:#38bdf8;margin-bottom:4px;">${sessionTitle}</div>
+          <div style="font-size:11px;color:#94a3b8;">Recorded on ${dateStr} ${timeStr ? '• ' + timeStr : ''} • ${interactions.length} Total Interaction${interactions.length === 1 ? '' : 's'}</div>
+        </div>
+        ${cardsHtml}
+        ${interactions.length > 15 ? `<div style="text-align:center;font-size:11px;color:#64748b;padding:8px;">Showing 15 of ${interactions.length} interactions. Download the full HTML/PDF in Clue AI for complete logs.</div>` : ''}
+      </div>
+    `;
+  };
+
+  const handleSendExportEmail = async () => {
+    if (!exportTargetSession) return;
+    const targetEmail = (exportEmailInput || userEmail || '').trim();
+    if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
+      setExportEmailStatus('error');
+      setExportEmailMsg('Please provide a valid recipient email address.');
+      return;
+    }
+
+    const executeSend = async () => {
+      setExportEmailStatus('sending');
+      setExportEmailMsg('Delivering session export to ' + targetEmail + '...');
+      try {
+        const { interactions } = parseSessionInteractions(exportTargetSession);
+        const emailContentHtml = generateSessionEmailBody(exportTargetSession, interactions);
+        const sessionTitle = exportTargetSession.title || exportTargetSession.name || 'Interview Session';
+
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'session_export',
+            session_name: sessionTitle,
+            to_email: targetEmail,
+            user_name: username || 'Clue AI User',
+            app_version: appVersion,
+            html_content: emailContentHtml,
+            summary: `Exported ${interactions.length} interaction${interactions.length === 1 ? '' : 's'} from session ${sessionTitle}.`
+          })
+        });
+
+        markEmailVerified(targetEmail);
+        setExportEmailStatus('success');
+        setExportEmailMsg('Session export delivered to ' + targetEmail + '!');
+        setTimeout(() => {
+          setShowExportModal(false);
+          setExportEmailStatus('idle');
+          setExportEmailMsg('');
+        }, 2200);
+      } catch (err: any) {
+        setExportEmailStatus('error');
+        setExportEmailMsg('Failed to deliver session export: ' + (err?.message || 'Network error'));
+      }
+    };
+
+    if (!isEmailVerified(targetEmail)) {
+      triggerOtpVerification('export', targetEmail, executeSend);
+    } else {
+      executeSend();
+    }
+  };
+
+  const exportSession = (session: any) => {
+    setExportTargetSession(session);
+    setExportEmailInput(userEmail || localStorage.getItem('clueai_saved_email') || '');
+    setExportEmailStatus('idle');
+    setExportEmailMsg('');
+    setShowExportModal(true);
   };
 
 
@@ -5106,7 +5309,7 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
+            className={`flex flex-col w-full h-full overflow-hidden ${stealthMode && isRecording && !isAiFullscreen && !showSettings && !showInfo && !showVirtualKeyboard && !showPreviousQuestions && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal ? 'pointer-events-none' : 'pointer-events-auto'} rounded-3xl p-4 ${isRecording ? 'bg-transparent' : 'bg-[#09090b]'}`}
           >
             <datalist id="saved-emails">
               {localStorage.getItem('clueai_saved_email') && <option value={localStorage.getItem('clueai_saved_email')!} />}
@@ -6847,7 +7050,7 @@ function App() {
                         </h3>
                         {otpPendingType && (
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                            {otpPendingType === 'feedback' ? 'Feedback' : otpPendingType === 'reminder' ? 'Reminder' : otpPendingType === 'note' ? 'Notes' : otpPendingType === 'onboarding' ? 'Onboarding' : 'Settings'}
+                            {otpPendingType === 'feedback' ? 'Feedback' : otpPendingType === 'reminder' ? 'Reminder' : otpPendingType === 'note' ? 'Notes' : otpPendingType === 'onboarding' ? 'Onboarding' : otpPendingType === 'export' ? 'Export' : 'Settings'}
                           </span>
                         )}
                       </div>
@@ -6941,6 +7144,241 @@ function App() {
                             </button>
                           )}
                         </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* In-App Session Export Modal with Direct Download (HTML & PDF) and Email Dispatch */}
+              <AnimatePresence>
+                {showExportModal && exportTargetSession && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 z-[75] bg-black/85 backdrop-blur-2xl flex items-center justify-center p-4 pointer-events-auto select-none"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.94, opacity: 0, y: 15 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.94, opacity: 0, y: 15 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      className="bg-[#090b14]/95 border border-cyan-500/40 w-full max-w-xl rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.25)] flex flex-col gap-5 text-left max-h-[92vh] overflow-y-auto custom-scrollbar relative stealth-exempt"
+                    >
+                      {/* Top Cyberpunk Ambient Glow Bar */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[1px]"></div>
+
+                      {/* Header */}
+                      <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600/30 to-cyan-500/30 border border-cyan-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                            <Download size={20} className="text-cyan-400" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-black tracking-tight text-white">Export Session</h3>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 max-w-[160px] truncate">
+                                {exportTargetSession.title || exportTargetSession.name || 'Session'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 mt-0.5">
+                              Download locally in HTML or PDF, or email the formatted report directly.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowExportModal(false)}
+                          className="p-2 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      {/* Section 1: Direct Download */}
+                      <div className="flex flex-col gap-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
+                            1. Direct Local Download
+                          </span>
+                          <span className="text-[10px] text-white/40">Instant offline files</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* HTML Download Card */}
+                          <button
+                            type="button"
+                            onClick={() => downloadSessionHtml(exportTargetSession)}
+                            className="group p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-cyan-500/50 flex flex-col items-start gap-2 text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                                <FileCode size={16} />
+                              </div>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60">
+                                .HTML
+                              </span>
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
+                                Download HTML Report
+                              </div>
+                              <div className="text-[11px] text-white/50 mt-0.5 leading-snug">
+                                Full dark-mode report with syntax highlights and expandable questions.
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* PDF Download Card */}
+                          <button
+                            type="button"
+                            onClick={() => downloadSessionPdf(exportTargetSession)}
+                            className="group p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 hover:border-blue-500/50 flex flex-col items-start gap-2 text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                <Printer size={16} />
+                              </div>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60">
+                                .PDF
+                              </span>
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
+                                Print / Save to PDF
+                              </div>
+                              <div className="text-[11px] text-white/50 mt-0.5 leading-snug">
+                                Formatted document layout optimized for direct printing or PDF saving.
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Section 2: Send to Email */}
+                      <div className="flex flex-col gap-2.5 pt-2 border-t border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
+                            2. Send to Email Address
+                          </span>
+                          {exportEmailInput.trim() && isEmailVerified(exportEmailInput.trim()) ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                              <CheckCircle2 size={11} /> Verified Address
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-white/40">
+                              {exportEmailInput.trim() ? 'Requires OTP verification' : 'Auto-verified with OTP'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="relative">
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="email"
+                                value={exportEmailInput}
+                                onChange={(e) => {
+                                  setExportEmailInput(e.target.value);
+                                  setExportEmailMsg('');
+                                  const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                  const matches = e.target.value ? saved.filter((s: string) => s.toLowerCase().includes(e.target.value.toLowerCase())) : saved;
+                                  setShowExportEmailSuggest(matches.length > 0);
+                                }}
+                                onFocus={() => {
+                                  const saved = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+                                  if (saved.length > 0) setShowExportEmailSuggest(true);
+                                }}
+                                onBlur={() => setTimeout(() => setShowExportEmailSuggest(false), 200)}
+                                placeholder="Enter recipient email (e.g. name@gmail.com)"
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs text-white placeholder-white/30 transition-all font-mono"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={exportEmailStatus === 'sending' || !exportEmailInput.trim()}
+                              onClick={handleSendExportEmail}
+                              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_18px_rgba(6,182,212,0.4)] border border-cyan-400/40 hover:border-cyan-300 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                              {exportEmailStatus === 'sending' ? (
+                                <>
+                                  <Loader2 size={14} className="animate-spin text-white" />
+                                  <span>Dispatching...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Mail size={14} className="text-white" />
+                                  <span>Send to Email</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Autocomplete dropdown for Saved Emails */}
+                          {showExportEmailSuggest && JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]').length > 0 && (
+                            <div className="absolute top-full left-0 w-full mt-1.5 bg-[#0e1122]/95 backdrop-blur-xl border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden z-50 max-h-36 overflow-y-auto custom-scrollbar">
+                              <div className="px-3 py-1.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">Saved & Verified Addresses</span>
+                                <span className="text-[9px] text-white/40">Select to fill</span>
+                              </div>
+                              {(JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]') as string[])
+                                .filter(s => !exportEmailInput || s.toLowerCase().includes(exportEmailInput.toLowerCase()))
+                                .map((email, idx) => {
+                                  const verified = isEmailVerified(email);
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="px-3 py-2 hover:bg-white/10 cursor-pointer text-xs text-white/90 border-b border-white/5 last:border-0 flex items-center justify-between transition-colors"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setExportEmailInput(email);
+                                        setShowExportEmailSuggest(false);
+                                        setExportEmailMsg('');
+                                      }}
+                                    >
+                                      <span className="font-mono text-white/90">{email}</span>
+                                      {verified && (
+                                        <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                                          <CheckCircle2 size={10} className="text-emerald-400" /> Verified
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Email Status Message */}
+                        {exportEmailMsg && (
+                          <div
+                            className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                              exportEmailStatus === 'success'
+                                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                                : 'bg-rose-500/15 border border-rose-500/30 text-rose-300'
+                            }`}
+                          >
+                            {exportEmailStatus === 'success' ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                            <span>{exportEmailMsg}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Modal Footer */}
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-[11px] text-white/40">
+                          Session contains {exportTargetSession.history?.length || 0} interaction{(exportTargetSession.history?.length || 0) === 1 ? '' : 's'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowExportModal(false)}
+                          className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
+                        >
+                          Close
+                        </button>
                       </div>
                     </motion.div>
                   </motion.div>
@@ -8049,7 +8487,7 @@ function App() {
               )}
 
               {/* Dashboard Empty State with Scroll-Collapsing Top Sections */}
-              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && (
+              {!isRecording && !showSettings && !showInfo && !showUpdateModal && !showFeedbackModal && !showStorageModal && !showDeleteUserDataConfirm && !showOtpModal && !showExportModal && (
                 <div className="flex-1 min-h-0 flex flex-col mt-2 px-2 pb-4 overflow-hidden">
                   {/* Upper Two Sections with Smooth Scroll-Collapse Transition */}
                   <motion.div 
