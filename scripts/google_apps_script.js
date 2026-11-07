@@ -18,7 +18,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.9.3";
+const DEFAULT_VERSION = "5.9.4";
 
 /**
  * Zero-argument Test Runner for Google Apps Script IDE

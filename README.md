@@ -20,14 +20,13 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.3)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.4)
 
-### 🚀 What's New in v5.9.3
-- 🌐 **Interactive HTML Session Exports with Favicon & Branding**: Exported session HTML files now feature clickable question accordions, embedded session screenshots, brand logo header, and custom Clue AI atom favicon.
-- 🎨 **High-Contrast Clean Email Notifications**: All 9 email notification templates and Google Apps Script handlers feature high-contrast central badges, readable text, balanced padding, and direct developer website redirection.
-- 🔄 **Smart Multi-Session Continuation & Merge**: Resuming past sessions now appends clear continuation banners with exact timestamps and preserves all past interaction history without overwriting.
-- ✉️ **Dynamic Verified Email Suggestions**: Reminder, Settings, Notes, and Feedback modals show verified email suggestions on click/focus with properly padded, non-overlapping status badges.
-- 📸 **Feedback Image Upload Animation & Dual Dispatch**: Feedback attachments strictly enforce image formats with upload pulse animation and dual routing to `clueai.support@gmail.com` and `farhankhalid17968@gmail.com`.
+### 🚀 What's New in v5.9.4
+- ⚡ **Guaranteed Instant In-App Update Relaunch**: Detached update launcher script waits for file handle release, installs the update package, and immediately restarts Clue AI without getting stuck.
+- 🛡️ **NSIS Installer Silent Execution Hooks**: Native process cleanup and custom NSIS `customInstallEnd` hooks ensure the application reliably starts after silent installs.
+- 🌐 **Interactive HTML Session Exports with Favicon & Branding**: Exported session HTML files feature clickable question accordions, embedded session images, and official Clue AI atom favicon for browser tabs.
+- 🎨 **High-Contrast Clean Email Notifications**: All email notification templates feature high-contrast badges, readable text, balanced padding, zero unicode artifacts, and direct developer website redirection.
 
 ### 🪟 1. For Windows
 

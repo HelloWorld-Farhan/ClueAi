@@ -18,24 +18,20 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
+      title: "Guaranteed Instant Update Relaunch & Startup",
+      desc: "Detached update launcher waits for file lock release, installs the new version, and automatically starts Clue AI without getting stuck or requiring manual intervention."
+    },
+    {
+      title: "NSIS Installer Silent Execution Hooks",
+      desc: "Native process termination and custom NSIS launch hooks ensure the application reliably restarts immediately upon update completion."
+    },
+    {
       title: "Interactive HTML Session Exports with Favicon & Branding",
-      desc: "Exported session HTML files now feature clickable question accordions, embedded session screenshots, brand logo header, and custom Clue AI atom favicon."
+      desc: "Exported session HTML files feature clickable question accordions, embedded session images, and official Clue AI atom favicon for browser tabs."
     },
     {
-      title: "High-Contrast Email Notifications",
-      desc: "All email templates now use crisp high-contrast cards, readable text, balanced padding, and direct developer website links."
-    },
-    {
-      title: "Smart Session Resumption & History Merge",
-      desc: "Resuming existing sessions now inserts continuation headers with exact timestamps and preserves all past interaction history without overwriting."
-    },
-    {
-      title: "Dynamic Verified Email Suggestions",
-      desc: "Reminder, Settings, Notes, and Feedback modals show verified email suggestions on click/focus with properly padded, non-overlapping status badges."
-    },
-    {
-      title: "Feedback Image Upload Animation & Dual Dispatch",
-      desc: "Feedback attachments strictly enforce image formats with upload pulse animation and dual routing to engineering."
+      title: "High-Contrast Email Notifications & Clean Layouts",
+      desc: "All email templates feature crystal-clear high contrast, balanced padding, zero encoding issues, and direct portfolio links."
     }
   ];
 
@@ -496,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.3');
+  const [appVersion, setAppVersion] = useState('5.9.4');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -3746,8 +3742,10 @@ function App() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${sessionName} • Clue AI Session Export</title>
+  <title>Clue AI • ${sessionName}</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080b14'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2300f2fe'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%2338bdf8' stroke-width='1.5' transform='rotate(30 16 16)'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%23818cf8' stroke-width='1.5' transform='rotate(-30 16 16)'/%3E%3C/svg%3E">
+  <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080b14'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2300f2fe'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%2338bdf8' stroke-width='1.5' transform='rotate(30 16 16)'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%23818cf8' stroke-width='1.5' transform='rotate(-30 16 16)'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080b14'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2300f2fe'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%2338bdf8' stroke-width='1.5' transform='rotate(30 16 16)'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='4.5' fill='none' stroke='%23818cf8' stroke-width='1.5' transform='rotate(-30 16 16)'/%3E%3C/svg%3E">
   <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/HelloWorld-Farhan/ClueAi@main/public/logo.png">
   <style>
     :root {
@@ -3967,7 +3965,7 @@ function App() {
           </div>
         </div>
         <div class="brand-badges">
-          <span class="badge-version">V5.9.3</span>
+          <span class="badge-version">V5.9.4</span>
           <span class="badge-status">Export Verified</span>
         </div>
       </div>

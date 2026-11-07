@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Target Release Tag'
         required: false
-        default: 'v5.9.3'
+        default: 'v5.9.4'
 
 permissions:
   contents: write
@@ -117,15 +117,17 @@ jobs:
           $tag = "${{ inputs.tag || github.ref_name }}"
           $ver = $tag -replace '^v',''
           Write-Host "Triggering automated Clue AI V$ver release announcement email broadcast..."
-          $payload = @{
+          $payloadObj = @{
             type = "broadcast_update"
             action = "broadcast_update"
             version = $ver
             app_version = $ver
-            highlights = "• Direct In-App Update Execution: Updater directly runs downloaded installer with auto-relaunch`n• Versioned Release Binaries: Standalone ClueAI-v$ver.exe & ClueAI-v$ver.dmg artifacts`n• Broadcast Recipient Transparency: GitHub release workflow logs all delivered recipient emails`n• Ultra-fast Cold Boot and Rock-solid Process Management"
-          } | ConvertTo-Json
+            highlights = "Guaranteed instant update relaunch, NSIS silent installer execution hooks, interactive HTML session exports with custom Clue AI atom favicon, and high-contrast email delivery."
+          }
+          $payload = $payloadObj | ConvertTo-Json
           try {
-            $resp = Invoke-RestMethod -Uri "https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec" -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 30
+            $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+            $resp = Invoke-RestMethod -Uri "https://script.google.com/macros/s/AKfycbyWqhztb7GbVlghFBJeusoJ-YcYx-9WPsADg9JbUXTOY-QKTpjR1ivKNyJP3iJ3wzpgKw/exec" -Method Post -Body $bodyBytes -ContentType "application/json; charset=utf-8" -TimeoutSec 30
             Write-Host "Broadcast webhook successfully invoked: $($resp | ConvertTo-Json -Compress)"
             if ($resp.message) {
               Write-Host "Broadcast Result: $($resp.message)"

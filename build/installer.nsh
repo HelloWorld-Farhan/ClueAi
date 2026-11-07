@@ -2,9 +2,16 @@
 !include "LogicLib.nsh"
 
 !macro customInit
-  ; Terminate running installed ClueAI instances without killing the running installer itself
-  nsExec::ExecToLog 'powershell.exe -NoProfile -Command "Get-Process ClueAI,clueai -ErrorAction SilentlyContinue | ? Path -like ''*Programs*'' | Stop-Process -Force"'
-  Sleep 1000
+  ; Terminate running installed ClueAI instances instantly so binaries are never locked during update
+  nsExec::Exec 'taskkill /F /IM ClueAI.exe'
+  Sleep 500
+!macroend
+
+!macro customInstallEnd
+  ; Ensure ClueAI launches immediately even after a silent update install (/S)
+  ${if} ${isSilent}
+    Exec '"$appExe"'
+  ${endif}
 !macroend
 
 !macro customUnInstall
@@ -33,4 +40,3 @@
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.clueai.app"
   ${endif}
 !macroend
-

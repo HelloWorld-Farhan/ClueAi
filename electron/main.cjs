@@ -998,28 +998,86 @@ async function downloadReleaseAssetDirect(latestVersion) {
           targetInstaller = matches[0];
         }
       } catch (e) { }
+
+      // Check electron-updater pending folder if present
+      if (!targetInstaller) {
+        try {
+          const updaterPendingDir = path.join(app.getPath('userData'), '..', 'clueai-updater', 'pending');
+          if (fs.existsSync(updaterPendingDir)) {
+            const pendingFiles = fs.readdirSync(updaterPendingDir);
+            const pendingMatches = pendingFiles
+              .filter(f => f.toLowerCase().endsWith('.exe'))
+              .map(f => path.join(updaterPendingDir, f))
+              .filter(p => fs.existsSync(p))
+              .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+            if (pendingMatches.length > 0) {
+              targetInstaller = pendingMatches[0];
+            }
+          }
+        } catch (e) { }
+      }
     }
 
     if (targetInstaller && fs.existsSync(targetInstaller)) {
-      console.log('Spawning downloaded installer directly:', targetInstaller);
-      const { spawn } = require('child_process');
+      console.log('Preparing reliable detached installer execution:', targetInstaller);
       if (process.platform === 'win32') {
-        // Run NSIS installer detached with --updated, /S (silent), and --force-run to install and auto-launch
-        const child = spawn(targetInstaller, ['--updated', '/S', '--force-run'], {
-          detached: true,
-          stdio: 'ignore'
-        });
-        child.unref();
+        const appExe = process.execPath;
+        const currentPid = process.pid;
+        const scriptPath = path.join(app.getPath('temp'), `clueai_update_launcher_${Date.now()}.cmd`);
+
+        const scriptContent = [
+          '@echo off',
+          'setlocal EnableDelayedExpansion',
+          'title Clue AI Update Assistant',
+          'echo Applying Clue AI update...',
+          'echo Waiting for current instance to exit cleanly...',
+          'ping 127.0.0.1 -n 2 >nul',
+          `taskkill /F /PID ${currentPid} >nul 2>&1`,
+          'taskkill /F /IM ClueAI.exe >nul 2>&1',
+          'ping 127.0.0.1 -n 2 >nul',
+          'echo Installing update packages...',
+          `start /wait "" "${targetInstaller}" /S --updated`,
+          'ping 127.0.0.1 -n 2 >nul',
+          'echo Launching updated Clue AI...',
+          `if exist "${appExe}" (`,
+          `  start "" "${appExe}"`,
+          ') else (',
+          `  set "FB1=%LOCALAPPDATA%\\Programs\\clueai\\ClueAI.exe"`,
+          `  if exist "!FB1!" (`,
+          `    start "" "!FB1!"`,
+          '  ) else (',
+          `    set "FB2=%LOCALAPPDATA%\\Programs\\ClueAI\\ClueAI.exe"`,
+          `    if exist "!FB2!" start "" "!FB2!"`,
+          '  )',
+          ')',
+          'del "%~f0" >nul 2>&1',
+          'exit /b 0'
+        ].join('\r\n');
+
+        try {
+          fs.writeFileSync(scriptPath, scriptContent, 'utf8');
+          const { spawn } = require('child_process');
+          const child = spawn('cmd.exe', ['/c', scriptPath], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true
+          });
+          child.unref();
+          app.exit(0);
+          return;
+        } catch (scriptErr) {
+          console.error('Failed to launch updater script:', scriptErr);
+        }
       } else if (process.platform === 'darwin') {
+        const { spawn } = require('child_process');
         const child = spawn('open', [targetInstaller], {
           detached: true,
           stdio: 'ignore'
         });
         child.unref();
+        app.exit(0);
+        return;
       }
-      // Exit immediately so that file locks on ClueAI.exe are released for the installer
-      app.exit(0);
-      return;
     }
 
     // Priority 2: Use electron-updater native quitAndInstall if active
