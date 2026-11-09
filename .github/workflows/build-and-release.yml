@@ -36,13 +36,48 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
+      - name: Pre-cache Electron Binaries with Retries & Mirror Fallback
+        shell: bash
+        run: |
+          ELECTRON_VER="v31.7.7"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            CACHE_DIR="$LOCALAPPDATA/electron/Cache"
+            mkdir -p "$CACHE_DIR"
+            TARGET_ZIP="$CACHE_DIR/electron-${ELECTRON_VER}-win32-x64.zip"
+            if [ ! -f "$TARGET_ZIP" ]; then
+              echo "Pre-fetching Windows Electron binary with retries..."
+              curl -fL --retry 5 --retry-delay 3 --retry-all-errors -o "$TARGET_ZIP" "https://github.com/electron/electron/releases/download/${ELECTRON_VER}/electron-${ELECTRON_VER}-win32-x64.zip" || \
+              curl -fL --retry 5 --retry-delay 3 -o "$TARGET_ZIP" "https://npmmirror.com/mirrors/electron/${ELECTRON_VER}/electron-${ELECTRON_VER}-win32-x64.zip" || true
+            fi
+            BUILDER_CACHE="$LOCALAPPDATA/electron-builder/Cache/electron"
+            mkdir -p "$BUILDER_CACHE"
+            cp "$TARGET_ZIP" "$BUILDER_CACHE/" 2>/dev/null || true
+          else
+            CACHE_DIR="$HOME/Library/Caches/electron"
+            mkdir -p "$CACHE_DIR"
+            for ARCH in x64 arm64; do
+              TARGET_ZIP="$CACHE_DIR/electron-${ELECTRON_VER}-darwin-${ARCH}.zip"
+              if [ ! -f "$TARGET_ZIP" ]; then
+                echo "Pre-fetching macOS Electron ${ARCH} binary with retries..."
+                curl -fL --retry 5 --retry-delay 3 --retry-all-errors -o "$TARGET_ZIP" "https://github.com/electron/electron/releases/download/${ELECTRON_VER}/electron-${ELECTRON_VER}-darwin-${ARCH}.zip" || \
+                curl -fL --retry 5 --retry-delay 3 -o "$TARGET_ZIP" "https://npmmirror.com/mirrors/electron/${ELECTRON_VER}/electron-${ELECTRON_VER}-darwin-${ARCH}.zip" || true
+              fi
+            done
+          fi
+
       - name: Build and Package Electron App
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           npm run build
-          npx electron-builder --publish never
+          if ! npx electron-builder --publish never; then
+            echo "Packaging failed, retrying with official Electron mirror..."
+            sleep 5
+            export ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+            npx electron-builder --publish never
+          fi
 
       - name: Stage Evergreen Artifacts
         run: |
