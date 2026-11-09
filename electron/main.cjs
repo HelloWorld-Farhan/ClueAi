@@ -178,16 +178,24 @@ function applyStealthProtection(win, enabled) {
 function createSplashWindow() {
   if (splashWindow && !splashWindow.isDestroyed()) return;
   try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const workArea = primaryDisplay.workArea;
+    const splashWidth = 480;
+    const splashHeight = 150;
+    const splashX = Math.round(workArea.x + (workArea.width - splashWidth) / 2);
+    const splashY = Math.round(workArea.y + 36);
+
     splashWindow = new BrowserWindow({
-      width: 520,
-      height: 300,
-      center: true,
-      show: true,
+      width: splashWidth,
+      height: splashHeight,
+      x: splashX,
+      y: splashY,
+      show: false,
       frame: false,
       transparent: true,
       resizable: false,
       alwaysOnTop: true,
-      skipTaskbar: false,
+      skipTaskbar: true,
       hasShadow: true,
       backgroundColor: '#00000000',
       webPreferences: {
@@ -200,6 +208,13 @@ function createSplashWindow() {
     if (fs.existsSync(splashPath)) {
       splashWindow.loadFile(splashPath);
     }
+
+    splashWindow.once('ready-to-show', () => {
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+        splashWindow.show();
+      }
+    });
   } catch (err) {
     console.warn('Splash window notice:', err.message);
   }
@@ -1602,7 +1617,7 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
 app.whenReady().then(() => {
   createWindow();
 
-  // Startup background update check deferred by 8 seconds to completely prioritize cold boot and UI rendering
+  // Fast startup background update check (300ms) for instant realtime update availability
   setTimeout(() => {
     try {
       const updater = getAutoUpdater();
@@ -1610,7 +1625,7 @@ app.whenReady().then(() => {
         updater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
       }
     } catch (e) { }
-  }, 8000);
+  }, 300);
 
     globalShortcut.register('CommandOrControl+Shift+K', () => {
       try {

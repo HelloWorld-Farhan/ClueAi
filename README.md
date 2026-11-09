@@ -20,13 +20,16 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.6)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.7)
 
-### 🚀 What's New in v5.9.6
-- 🌟 **Instant Cosmic Branded Splash Screen**: A high-performance, frameless rounded splash window renders in `< 10ms` upon launch, eliminating all empty-box lag before transitioning seamlessly into the fully hydrated copilot interface.
-- 🔕 **100% Headless, Silent In-App Updates**: Replaced batch command scripts with an in-memory Windows Script Host runner (`wscript.exe` with `SW_HIDE`), completely eliminating all terminal/cmd window flashes during downloads and installations.
-- 📬 **Universal Multi-Inbox Registration & Update Broadcasts**: Every verified or saved user email address is automatically registered with the Google Apps Script cloud webhook backend, guaranteeing that all user inboxes receive release announcements.
-- ⚙️ **Dynamic Auto-Versioning Backend**: Google Apps Script automatically discovers new release versions from GitHub without requiring manual hardcoded script updates.
+### 🚀 What's New in v5.9.7
+- 🌟 **Top-Docked Floating Splash Card**: Positioned precisely at the top of your screen (`y: 36`) matching the floating Clue AI copilot dock, featuring slide-in/fade-in entrance animation and eliminating empty window borders.
+- ⚡ **Instant Real-Time Update Detection**: Reduced startup update polling latency from 8s/3.5s down to 250-300ms, immediately detecting new releases in real time upon app launch.
+- 📊 **Dual-Progress-Bar In-App Updater**:
+  - **Upper Bar**: Installation & System Binary Setup (activates during environment preparation, pauses for transfer, and reactivates with focused cyan animation to finalize binary replacement).
+  - **Lower Bar**: Live Package Transfer (takes focused electric cyan glow with real-time download %, MB transferred, total size, and network throughput).
+- 🔕 **100% Silent Headless Execution**: Zero terminal or command-prompt windows during background package replacement and automatic relaunch using Windows Script Host (`wscript.exe` with `SW_HIDE 0`).
+- 📬 **Dynamic Multi-Inbox Notification Cloud**: Automated user registration and dynamic release broadcasting via Google Apps Script without requiring manual hardcoded version updates.
 
 ### 🪟 1. For Windows
 

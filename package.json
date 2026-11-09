@@ -1,7 +1,7 @@
 {
   "name": "clueai",
   "private": true,
-  "version": "5.9.6",
+  "version": "5.9.7",
   "description": "Clue AI - The Ultimate AI Interview Assistant",
   "author": "Farhan Khalid <farhankhalid17968@gmail.com>",
   "type": "module",

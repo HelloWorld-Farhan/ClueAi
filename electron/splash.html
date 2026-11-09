@@ -22,33 +22,44 @@
     }
     .splash-card {
       position: relative;
-      width: 520px;
-      height: 300px;
-      margin: auto;
-      border-radius: 24px;
-      background: radial-gradient(circle at 20% 30%, #1e293b 0%, #0a0f1d 70%, #050811 100%);
-      border: 1px solid rgba(56, 189, 248, 0.28);
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85),
-                  0 0 40px -10px rgba(56, 189, 248, 0.25),
-                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+      width: 480px;
+      height: 150px;
+      margin: 0 auto;
+      border-radius: 20px;
+      background: radial-gradient(circle at 15% 50%, #1e293b 0%, #0a0f1d 65%, #030712 100%);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.9),
+                  0 0 30px -5px rgba(56, 189, 248, 0.25),
+                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
       display: flex;
       align-items: center;
-      padding: 32px;
+      padding: 20px 24px;
       overflow: hidden;
+      animation: splashSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes splashSlideIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-22px) scale(0.96);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
     /* Subtle background glow effect */
     .glow-sphere {
       position: absolute;
-      width: 260px;
-      height: 260px;
-      left: -40px;
-      top: -40px;
-      background: radial-gradient(circle, rgba(14, 165, 233, 0.2) 0%, rgba(99, 102, 241, 0.08) 50%, transparent 80%);
-      filter: blur(20px);
+      width: 200px;
+      height: 200px;
+      left: -30px;
+      top: -30px;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(99, 102, 241, 0.1) 50%, transparent 80%);
+      filter: blur(24px);
       pointer-events: none;
     }
     .left-art {
-      flex: 0 0 130px;
+      flex: 0 0 85px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -57,32 +68,32 @@
     }
     .logo-container {
       position: relative;
-      width: 100px;
-      height: 100px;
+      width: 76px;
+      height: 76px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .logo-pulse-ring {
       position: absolute;
-      width: 96px;
-      height: 96px;
+      width: 74px;
+      height: 74px;
       border-radius: 50%;
-      border: 2px solid rgba(56, 189, 248, 0.4);
-      animation: pulseRing 2.4s infinite ease-out;
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      animation: pulseRing 2.2s infinite ease-out;
     }
     .logo-orbit-ring {
       position: absolute;
-      width: 110px;
-      height: 110px;
+      width: 84px;
+      height: 84px;
       border-radius: 50%;
-      border: 1px dashed rgba(129, 140, 248, 0.35);
-      animation: rotateOrbit 12s infinite linear;
+      border: 1px dashed rgba(129, 140, 248, 0.4);
+      animation: rotateOrbit 10s infinite linear;
     }
     @keyframes pulseRing {
       0% { transform: scale(0.85); opacity: 0.8; }
-      50% { transform: scale(1.1); opacity: 0.2; }
-      100% { transform: scale(1.25); opacity: 0; }
+      50% { transform: scale(1.15); opacity: 0.2; }
+      100% { transform: scale(1.3); opacity: 0; }
     }
     @keyframes rotateOrbit {
       from { transform: rotate(0deg); }
@@ -90,52 +101,57 @@
     }
     .logo-core {
       position: relative;
-      width: 76px;
-      height: 76px;
+      width: 58px;
+      height: 58px;
       background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
-      border-radius: 20px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.6),
-                  inset 0 2px 4px rgba(255, 255, 255, 0.35);
+      box-shadow: 0 8px 20px -4px rgba(2, 132, 199, 0.65),
+                  inset 0 1.5px 3px rgba(255, 255, 255, 0.4);
     }
     .logo-core svg {
-      width: 44px;
-      height: 44px;
+      width: 32px;
+      height: 32px;
       fill: none;
       stroke: #ffffff;
-      stroke-width: 2;
+      stroke-width: 2.2;
       stroke-linecap: round;
       stroke-linejoin: round;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
     }
     .right-content {
       flex: 1;
-      padding-left: 28px;
+      padding-left: 20px;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      min-width: 0;
+    }
+    .top-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
     }
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 3px 10px;
-      background: rgba(56, 189, 248, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      gap: 5px;
+      padding: 2px 8px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.35);
       border-radius: 999px;
       color: #38bdf8;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
-      letter-spacing: 1.2px;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
-      margin-bottom: 10px;
-      width: fit-content;
     }
     .badge-dot {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
       background: #38bdf8;
       box-shadow: 0 0 8px #38bdf8;
@@ -145,57 +161,64 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.3; }
     }
+    .app-version-tag {
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 10px;
+      color: #94a3b8;
+      letter-spacing: 0.3px;
+    }
+    .app-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
     .app-title {
-      font-size: 34px;
+      font-size: 22px;
       font-weight: 800;
       line-height: 1.1;
       letter-spacing: -0.5px;
       background: linear-gradient(135deg, #ffffff 30%, #bae6fd 70%, #60a5fa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 4px;
     }
     .app-subtitle {
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: 500;
       color: #94a3b8;
-      margin-bottom: 8px;
-    }
-    .app-version-line {
-      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
-      font-size: 11px;
-      color: #38bdf8;
-      letter-spacing: 0.5px;
-      margin-bottom: 22px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .loading-track {
       width: 100%;
-      height: 4px;
+      height: 3.5px;
       background: rgba(255, 255, 255, 0.08);
       border-radius: 999px;
       overflow: hidden;
       position: relative;
+      margin-top: 10px;
     }
     .loading-bar {
       position: absolute;
       top: 0;
       left: 0;
       height: 100%;
-      width: 45%;
+      width: 40%;
       background: linear-gradient(90deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
       border-radius: 999px;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
-      animation: loadSlide 1.8s infinite ease-in-out;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
+      animation: loadSlide 1.6s infinite ease-in-out;
     }
     @keyframes loadSlide {
-      0% { left: -45%; }
-      50% { left: 40%; width: 55%; }
+      0% { left: -40%; }
+      50% { left: 40%; width: 50%; }
       100% { left: 100%; width: 30%; }
     }
     .status-text {
-      font-size: 11px;
+      font-size: 10px;
       color: #64748b;
-      margin-top: 8px;
+      margin-top: 6px;
       display: flex;
       justify-content: space-between;
       font-weight: 500;
@@ -221,22 +244,25 @@
       </div>
     </div>
     <div class="right-content">
-      <div class="badge">
-        <span class="badge-dot"></span>
-        <span>AI Engine Ready</span>
+      <div class="top-meta">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span>AI Engine Ready</span>
+        </div>
+        <span class="app-version-tag">v5.9.7 &bull; Stealth</span>
       </div>
-      <div class="app-title">Clue AI</div>
-      <div class="app-subtitle">AI Interview Intelligence Copilot</div>
-      <div class="app-version-line">Version 5.9.6 &bull; Stealth Protection Active</div>
+      <div class="app-title-row">
+        <span class="app-title">Clue AI</span>
+        <span class="app-subtitle">Interview Intelligence Copilot</span>
+      </div>
       <div class="loading-track">
         <div class="loading-bar"></div>
       </div>
       <div class="status-text">
-        <span>Initializing engine...</span>
-        <span>Starting</span>
+        <span>Starting instant environment...</span>
+        <span>Ready</span>
       </div>
     </div>
   </div>
 </body>
 </html>
-

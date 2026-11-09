@@ -492,10 +492,12 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.6');
+  const [appVersion, setAppVersion] = useState('5.9.7');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
-  const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
+  const [updatePhase, setUpdatePhase] = useState<'idle' | 'prep' | 'download' | 'install'>('idle');
+  const [installStageText, setInstallStageText] = useState<string>('Preparing installation environment...');
+  const [downloadStageText, setDownloadStageText] = useState<string>('Waiting for preparation...');
   const [sessionModalMode, setSessionModalMode] = useState<'new' | 'resume'>('new');
   const [sessionSearchTerm, setSessionSearchTerm] = useState('');
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'>('idle');
@@ -633,7 +635,7 @@ function App() {
           type: 'register_user',
           email: clean,
           user_name: localStorage.getItem('clueai_username') || 'ClueAI User',
-          app_version: '5.9.6'
+          app_version: '5.9.7'
         })
       }).catch(() => { });
     } catch { }
@@ -2395,7 +2397,7 @@ function App() {
             email: primaryEmail || allEmails[0],
             saved_emails: allEmails,
             user_name: localStorage.getItem('clueai_username') || 'ClueAI User',
-            app_version: '5.9.6'
+            app_version: '5.9.7'
           })
         }).catch(() => { });
       }
@@ -2405,11 +2407,11 @@ function App() {
       if (v) setAppVersion(v);
     }).catch(() => { });
 
-    // Defer network checks and disk storage scan by 3.5s to ensure cold boot paints instantly
+    // Realtime instant update check & disk storage scan (250ms)
     const initialDeferredTimer = setTimeout(() => {
       handleCheckForUpdates();
       fetchStorageInfo();
-    }, 3500);
+    }, 250);
     const storageTimer = setInterval(fetchStorageInfo, 30000);
 
     const handleUpdaterStatus = (_event: any, data: any) => {
@@ -2436,16 +2438,16 @@ function App() {
           total: data.total || 0,
         });
         if (isInstallingUpdateRef.current) {
-          const dlPercent = data.percent || 0;
-          const mapped = Math.min(50, Math.max(1, Math.round(dlPercent * 0.5)));
-          setInstallProgress(mapped);
+          setUpdatePhase('download');
           const mbTransferred = ((data.transferred || 0) / 1048576).toFixed(1);
           const mbTotal = ((data.total || 0) / 1048576).toFixed(1);
           const speed = ((data.bytesPerSecond || 0) / 1048576).toFixed(1);
-          setInstallStageText(`Downloading update (${mbTransferred} MB / ${mbTotal} MB • ${speed} MB/s)...`);
+          setDownloadStageText(`Downloading package (${mbTransferred} MB / ${mbTotal} MB • ${speed} MB/s)`);
         }
       } else if (data.status === 'downloaded') {
         setUpdateInfo(prev => ({ ...prev, version: data.version, releaseNotes: data.releaseNotes || prev.releaseNotes }));
+        setDownloadProgress(prev => ({ ...prev, percent: 100 }));
+        setDownloadStageText("Download complete (100%) • Package verified");
         if (isInstallingUpdateRef.current) {
           triggerSeamlessInstallPhases();
         }
@@ -2468,24 +2470,28 @@ function App() {
   }, [handleCheckForUpdates, fetchStorageInfo]);
 
   const triggerSeamlessInstallPhases = () => {
-    let current = 50;
-    setInstallProgress(50);
+    setUpdatePhase('install');
+    let current = 0;
+    setInstallProgress(0);
     setInstallStageText("Verifying update package integrity & signatures...");
 
     const tick = () => {
       current += 1;
       setInstallProgress(current);
 
-      let delay = 35;
-      if (current <= 70) {
-        setInstallStageText("Extracting update packages & assets...");
+      let delay = 30;
+      if (current <= 25) {
+        setInstallStageText("Verifying update package integrity & signatures...");
+        delay = 25;
+      } else if (current <= 60) {
+        setInstallStageText("Extracting delta packages & core engine binaries...");
         delay = 30;
-      } else if (current <= 92) {
+      } else if (current <= 90) {
         setInstallStageText("Replacing system binaries & updating assets...");
-        delay = 40;
+        delay = 35;
       } else if (current < 100) {
         setInstallStageText("Finalizing installation & preparing instant launch...");
-        delay = 35;
+        delay = 25;
       } else {
         setInstallStageText("Update 100% complete! Launching Clue AI...");
         ipcRenderer.invoke('quit-and-install-update');
@@ -2504,44 +2510,52 @@ function App() {
     setShowStartupUpdatePopup(false);
 
     if (updateStatus === 'downloaded') {
+      setDownloadProgress({ percent: 100, bytesPerSecond: 0, transferred: 0, total: 0 });
+      setDownloadStageText("Package verified & cached locally");
       triggerSeamlessInstallPhases();
     } else {
-      setInstallProgress(1);
-      setInstallStageText("Initiating secure update download from Clue AI cloud...");
-      setUpdateStatus('downloading');
+      // Phase 1: Upper bar starts active for system preparation
+      setUpdatePhase('prep');
+      setInstallProgress(5);
+      setInstallStageText("Preparing installation environment & verifying permissions...");
       setDownloadProgress({ percent: 0, bytesPerSecond: 0, transferred: 0, total: 0 });
+      setDownloadStageText("Waiting for preparation completion...");
 
-      // Visual smooth initial progress ramp while connection establishes
-      let initialDl = 1;
-      const initialTimer = setInterval(() => {
+      let prepVal = 5;
+      const prepInterval = setInterval(() => {
         if (!isInstallingUpdateRef.current) {
-          clearInterval(initialTimer);
+          clearInterval(prepInterval);
           return;
         }
-        if (initialDl < 15 && downloadProgress.percent === 0) {
-          initialDl += 1;
-          setInstallProgress(initialDl);
-          setInstallStageText(`Connecting to Clue AI cloud (${initialDl}%)...`);
-        } else {
-          clearInterval(initialTimer);
-        }
-      }, 120);
+        prepVal += 8;
+        if (prepVal >= 100) {
+          prepVal = 100;
+          clearInterval(prepInterval);
+          setInstallProgress(100);
+          setInstallStageText("Environment prepared • Handing off to package download");
 
-      ipcRenderer.invoke('download-update', updateInfo.version).then((res: any) => {
-        if (res && res.error) {
-          clearInterval(initialTimer);
-          setIsInstallingUpdate(false);
-          setShowUpdateModal(true);
-          setUpdateStatus('error');
-          setUpdateInfo(prev => ({ ...prev, message: res.error }));
+          // Phase 2: Lower bar takes active focus and download starts
+          setUpdatePhase('download');
+          setUpdateStatus('downloading');
+          setDownloadStageText("Connecting to Clue AI cloud distribution network...");
+
+          ipcRenderer.invoke('download-update', updateInfo.version).then((res: any) => {
+            if (res && res.error) {
+              setIsInstallingUpdate(false);
+              setShowUpdateModal(true);
+              setUpdateStatus('error');
+              setUpdateInfo(prev => ({ ...prev, message: res.error }));
+            }
+          }).catch((err: any) => {
+            setIsInstallingUpdate(false);
+            setShowUpdateModal(true);
+            setUpdateStatus('error');
+            setUpdateInfo(prev => ({ ...prev, message: err?.message || 'Download failed' }));
+          });
+        } else {
+          setInstallProgress(prepVal);
         }
-      }).catch((err: any) => {
-        clearInterval(initialTimer);
-        setIsInstallingUpdate(false);
-        setShowUpdateModal(true);
-        setUpdateStatus('error');
-        setUpdateInfo(prev => ({ ...prev, message: err?.message || 'Download failed' }));
-      });
+      }, 45);
     }
   };
 
@@ -4007,7 +4021,7 @@ function App() {
           </div>
         </div>
         <div class="brand-badges">
-          <span class="badge-version">V5.9.6</span>
+          <span class="badge-version">V5.9.7</span>
           <span class="badge-status">Export Verified</span>
         </div>
       </div>
@@ -11248,56 +11262,153 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Full-Screen Samsung One UI Style Update Installation Screen */}
+        {/* Full-Screen Dual-Progress-Bar Update Installation Screen */}
         <AnimatePresence>
           {isInstallingUpdate && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] bg-[#05060b] flex flex-col items-center justify-center p-8 select-none text-white overflow-hidden pointer-events-auto"
+              className="fixed inset-0 z-[99999] bg-[#030712] flex flex-col items-center justify-center p-6 select-none text-white overflow-hidden pointer-events-auto"
             >
-              {/* Ambient radial glow */}
-              <div className="absolute w-[600px] h-[600px] rounded-full bg-cyan-500/15 blur-[140px] pointer-events-none" />
+              {/* Cosmic radial glow */}
+              <div className="absolute w-[640px] h-[640px] rounded-full bg-cyan-500/10 blur-[150px] pointer-events-none" />
+              <div className="absolute w-[400px] h-[400px] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
 
-              <div className="relative z-10 flex flex-col items-center max-w-md w-full text-center">
-                {/* Glowing Clue AI emblem */}
-                <div className="relative mb-8">
-                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500/20 via-blue-500/30 to-indigo-500/20 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_60px_rgba(6,182,212,0.4)] animate-pulse">
-                    <Sparkles size={44} className="text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+              <div className="relative z-10 flex flex-col items-center max-w-lg w-full text-center">
+                {/* Glowing Clue AI emblem with dual orbit rings */}
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-500/25 via-blue-500/35 to-indigo-500/25 border border-cyan-400/60 flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.45)]">
+                    <Sparkles size={38} className="text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
                   </div>
-                  <div className="absolute -inset-2 rounded-3xl border border-cyan-500/20 animate-ping" style={{ animationDuration: '3s' }} />
+                  <div className="absolute -inset-2.5 rounded-full border border-cyan-400/30 animate-ping" style={{ animationDuration: '3.5s' }} />
+                  <div className="absolute -inset-4 rounded-full border border-dashed border-indigo-400/30 animate-spin" style={{ animationDuration: '14s' }} />
                 </div>
 
                 <h2 className="text-2xl font-black text-white tracking-tight mb-1">
-                  Installing Clue AI Update
+                  Clue AI Intelligence Update
                 </h2>
-                <p className="text-xs text-cyan-400/80 font-mono font-bold uppercase tracking-widest mb-8">
-                  Upgrading to Version {updateInfo.version || '5.8.9'}
-                </p>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 font-mono text-xs font-semibold mb-6">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  Target Release: Version {updateInfo.version || '5.9.7'}
+                </div>
 
-                {/* High-tech Progress Bar */}
-                <div className="w-full bg-black/80 rounded-full border border-cyan-500/40 p-1 mb-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)]">
-                  <div
-                    className="h-3.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full transition-all duration-100 shadow-[0_0_20px_rgba(6,182,212,0.9)] relative"
-                    style={{ width: `${Math.max(installProgress, 2)}%` }}
-                  >
-                    <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-white rounded-full shadow-[0_0_8px_white]" />
+                <div className="w-full space-y-4">
+                  {/* UPPER PROGRESS BAR: Installation & System Preparation */}
+                  <div className={`w-full p-4 rounded-2xl border transition-all duration-300 text-left ${
+                    updatePhase === 'prep' || updatePhase === 'install'
+                      ? 'bg-slate-900/90 border-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400/50'
+                      : 'bg-slate-950/50 border-white/10 opacity-70'
+                  }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          updatePhase === 'prep' || updatePhase === 'install'
+                            ? 'bg-cyan-400 animate-ping'
+                            : installProgress === 100
+                            ? 'bg-emerald-400'
+                            : 'bg-white/30'
+                        }`} />
+                        <span className="text-xs font-bold text-white tracking-wide uppercase">
+                          1. Installation &amp; System Binaries
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {updatePhase === 'prep' && (
+                          <span className="text-[10px] uppercase font-bold text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded-full border border-cyan-500/40">
+                            Initializing
+                          </span>
+                        )}
+                        {updatePhase === 'install' && (
+                          <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/40 animate-pulse">
+                            Installing
+                          </span>
+                        )}
+                        {updatePhase === 'download' && (
+                          <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-white/10">
+                            Awaiting Download
+                          </span>
+                        )}
+                        <span className="text-xs font-mono font-black text-cyan-300">
+                          {installProgress}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-black/90 rounded-full border border-white/10 p-0.5 mb-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)]">
+                      <div
+                        className="h-2.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full transition-all duration-150 shadow-[0_0_16px_rgba(6,182,212,0.9)] relative"
+                        style={{ width: `${Math.max(installProgress, 2)}%` }}
+                      >
+                        {(updatePhase === 'prep' || updatePhase === 'install') && (
+                          <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full shadow-[0_0_8px_white]" />
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] font-mono text-cyan-200/80 truncate">
+                      {installStageText}
+                    </p>
+                  </div>
+
+                  {/* LOWER PROGRESS BAR: Live Package Download */}
+                  <div className={`w-full p-4 rounded-2xl border transition-all duration-300 text-left ${
+                    updatePhase === 'download'
+                      ? 'bg-slate-900/90 border-blue-400/70 shadow-[0_0_30px_rgba(59,130,246,0.25)] ring-1 ring-blue-400/50'
+                      : 'bg-slate-950/50 border-white/10 opacity-70'
+                  }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          updatePhase === 'download'
+                            ? 'bg-blue-400 animate-ping'
+                            : downloadProgress.percent === 100
+                            ? 'bg-emerald-400'
+                            : 'bg-white/30'
+                        }`} />
+                        <span className="text-xs font-bold text-white tracking-wide uppercase">
+                          2. Live Release Package Download
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {updatePhase === 'download' ? (
+                          <span className="text-[10px] uppercase font-bold text-blue-300 bg-blue-950 px-2 py-0.5 rounded-full border border-blue-500/40 animate-pulse">
+                            Active Stream
+                          </span>
+                        ) : downloadProgress.percent === 100 ? (
+                          <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-white/10">
+                            Standby
+                          </span>
+                        )}
+                        <span className="text-xs font-mono font-black text-blue-300">
+                          {downloadProgress.percent}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-black/90 rounded-full border border-white/10 p-0.5 mb-2 shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)]">
+                      <div
+                        className="h-2.5 bg-gradient-to-r from-sky-400 via-cyan-400 to-blue-500 rounded-full transition-all duration-150 shadow-[0_0_16px_rgba(56,189,248,0.9)] relative"
+                        style={{ width: `${Math.max(downloadProgress.percent, 2)}%` }}
+                      >
+                        {updatePhase === 'download' && (
+                          <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full shadow-[0_0_8px_white]" />
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] font-mono text-blue-200/80 truncate">
+                      {downloadStageText}
+                    </p>
                   </div>
                 </div>
 
-                {/* Percentage & Live Stage Text */}
-                <div className="flex items-center justify-between w-full text-xs font-mono mb-2">
-                  <span className="text-white/80 font-medium text-left">
-                    {installStageText}
-                  </span>
-                  <span className="text-cyan-300 font-black text-sm">
-                    {installProgress}%
-                  </span>
-                </div>
-
-                <div className="mt-8 text-[11px] text-white/50 flex items-center gap-2 font-mono">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <div className="mt-7 text-[11px] text-white/50 flex items-center justify-center gap-2 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
                   Please do not close Clue AI. Relaunching automatically upon completion.
                 </div>
               </div>

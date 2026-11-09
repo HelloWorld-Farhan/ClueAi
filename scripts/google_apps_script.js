@@ -19,7 +19,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const BASE_FALLBACK_VERSION = "5.9.6";
+const BASE_FALLBACK_VERSION = "5.9.7";
 const DEFAULT_VERSION = BASE_FALLBACK_VERSION;
 
 /**
