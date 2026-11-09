@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * CLUE AI - Google Apps Script Backend (v5.9.2)
+ * CLUE AI - Google Apps Script Cloud Webhook Backend (Dynamic Auto-Versioning)
  * =========================================================================
  * Handles:
  *  1. Universal 6-Digit Email OTP Verification (Dark Mode)
@@ -9,6 +9,7 @@
  *  4. Interview Notes (Scheduled notes delivery)
  *  5. User Feedback & Bug Reports (Admin report + User thanks)
  *  6. User Registration & Release Update Broadcast Notifications
+ *  7. Automated Real-Time Dynamic Versioning (Zero Manual Edits Needed)
  *
  * Support Email: clueai.support@gmail.com
  * Developer: Farhan Khalid (https://farhan-khalid-portfolio.vercel.app/)
@@ -18,7 +19,61 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const DEFAULT_VERSION = "5.9.5";
+const BASE_FALLBACK_VERSION = "5.9.5";
+const DEFAULT_VERSION = BASE_FALLBACK_VERSION;
+
+/**
+ * Dynamic Version Resolver
+ * Automatically resolves the version without ever needing manual hardcoded edits:
+ * 1. Checks if a version was passed in the request or function call (app_version / version)
+ * 2. Checks persistent Google Apps Script cache (ScriptProperties "CLUEAI_LATEST_VERSION")
+ * 3. Dynamically queries GitHub releases API for the latest release tag
+ * 4. Falls back gracefully if offline or unreachable
+ */
+function getDynamicAppVersion(requestedVersion) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+
+    // 1. If explicit version was provided in payload, persist and return it
+    if (requestedVersion && typeof requestedVersion === 'string' && requestedVersion.trim().length > 0) {
+      const cleanVer = requestedVersion.trim().replace(/^v/i, '');
+      try {
+        props.setProperty("CLUEAI_LATEST_VERSION", cleanVer);
+      } catch (e) {}
+      return cleanVer;
+    }
+
+    // 2. Check persistent ScriptProperties cache
+    try {
+      const cached = props.getProperty("CLUEAI_LATEST_VERSION");
+      if (cached && cached.trim().length > 0) {
+        return cached.trim();
+      }
+    } catch (e) {}
+
+    // 3. Dynamically fetch latest release tag from GitHub API
+    try {
+      const response = UrlFetchApp.fetch("https://api.github.com/repos/HelloWorld-Farhan/ClueAi/releases/latest", {
+        muteHttpExceptions: true,
+        headers: { "User-Agent": "ClueAI-AppsScript" }
+      });
+      if (response && response.getResponseCode() === 200) {
+        const release = JSON.parse(response.getContentText());
+        if (release && release.tag_name) {
+          const liveTag = release.tag_name.replace(/^v/i, '').trim();
+          props.setProperty("CLUEAI_LATEST_VERSION", liveTag);
+          return liveTag;
+        }
+      }
+    } catch (apiErr) {
+      Logger.log("Dynamic GitHub version fetch notice: " + (apiErr ? apiErr.message : apiErr));
+    }
+  } catch (err) {
+    Logger.log("getDynamicAppVersion notice: " + (err ? err.message : err));
+  }
+
+  return BASE_FALLBACK_VERSION;
+}
 
 /**
  * Zero-argument Test Runner for Google Apps Script IDE
@@ -26,11 +81,13 @@ const DEFAULT_VERSION = "5.9.5";
  */
 function testRun() {
   Logger.log("Testing Clue AI Google Apps Script Engine...");
+  const dynamicVer = getDynamicAppVersion();
+  Logger.log("Dynamically Resolved Version: " + dynamicVer);
   const users = getRegisteredUsers();
   Logger.log("Found " + users.length + " registered users: " + users.join(", "));
-  const sampleLayout = getEmailLayout();
-  Logger.log("getEmailLayout() executed successfully. HTML output generated. Length: " + sampleLayout.length);
-  return "OK";
+  const sampleLayout = getEmailLayout({ appVersion: dynamicVer });
+  Logger.log("getEmailLayout() executed successfully. HTML length: " + sampleLayout.length);
+  return { status: "OK", version: dynamicVer, userCount: users.length };
 }
 
 /**
@@ -38,7 +95,7 @@ function testRun() {
  * Can be run directly from Google Apps Script Editor or triggered via Webhook POST.
  */
 function broadcastNewUpdate(version, summary) {
-  const appVersion = version || DEFAULT_VERSION;
+  const appVersion = getDynamicAppVersion(version);
   const highlights = summary || "Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.";
   const users = getRegisteredUsers();
   Logger.log("Broadcasting update V" + appVersion + " to " + users.length + " registered users: " + users.join(", "));
@@ -128,7 +185,7 @@ function getRegisteredUsers() {
  */
 function getEmailLayout(opts) {
   opts = opts || {};
-  const version = opts.appVersion || DEFAULT_VERSION;
+  const version = getDynamicAppVersion(opts.appVersion);
   const year = new Date().getFullYear();
   const heroGradient = opts.heroGradient || "linear-gradient(135deg,#3b82f6 0%,#2563eb 50%,#1d4ed8 100%)";
   const accentGradient = opts.accentGradient || "linear-gradient(90deg,#22d3ee 0%,#3b82f6 55%,#2563eb 100%)";
@@ -526,13 +583,42 @@ function getUpdateBroadcastEmailHtml(userName, appVersion) {
 }
 
 /**
+ * Webhook Health Check and Status Handler (HTTP GET)
+ * Returns status, dynamically resolved version, registered user count, and timestamp.
+ */
+function doGet(e) {
+  try {
+    const version = getDynamicAppVersion();
+    const users = getRegisteredUsers();
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "online",
+      service: "Clue AI Google Apps Script Backend",
+      version: version,
+      registeredUsersCount: users.length,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * Main Webhook Handler (HTTP POST)
  */
 function doPost(e) {
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "No POST payload received. Clue AI webhook is online and operational."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     const data = JSON.parse(e.postData.contents);
     const type = data.type || (data.action === 'delete' ? 'delete' : 'reminder');
-    const appVersion = data.app_version || DEFAULT_VERSION;
+    const appVersion = getDynamicAppVersion(data.app_version || data.version);
 
     // ----------------------------------------------------
     // ACTION 1: SEND OTP VERIFICATION CODE
@@ -587,7 +673,7 @@ function doPost(e) {
     // ACTION 3: BROADCAST UPDATE NOTIFICATION TO ALL USERS
     // ----------------------------------------------------
     if (type === 'broadcast_update') {
-      const version = data.version || data.app_version || DEFAULT_VERSION;
+      const version = getDynamicAppVersion(data.version || data.app_version);
       const highlights = data.highlights || data.release_notes || data.summary || "Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.";
       const res = broadcastNewUpdate(version, highlights);
       const msg = typeof res === 'object' ? res.message : res;
@@ -744,11 +830,11 @@ function doPost(e) {
       const triggers = ScriptApp.getProjectTriggers();
       for (let i = 0; i < triggers.length; i++) {
         const triggerKey = 'trigger_' + triggers[i].getUniqueId();
-        const payloadId = PropertiesService.getUserProperties().getProperty(triggerKey);
+        const payloadId = PropertiesService.getScriptProperties().getProperty(triggerKey);
         if (payloadId === data.id) {
           ScriptApp.deleteTrigger(triggers[i]);
-          PropertiesService.getUserProperties().deleteProperty(triggerKey);
-          PropertiesService.getUserProperties().deleteProperty(payloadId);
+          PropertiesService.getScriptProperties().deleteProperty(triggerKey);
+          PropertiesService.getScriptProperties().deleteProperty(payloadId);
           break;
         }
       }
@@ -982,14 +1068,14 @@ function doPost(e) {
       if (data.email) registerUserEmail(data.email, data.to_name || 'Candidate');
       const targetDate = parseTargetDate(data.date, data.time);
       const triggerId = data.id || Utilities.getUuid();
-      PropertiesService.getUserProperties().setProperty(triggerId, JSON.stringify(data));
+      PropertiesService.getScriptProperties().setProperty(triggerId, JSON.stringify(data));
 
       const newTrigger = ScriptApp.newTrigger('sendScheduledNote')
         .timeBased()
         .at(targetDate)
         .create();
 
-      PropertiesService.getUserProperties().setProperty('trigger_' + newTrigger.getUniqueId(), triggerId);
+      PropertiesService.getScriptProperties().setProperty('trigger_' + newTrigger.getUniqueId(), triggerId);
 
       return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Note scheduled for ' + targetDate }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -1090,14 +1176,14 @@ function doPost(e) {
     // Schedule Future Trigger
     const targetDate = parseTargetDate(data.date, data.time);
     const triggerId = data.id || Utilities.getUuid();
-    PropertiesService.getUserProperties().setProperty(triggerId, JSON.stringify(data));
+    PropertiesService.getScriptProperties().setProperty(triggerId, JSON.stringify(data));
 
     const newTrigger = ScriptApp.newTrigger('sendScheduledReminder')
       .timeBased()
       .at(targetDate)
       .create();
 
-    PropertiesService.getUserProperties().setProperty('trigger_' + newTrigger.getUniqueId(), triggerId);
+    PropertiesService.getScriptProperties().setProperty('trigger_' + newTrigger.getUniqueId(), triggerId);
 
     return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -1114,15 +1200,15 @@ function doPost(e) {
 function sendScheduledReminder(e) {
   if (!e || !e.triggerUid) return;
   const triggerKey = 'trigger_' + e.triggerUid;
-  const payloadId = PropertiesService.getUserProperties().getProperty(triggerKey);
+  const payloadId = PropertiesService.getScriptProperties().getProperty(triggerKey);
 
   if (payloadId) {
-    const dataStr = PropertiesService.getUserProperties().getProperty(payloadId);
+    const dataStr = PropertiesService.getScriptProperties().getProperty(payloadId);
     if (dataStr) {
       const data = JSON.parse(dataStr);
       const toName = data.to_name || "Candidate";
       const company = data.company_name || "Your Interview";
-      const appVersion = data.app_version || DEFAULT_VERSION;
+      const appVersion = getDynamicAppVersion(data.app_version || data.version);
 
       const alertCentralBox = `
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#450a0a" style="background-color:#450a0a;border:1.5px solid rgba(255,255,255,.25);border-radius:18px;">
@@ -1202,9 +1288,9 @@ function sendScheduledReminder(e) {
         name: "ClueAI System"
       });
 
-      PropertiesService.getUserProperties().deleteProperty(payloadId);
+      PropertiesService.getScriptProperties().deleteProperty(payloadId);
     }
-    PropertiesService.getUserProperties().deleteProperty(triggerKey);
+    PropertiesService.getScriptProperties().deleteProperty(triggerKey);
   }
 
   // Trigger cleanup
@@ -1223,13 +1309,13 @@ function sendScheduledReminder(e) {
 function sendScheduledNote(e) {
   if (!e || !e.triggerUid) return;
   const triggerKey = 'trigger_' + e.triggerUid;
-  const payloadId = PropertiesService.getUserProperties().getProperty(triggerKey);
+  const payloadId = PropertiesService.getScriptProperties().getProperty(triggerKey);
 
   if (payloadId) {
-    const dataStr = PropertiesService.getUserProperties().getProperty(payloadId);
+    const dataStr = PropertiesService.getScriptProperties().getProperty(payloadId);
     if (dataStr) {
       const data = JSON.parse(dataStr);
-      const appVersion = data.app_version || DEFAULT_VERSION;
+      const appVersion = getDynamicAppVersion(data.app_version || data.version);
 
       const noteCentralBox = `
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#0f172a" style="background-color:#0f172a;border:1.5px solid rgba(255,255,255,0.25);border-radius:18px;">
@@ -1305,9 +1391,9 @@ function sendScheduledNote(e) {
         name: "ClueAI System"
       });
 
-      PropertiesService.getUserProperties().deleteProperty(payloadId);
+      PropertiesService.getScriptProperties().deleteProperty(payloadId);
     }
-    PropertiesService.getUserProperties().deleteProperty(triggerKey);
+    PropertiesService.getScriptProperties().deleteProperty(triggerKey);
   }
 
   // Trigger cleanup
