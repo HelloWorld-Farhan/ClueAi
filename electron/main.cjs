@@ -178,24 +178,19 @@ function applyStealthProtection(win, enabled) {
 function createSplashWindow() {
   if (splashWindow && !splashWindow.isDestroyed()) return;
   try {
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const workArea = primaryDisplay.workArea;
-    const splashWidth = 480;
-    const splashHeight = 150;
-    const splashX = Math.round(workArea.x + (workArea.width - splashWidth) / 2);
-    const splashY = Math.round(workArea.y + 36);
+    const splashWidth = 640;
+    const splashHeight = 360;
 
     splashWindow = new BrowserWindow({
       width: splashWidth,
       height: splashHeight,
-      x: splashX,
-      y: splashY,
+      center: true,
       show: false,
       frame: false,
       transparent: true,
       resizable: false,
       alwaysOnTop: true,
-      skipTaskbar: true,
+      skipTaskbar: false,
       hasShadow: true,
       backgroundColor: '#00000000',
       webPreferences: {

@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.7');
+  const [appVersion, setAppVersion] = useState('5.9.8');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [updatePhase, setUpdatePhase] = useState<'idle' | 'prep' | 'download' | 'install'>('idle');
@@ -635,7 +635,7 @@ function App() {
           type: 'register_user',
           email: clean,
           user_name: localStorage.getItem('clueai_username') || 'ClueAI User',
-          app_version: '5.9.7'
+          app_version: '5.9.8'
         })
       }).catch(() => { });
     } catch { }
@@ -2397,7 +2397,7 @@ function App() {
             email: primaryEmail || allEmails[0],
             saved_emails: allEmails,
             user_name: localStorage.getItem('clueai_username') || 'ClueAI User',
-            app_version: '5.9.7'
+            app_version: '5.9.8'
           })
         }).catch(() => { });
       }
@@ -4021,7 +4021,7 @@ function App() {
           </div>
         </div>
         <div class="brand-badges">
-          <span class="badge-version">V5.9.7</span>
+          <span class="badge-version">V5.9.8</span>
           <span class="badge-status">Export Verified</span>
         </div>
       </div>
@@ -11290,7 +11290,7 @@ function App() {
                 </h2>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 font-mono text-xs font-semibold mb-6">
                   <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  Target Release: Version {updateInfo.version || '5.9.7'}
+                  Target Release: Version {updateInfo.version || '5.9.8'}
                 </div>
 
                 <div className="w-full space-y-4">

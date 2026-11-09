@@ -20,16 +20,14 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.7)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.8)
 
-### 🚀 What's New in v5.9.7
-- 🌟 **Top-Docked Floating Splash Card**: Positioned precisely at the top of your screen (`y: 36`) matching the floating Clue AI copilot dock, featuring slide-in/fade-in entrance animation and eliminating empty window borders.
-- ⚡ **Instant Real-Time Update Detection**: Reduced startup update polling latency from 8s/3.5s down to 250-300ms, immediately detecting new releases in real time upon app launch.
-- 📊 **Dual-Progress-Bar In-App Updater**:
-  - **Upper Bar**: Installation & System Binary Setup (activates during environment preparation, pauses for transfer, and reactivates with focused cyan animation to finalize binary replacement).
-  - **Lower Bar**: Live Package Transfer (takes focused electric cyan glow with real-time download %, MB transferred, total size, and network throughput).
-- 🔕 **100% Silent Headless Execution**: Zero terminal or command-prompt windows during background package replacement and automatic relaunch using Windows Script Host (`wscript.exe` with `SW_HIDE 0`).
-- 📬 **Dynamic Multi-Inbox Notification Cloud**: Automated user registration and dynamic release broadcasting via Google Apps Script without requiring manual hardcoded version updates.
+### 🚀 What's New in v5.9.8
+- 🌌 **Centered Cinematic Desktop Splash Screen**: Sized at `640px × 360px` and centered on the display, featuring high-definition space-explorer cinematic artwork, glowing Clue AI branding, stealth protection status, and smooth non-flicker launch.
+- ⚡ **Zero-Lag Instant Startup**: Fully optimized cold boot rendering with V8 code caching and instantaneous React mounting handoff.
+- 📊 **Dual-Progress-Bar In-App Updater**: Dual-phase installation architecture with real-time download throughput tracking and focused progress transitions.
+- 🧹 **Repository & Engine Optimization**: Removed redundant root files and dead code for a cleaner, faster bundle.
+- 🔕 **100% Silent Headless Updater**: Zero terminal or command-prompt windows during background package installations (`wscript.exe` with `SW_HIDE 0`).
 
 ### 🪟 1. For Windows
 

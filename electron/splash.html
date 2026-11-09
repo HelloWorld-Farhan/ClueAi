@@ -18,222 +18,239 @@
       height: 100%;
       background: transparent;
       overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
-    .splash-card {
+    .splash-container {
       position: relative;
-      width: 480px;
-      height: 150px;
-      margin: 0 auto;
-      border-radius: 20px;
-      background: radial-gradient(circle at 15% 50%, #1e293b 0%, #0a0f1d 65%, #030712 100%);
+      width: 640px;
+      height: 360px;
+      margin: auto;
+      border-radius: 24px;
+      background: #030712;
       border: 1px solid rgba(56, 189, 248, 0.35);
-      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.9),
-                  0 0 30px -5px rgba(56, 189, 248, 0.25),
-                  inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
-      display: flex;
-      align-items: center;
-      padding: 20px 24px;
+      box-shadow: 0 30px 80px -10px rgba(0, 0, 0, 0.95),
+                  0 0 50px -10px rgba(56, 189, 248, 0.3),
+                  inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.25);
       overflow: hidden;
-      animation: splashSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: splashFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
-    @keyframes splashSlideIn {
+    @keyframes splashFadeIn {
       0% {
         opacity: 0;
-        transform: translateY(-22px) scale(0.96);
+        transform: scale(0.97);
       }
       100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
       }
     }
-    /* Subtle background glow effect */
-    .glow-sphere {
+    /* Full cinematic background image */
+    .bg-art {
       position: absolute;
-      width: 200px;
-      height: 200px;
-      left: -30px;
-      top: -30px;
-      background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(99, 102, 241, 0.1) 50%, transparent 80%);
-      filter: blur(24px);
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: url('splash_bg.jpg') center/cover no-repeat;
       pointer-events: none;
     }
-    .left-art {
-      flex: 0 0 85px;
+    /* Dynamic atmospheric gradient overlays for perfect contrast and readability */
+    .bg-overlay-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        rgba(3, 7, 18, 0.25) 0%,
+        rgba(3, 7, 18, 0.65) 45%,
+        rgba(3, 7, 18, 0.92) 80%,
+        rgba(3, 7, 18, 0.97) 100%
+      );
+      pointer-events: none;
+    }
+    .bg-vignette {
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+
+    /* Top header row with stealth indicator */
+    .header-bar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 28px 0 28px;
+    }
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(3, 7, 18, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 999px;
+      color: #38bdf8;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulseDot 1.4s infinite ease-in-out;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .stealth-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.6);
+      background: rgba(3, 7, 18, 0.5);
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Main brand area placed prominently on right side */
+    .brand-content {
+      position: relative;
+      z-index: 10;
+      align-self: flex-end;
+      width: 340px;
+      padding-right: 32px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
     }
-    .logo-container {
-      position: relative;
-      width: 76px;
-      height: 76px;
+    .logo-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-    }
-    .logo-pulse-ring {
-      position: absolute;
-      width: 74px;
-      height: 74px;
-      border-radius: 50%;
-      border: 1.5px solid rgba(56, 189, 248, 0.45);
-      animation: pulseRing 2.2s infinite ease-out;
-    }
-    .logo-orbit-ring {
-      position: absolute;
-      width: 84px;
-      height: 84px;
-      border-radius: 50%;
-      border: 1px dashed rgba(129, 140, 248, 0.4);
-      animation: rotateOrbit 10s infinite linear;
-    }
-    @keyframes pulseRing {
-      0% { transform: scale(0.85); opacity: 0.8; }
-      50% { transform: scale(1.15); opacity: 0.2; }
-      100% { transform: scale(1.3); opacity: 0; }
-    }
-    @keyframes rotateOrbit {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      gap: 12px;
+      margin-bottom: 8px;
     }
     .logo-core {
-      position: relative;
-      width: 58px;
-      height: 58px;
+      width: 44px;
+      height: 44px;
       background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
-      border-radius: 16px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 20px -4px rgba(2, 132, 199, 0.65),
-                  inset 0 1.5px 3px rgba(255, 255, 255, 0.4);
+      box-shadow: 0 8px 24px -2px rgba(2, 132, 199, 0.7),
+                  inset 0 1px 2px rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .logo-core svg {
-      width: 32px;
-      height: 32px;
+      width: 26px;
+      height: 26px;
       fill: none;
       stroke: #ffffff;
       stroke-width: 2.2;
       stroke-linecap: round;
       stroke-linejoin: round;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
     }
-    .right-content {
-      flex: 1;
-      padding-left: 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      min-width: 0;
+    .brand-title {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8),
+                   0 0 35px rgba(56, 189, 248, 0.4);
     }
-    .top-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
+    .brand-subtitle {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: -0.2px;
+      margin-top: 4px;
+      margin-bottom: 6px;
     }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 2px 8px;
-      background: rgba(56, 189, 248, 0.14);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      border-radius: 999px;
+    .brand-version {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
       color: #38bdf8;
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
+      letter-spacing: 0.4px;
     }
-    .badge-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #38bdf8;
-      box-shadow: 0 0 8px #38bdf8;
-      animation: blink 1.2s infinite ease-in-out;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    .app-version-tag {
-      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
-      font-size: 10px;
-      color: #94a3b8;
-      letter-spacing: 0.3px;
-    }
-    .app-title-row {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      margin-bottom: 2px;
-    }
-    .app-title {
-      font-size: 22px;
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #ffffff 30%, #bae6fd 70%, #60a5fa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .app-subtitle {
-      font-size: 11.5px;
-      font-weight: 500;
-      color: #94a3b8;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+
+    /* Bottom loading footer */
+    .footer-bar {
+      position: relative;
+      z-index: 10;
+      padding: 0 28px 22px 28px;
     }
     .loading-track {
       width: 100%;
-      height: 3.5px;
-      background: rgba(255, 255, 255, 0.08);
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
       border-radius: 999px;
       overflow: hidden;
       position: relative;
-      margin-top: 10px;
     }
     .loading-bar {
       position: absolute;
       top: 0;
       left: 0;
       height: 100%;
-      width: 40%;
+      width: 45%;
       background: linear-gradient(90deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
       border-radius: 999px;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
-      animation: loadSlide 1.6s infinite ease-in-out;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+      animation: loadSlide 1.5s infinite ease-in-out;
     }
     @keyframes loadSlide {
-      0% { left: -40%; }
-      50% { left: 40%; width: 50%; }
+      0% { left: -45%; }
+      50% { left: 40%; width: 55%; }
       100% { left: 100%; width: 30%; }
     }
-    .status-text {
-      font-size: 10px;
-      color: #64748b;
-      margin-top: 6px;
+    .status-row {
       display: flex;
+      align-items: center;
       justify-content: space-between;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #94a3b8;
       font-weight: 500;
+      font-family: 'SF Mono', Consolas, monospace;
+    }
+    .status-engine {
+      color: #38bdf8;
     }
   </style>
 </head>
 <body>
-  <div class="splash-card">
-    <div class="glow-sphere"></div>
-    <div class="left-art">
-      <div class="logo-container">
-        <div class="logo-pulse-ring"></div>
-        <div class="logo-orbit-ring"></div>
+  <div class="splash-container">
+    <div class="bg-art"></div>
+    <div class="bg-overlay-gradient"></div>
+    <div class="bg-vignette"></div>
+
+    <div class="header-bar">
+      <div class="badge-pill">
+        <span class="badge-dot"></span>
+        <span>AI Engine Ready</span>
+      </div>
+      <div class="stealth-status">
+        <span>Stealth Mode Protected</span>
+      </div>
+    </div>
+
+    <div class="brand-content">
+      <div class="logo-row">
         <div class="logo-core">
-          <!-- Clue AI Atom/Quantum Icon -->
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3" fill="#ffffff" />
             <ellipse cx="12" cy="12" rx="9" ry="3.8" transform="rotate(30 12 12)" />
@@ -241,26 +258,19 @@
             <ellipse cx="12" cy="12" rx="9" ry="3.8" transform="rotate(90 12 12)" />
           </svg>
         </div>
+        <div class="brand-title">Clue AI</div>
       </div>
+      <div class="brand-subtitle">AI Interview Intelligence Copilot</div>
+      <div class="brand-version">Version 5.9.8 &bull; 11/09/2026</div>
     </div>
-    <div class="right-content">
-      <div class="top-meta">
-        <div class="badge">
-          <span class="badge-dot"></span>
-          <span>AI Engine Ready</span>
-        </div>
-        <span class="app-version-tag">v5.9.7 &bull; Stealth</span>
-      </div>
-      <div class="app-title-row">
-        <span class="app-title">Clue AI</span>
-        <span class="app-subtitle">Interview Intelligence Copilot</span>
-      </div>
+
+    <div class="footer-bar">
       <div class="loading-track">
         <div class="loading-bar"></div>
       </div>
-      <div class="status-text">
-        <span>Starting instant environment...</span>
-        <span>Ready</span>
+      <div class="status-row">
+        <span>Initializing engine and neural context...</span>
+        <span class="status-engine">Ready</span>
       </div>
     </div>
   </div>
