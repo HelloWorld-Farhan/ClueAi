@@ -89,6 +89,9 @@ function getAutoUpdater() {
       });
 
       autoUpdater.on('update-downloaded', (info) => {
+        if (info && info.downloadedFile) {
+          directDownloadedInstallerPath = info.downloadedFile;
+        }
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('updater-status', {
             status: 'downloaded',
@@ -243,31 +246,46 @@ function createWindow() {
     },
   });
 
-  const transitionToMainWindow = () => {
-    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-      mainWindow.show();
-      mainWindow.focus();
-      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      applyStealthProtection(mainWindow, isStealthMode);
+  const splashStartTime = Date.now();
+  const MIN_SPLASH_TIME = 1400; // Guarantee live preview display so the user never sees a blank screen!
 
-      if (splashWindow && !splashWindow.isDestroyed()) {
-        try {
-          splashWindow.destroy();
-          splashWindow = null;
-        } catch (e) {}
-      }
+  let isTransitioning = false;
+  const transitionToMainWindow = () => {
+    if (isTransitioning) return;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const elapsed = Date.now() - splashStartTime;
+      const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
+
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+          isTransitioning = true;
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+          applyStealthProtection(mainWindow, isStealthMode);
+
+          setTimeout(() => {
+            if (splashWindow && !splashWindow.isDestroyed()) {
+              try {
+                splashWindow.destroy();
+                splashWindow = null;
+              } catch (e) {}
+            }
+          }, 150);
+        }
+      }, remaining);
     }
   };
 
   mainWindow.webContents.once('did-finish-load', () => {
-    setTimeout(transitionToMainWindow, 120);
+    setTimeout(transitionToMainWindow, 100);
   });
   mainWindow.once('ready-to-show', () => {
-    setTimeout(transitionToMainWindow, 80);
+    setTimeout(transitionToMainWindow, 50);
   });
 
   // Safety fallback if ready-to-show delays
-  setTimeout(transitionToMainWindow, 2400);
+  setTimeout(transitionToMainWindow, 2600);
 
   // Allow React to trigger immediate transition when mounted
   ipcMain.once('app-mounted', () => {
@@ -1138,39 +1156,40 @@ async function downloadReleaseAssetDirect(latestVersion) {
       fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
     } catch (err) { }
 
-    // Priority 1: Check if we downloaded an installer directly via direct GitHub release asset stream
+    // Priority 1: Check validated freshly downloaded installer
     let targetInstaller = null;
     if (directDownloadedInstallerPath && fs.existsSync(directDownloadedInstallerPath)) {
       targetInstaller = directDownloadedInstallerPath;
     } else {
-      // Check temp directory for any downloaded ClueAI installer
+      // Priority 2: Check electron-updater pending folder FIRST
       try {
-        const tempDir = app.getPath('temp');
-        const files = fs.readdirSync(tempDir);
-        const matches = files
-          .filter(f => f.toLowerCase().includes('clueai') && f.toLowerCase().endsWith('.exe'))
-          .map(f => path.join(tempDir, f))
-          .filter(p => fs.existsSync(p))
-          .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-        if (matches.length > 0) {
-          targetInstaller = matches[0];
+        const updaterPendingDir = path.join(app.getPath('userData'), '..', 'clueai-updater', 'pending');
+        if (fs.existsSync(updaterPendingDir)) {
+          const pendingFiles = fs.readdirSync(updaterPendingDir);
+          const pendingMatches = pendingFiles
+            .filter(f => f.toLowerCase().endsWith('.exe'))
+            .map(f => path.join(updaterPendingDir, f))
+            .filter(p => fs.existsSync(p))
+            .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+          if (pendingMatches.length > 0) {
+            targetInstaller = pendingMatches[0];
+          }
         }
       } catch (e) { }
 
-      // Check electron-updater pending folder if present
+      // Priority 3: Check temp directory strictly for installers modified in the last 15 minutes
       if (!targetInstaller) {
         try {
-          const updaterPendingDir = path.join(app.getPath('userData'), '..', 'clueai-updater', 'pending');
-          if (fs.existsSync(updaterPendingDir)) {
-            const pendingFiles = fs.readdirSync(updaterPendingDir);
-            const pendingMatches = pendingFiles
-              .filter(f => f.toLowerCase().endsWith('.exe'))
-              .map(f => path.join(updaterPendingDir, f))
-              .filter(p => fs.existsSync(p))
-              .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-            if (pendingMatches.length > 0) {
-              targetInstaller = pendingMatches[0];
-            }
+          const tempDir = app.getPath('temp');
+          const files = fs.readdirSync(tempDir);
+          const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
+          const matches = files
+            .filter(f => f.toLowerCase().includes('clueai') && f.toLowerCase().endsWith('.exe'))
+            .map(f => path.join(tempDir, f))
+            .filter(p => fs.existsSync(p) && fs.statSync(p).mtimeMs > fifteenMinsAgo)
+            .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+          if (matches.length > 0) {
+            targetInstaller = matches[0];
           }
         } catch (e) { }
       }
@@ -1191,15 +1210,20 @@ async function downloadReleaseAssetDirect(latestVersion) {
           'Set fso = CreateObject("Scripting.FileSystemObject")',
           'WScript.Sleep 1500',
           `WshShell.Run """" & "${escapedInstaller}" & """ /S --updated", 0, True`,
-          `If fso.FileExists("${escapedAppExe}") Then`,
-          `  WshShell.Run """" & "${escapedAppExe}" & """", 1, False`,
-          'Else',
-          '  fb1 = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\\Programs\\clueai\\ClueAI.exe")',
-          '  If fso.FileExists(fb1) Then',
-          '    WshShell.Run """" & fb1 & """", 1, False',
+          'WScript.Sleep 1000',
+          'Set objWMIService = GetObject("winmgmts:\\\\.\\root\\cimv2")',
+          'Set colProcesses = objWMIService.ExecQuery("Select * from Win32_Process Where Name = \'ClueAI.exe\'")',
+          'If colProcesses.Count = 0 Then',
+          `  If fso.FileExists("${escapedAppExe}") Then`,
+          `    WshShell.Run """" & "${escapedAppExe}" & """", 1, False`,
           '  Else',
-          '    fb2 = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\\Programs\\ClueAI\\ClueAI.exe")',
-          '    If fso.FileExists(fb2) Then WshShell.Run """" & fb2 & """", 1, False',
+          '    fb1 = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\\Programs\\ClueAI\\ClueAI.exe")',
+          '    If fso.FileExists(fb1) Then',
+          '      WshShell.Run """" & fb1 & """", 1, False',
+          '    Else',
+          '      fb2 = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\\Programs\\clueai\\ClueAI.exe")',
+          '      If fso.FileExists(fb2) Then WshShell.Run """" & fb2 & """", 1, False',
+          '    End If',
           '  End If',
           'End If',
           'On Error Resume Next',

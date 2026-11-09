@@ -20,13 +20,13 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.8)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.9)
 
-### 🚀 What's New in v5.9.8
-- 🌌 **Centered Cinematic Desktop Splash Screen**: Sized at `640px × 360px` and centered on the display, featuring high-definition space-explorer cinematic artwork, glowing Clue AI branding, stealth protection status, and smooth non-flicker launch.
-- ⚡ **Zero-Lag Instant Startup**: Fully optimized cold boot rendering with V8 code caching and instantaneous React mounting handoff.
-- 📊 **Dual-Progress-Bar In-App Updater**: Dual-phase installation architecture with real-time download throughput tracking and focused progress transitions.
-- 🧹 **Repository & Engine Optimization**: Removed redundant root files and dead code for a cleaner, faster bundle.
+### 🚀 What's New in v5.9.9
+- 🔄 **Flawless Single-Click In-App Updates**: Fixed update loops by strictly validating downloaded installer target paths and preventing old cache execution.
+- ⚡ **Zero-Flicker Live Startup Preview**: Interactive live startup stages with guaranteed preview time before seamless cross-fade into Copilot.
+- 🛡️ **Race-Free Single Instance Launcher**: Resolved post-update multi-instance collisions using active WMI process detection.
+- 🌌 **Centered Cinematic Desktop Splash Screen**: Sized at `640px × 360px` with space-explorer artwork and high-contrast typography.
 - 🔕 **100% Silent Headless Updater**: Zero terminal or command-prompt windows during background package installations (`wscript.exe` with `SW_HIDE 0`).
 
 ### 🪟 1. For Windows

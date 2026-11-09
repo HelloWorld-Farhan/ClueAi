@@ -261,7 +261,7 @@
         <div class="brand-title">Clue AI</div>
       </div>
       <div class="brand-subtitle">AI Interview Intelligence Copilot</div>
-      <div class="brand-version">Version 5.9.8 &bull; 11/09/2026</div>
+      <div class="brand-version">Version 5.9.9 &bull; 11/09/2026</div>
     </div>
 
     <div class="footer-bar">
@@ -269,10 +269,35 @@
         <div class="loading-bar"></div>
       </div>
       <div class="status-row">
-        <span>Initializing engine and neural context...</span>
-        <span class="status-engine">Ready</span>
+        <span id="splash-status-text">Initializing neural intelligence engine...</span>
+        <span class="status-engine" id="splash-status-pct">18%</span>
       </div>
     </div>
   </div>
+  <script>
+    let pct = 15;
+    const statusEl = document.getElementById('splash-status-text');
+    const pctEl = document.getElementById('splash-status-pct');
+
+    const stages = [
+      { threshold: 35, text: "Initializing Core AI Neural Engine..." },
+      { threshold: 68, text: "Restoring Session Cache & Secure Storage..." },
+      { threshold: 90, text: "Preparing Clue AI Copilot Interface..." },
+      { threshold: 100, text: "Engine Ready &bull; Launching Clue AI..." }
+    ];
+
+    setInterval(() => {
+      pct += Math.floor(Math.random() * 5) + 3;
+      if (pct > 99) pct = 99;
+      if (pctEl) pctEl.textContent = pct + "%";
+
+      for (const stage of stages) {
+        if (pct <= stage.threshold) {
+          if (statusEl) statusEl.innerHTML = stage.text;
+          break;
+        }
+      }
+    }, 45);
+  </script>
 </body>
 </html>
