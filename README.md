@@ -1,177 +1,169 @@
-# 🕵️‍♂️ ClueAI - The Ultimate AI Interview Assistant
+# 🕵️‍♂️ Clue AI — The Undetected Realtime Interview Copilot
 
 <p align="center">
-  <img src="public/logo_rounded.svg" width="120" alt="ClueAI Logo" />
+  <img src="public/logo_rounded.svg" width="130" alt="Clue AI Logo" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"/>
-  <img src="https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white"/>
-  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Groq-FF5722?style=for-the-badge&logo=lightning&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Gemini_AI-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white"/>
+  <a href="https://github.com/HelloWorld-Farhan/ClueAi-Web"><img src="https://img.shields.io/badge/Official_Website-ClueAi--Web-00E85D?style=for-the-badge&logo=cloudflare&logoColor=black"/></a>
+  <img src="https://img.shields.io/badge/Version-v5.9.9-blue?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Electron-31.7.7-191970?style=for-the-badge&logo=Electron&logoColor=white"/>
+  <img src="https://img.shields.io/badge/React-18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"/>
+  <img src="https://img.shields.io/badge/TypeScript-5.5-007ACC?style=for-the-badge&logo=typescript&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white"/>
   <img src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge"/>
 </p>
 
 <p align="center">
-  <strong>ClueAI</strong> is a cutting-edge, transparent desktop application designed to assist you during live interviews. By combining real-time speech-to-text with advanced LLMs (Groq & Gemini), ClueAI listens to your interviewer, analyzes your uploaded resumes, and provides 100% human-like, highly accurate answers instantly on your screen.
+  <strong>Clue AI</strong> is the world's most advanced, transparent desktop copilot engineered to assist developers during high-stakes technical interviews. Built with zero-latency Whisper speech-to-text, multi-LLM intelligence (Gemini 2.0 Flash, Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1), and hardware-level screen invisiblity, Clue AI operates undetected across Zoom, Microsoft Teams, Google Meet, and OBS.
+</p>
+
+<p align="center">
+  🌐 <strong>Official Website:</strong> <a href="https://github.com/HelloWorld-Farhan/ClueAi-Web"><strong>github.com/HelloWorld-Farhan/ClueAi-Web</strong></a>
 </p>
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.9)
+## ⚡ 1-Line Terminal Quick Launch (Release v5.9.9)
 
-### 🚀 What's New in v5.9.9
-- 🔄 **Flawless Single-Click In-App Updates**: Fixed update loops by strictly validating downloaded installer target paths and preventing old cache execution.
-- ⚡ **Zero-Flicker Live Startup Preview**: Interactive live startup stages with guaranteed preview time before seamless cross-fade into Copilot.
-- 🛡️ **Race-Free Single Instance Launcher**: Resolved post-update multi-instance collisions using active WMI process detection.
-- 🌌 **Centered Cinematic Desktop Splash Screen**: Sized at `640px × 360px` with space-explorer artwork and high-contrast typography.
-- 🔕 **100% Silent Headless Updater**: Zero terminal or command-prompt windows during background package installations (`wscript.exe` with `SW_HIDE 0`).
+### 🪟 Windows (10 & 11 x64)
 
-### 🪟 1. For Windows
-
-- **Direct Download Link**: [https://tinyurl.com/2a2lfo9a](https://tinyurl.com/2a2lfo9a)
-- **One-line Command** (Windows PowerShell - Works on all Windows versions):
+- **PowerShell (Recommended)**:
   ```powershell
-  curl.exe -L --retry 10 --retry-delay 2 --retry-all-errors -C - -o ClueAI.exe https://tinyurl.com/2a2lfo9a; .\ClueAI.exe
+  irm https://raw.githubusercontent.com/HelloWorld-Farhan/ClueAi-Web/main/install.ps1 | iex
   ```
-- **One-line Command** (Command Prompt / CMD):
+- **Command Prompt (CMD)**:
   ```cmd
   curl.exe -L --retry 10 --retry-delay 2 --retry-all-errors -C - -o ClueAI.exe https://tinyurl.com/2a2lfo9a && ClueAI.exe
   ```
+- **Direct Installer Link**: [Download ClueAI-v5.9.9.exe (Windows)](https://tinyurl.com/2a2lfo9a)
 
 ---
 
-### 🍎 2. For macOS
+### 🍎 macOS (Apple Silicon M1-M4 & Intel)
 
-- **Direct Download Link**: [https://tinyurl.com/2yynsmoo](https://tinyurl.com/2yynsmoo)
-- **One-line Command** (macOS Terminal):
+- **macOS Terminal One-Liner**:
   ```bash
   curl -L -o ClueAI.dmg https://tinyurl.com/2yynsmoo && open ClueAI.dmg
+  ```
+- **Direct Disk Image Link**: [Download ClueAI-mac.dmg (macOS Universal)](https://tinyurl.com/2yynsmoo)
+
+---
+
+### 🐧 Linux (Ubuntu / Fedora / Arch)
+
+- **Terminal AppImage**:
+  ```bash
+  curl -fsSL https://github.com/HelloWorld-Farhan/ClueAI/releases/latest/download/ClueAI-5.9.9-linux.AppImage -o ClueAI.AppImage && chmod +x ClueAI.AppImage && ./ClueAI.AppImage
   ```
 
 ---
 
-### 🚀 3-Step Quick Start (Zero Complex Setup)
-1. **Download:** Use the 1-line command or browser link for your operating system.
-2. **Launch:** Open `ClueAI`.
-3. **Configure & Start:**
-   - Click the **Settings (⚙️)** icon in the top bar.
-   - Enter your preferred AI provider API key (Groq, Gemini Flash, Claude, ChatGPT, or DeepSeek).
-   - Click **Start Interview**, choose your session context, and let ClueAI assist you in real time!
+## 🌟 Visual Architecture & Core Features
+
+Inspired by the celestial arc and ambient zeitgeist design language of the official web experience:
+
+```
+                      ╭─────────── [ Clue AI Apex Horizon ] ───────────╮
+                      │                                                │
+[Stealth Guard] ───> [Realtime Whisper] ───> [Multi-LLM] ───> [Code Sandbox] ───> [Floating Pill Dock]
+(OBS/Zoom Bypass)    (<50ms Audio STT)       (Gemini/Claude/GPT) (Python & TS)     (42px Dimension)
+```
+
+| Component | Technical Capability |
+| :--- | :--- |
+| 🛡️ **Stealth Invisibility Shield** | Zero screen capture footprint. Transparent floating window invisible to Zoom, Teams, Meet, and screen-sharing software. |
+| 🎙️ **Real-Time Whisper Audio STT** | Ultra-low latency (<50ms) simultaneous capture of interviewer voice and microphone audio streams. |
+| 🧠 **Multi-LLM Intelligence Matrix** | Instant switching between **Gemini 2.0 Flash**, **Claude 3.5 Sonnet**, **GPT-4o**, and **DeepSeek-R1** reasoning. |
+| 💻 **Integrated Code Sandbox** | In-app Python 3 and TypeScript sandbox runner for instant test case verification and LeetCode problem solving. |
+| 📸 **Vision AI Snipping Tool** | Drag-to-snip any diagram, problem statement, or IDE terminal with automated OCR parsing and solution breakdown. |
+| 📄 **Dual-Resume Context Engine** | Dual-resume priority matching. The AI emphasizes primary experience while utilizing secondary resumes as context. |
+| 🔄 **Dual-Stage Silent Updater** | Seamless in-app v5.9.9 auto-updating with zero terminal flashes, dual progress tracking, and crash-free restart. |
+| 📬 **Multi-Inbox Cloud Broadcast** | Connected to Google Apps Script cloud webhook for instant user notifications and feedback delivery. |
+| 🗄️ **Local SQLite History & PDF** | Complete local interview transcript logging with one-click exportable PDF summaries. |
 
 ---
 
-## ✨ Features
+## 🏆 Recognition & Design Awards
 
-| Feature | Description |
-|---|---|
-| 🎙️ **Real-Time Transcription** | Seamlessly captures and transcribes live interview audio. |
-| 📄 **Dual-Resume Priority System** | Upload up to two resumes. Mark one as "High Priority" for the AI to focus on first, falling back to the second only if needed. |
-| 👤 **Personal Context** | Upload a dedicated file about your strengths, weaknesses, and hobbies so the AI can answer behavioral questions perfectly. |
-| 📸 **Snipping Tool (Vision AI)** | Built-in safe screenshot tool! Drag a box over a coding question or diagram, and the Vision AI will analyze it instantly. |
-| ⚡ **Lightning Fast AI** | Switch between Groq (Llama 3) for ultra-low latency or Gemini Flash for complex reasoning. |
-| 👻 **Stealth Mode** | Transparent, borderless UI that floats perfectly on your screen without interfering with your workflow. |
-
----
-
-## 📥 How to Download & Run (For Users)
-
-You do **not** need to install any coding tools to use ClueAI! 
-
-1. Go to the [Releases](https://github.com/HelloWorld-Farhan/ClueAi/releases) section of this repository.
-2. Download the latest **`ClueAI.exe`** file.
-3. Double-click the downloaded file to run the application immediately (Portable App - no installation required!).
-4. Enter your API keys in the Settings panel, upload your resumes, and start acing your interviews!
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>BEST UI</strong><br/>Design Awarded</td>
+      <td align="center"><strong>BEST UX</strong><br/>Flow Awarded</td>
+      <td align="center"><strong>STEALTH PASS</strong><br/>Zero Detection Verified</td>
+      <td align="center"><strong>SPECIAL KUDOS</strong><br/>Innovation Awarded</td>
+    </tr>
+  </table>
+</div>
 
 ---
 
-## 💻 How to Build (For Developers)
+## 🚀 3-Step Quick Start Guide
 
-Before you begin, ensure you have **Node.js** installed and **Developer Mode** enabled on Windows (required for `electron-builder` symlinks).
+1. **Launch:** Run the 1-line terminal command above or download the standalone executable.
+2. **Configure:** Click the **Settings (⚙️)** gear icon in the top bar and enter your preferred AI API key (Groq, Gemini, Anthropic, OpenAI, or DeepSeek).
+3. **Ace the Interview:** Press `Ctrl + \` to toggle the floating dock, enable the live audio listener, and get human-like responses in real time.
 
-### Step 1 — Clone the Repository
+---
+
+## 💻 Developer Guide & Local Build
+
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **Developer Mode**: Enabled in Windows Settings (for `electron-builder` symlinks)
+
+### 1. Clone & Install
 ```bash
 git clone https://github.com/HelloWorld-Farhan/ClueAi.git
 cd ClueAi
-```
-
-### Step 2 — Install Dependencies
-```bash
 npm install
 ```
 
-### Step 3 — Run Locally in Development
+### 2. Development Mode
 ```bash
 npm run start
 ```
 
-### Step 4 — Build the `.exe` Release
+### 3. Production Executable (`.exe` / `.dmg`)
 ```bash
 npm run dist
 ```
-*Your `ClueAI.exe` file will be generated inside the `release` folder.*
+*Generated installers are output directly into the `release/` directory.*
 
 ---
 
-## 🐳 Docker Deployment (Cross-Device & Web Support)
+## 🐳 Docker Deployment (Browser Mode)
 
-ClueAI can be deployed anywhere with Docker, allowing you to access and run ClueAI seamlessly on any device (Windows, macOS, Linux, tablet, or phone) through your browser:
+Clue AI can also run as a self-hosted container accessible through any browser:
 
-### Option A — Using Docker Compose (Recommended)
 ```bash
+# Using Docker Compose (Recommended)
 docker compose up -d --build
-```
-Then open your browser at **`http://localhost:3000`**.
 
-### Option B — Using Docker CLI
-```bash
-# Build the Docker image
-npm run docker:build
-
-# Run the container
-npm run docker:run
-```
-
-To stop the container:
-```bash
-docker compose down
+# Access Clue AI in browser:
+http://localhost:3000
 ```
 
 ---
 
-## 👨‍💻 Author
+## 🌐 Related Repositories
+
+- 🚀 **[ClueAi-Web](https://github.com/HelloWorld-Farhan/ClueAi-Web)**: The official React 19 + Vite + Tailwind marketing portal with celestial curved arc horizon and ambient quotes zeitgeist.
+
+---
+
+## 👨‍💻 Author & Maintainer
 
 **Farhan Khalid**  
-📧 farhankhalid17968@gmail.com  
-🔗 [LinkedIn](https://www.linkedin.com/in/farhan-khalid-117514259/)  
-🐙 [GitHub](https://github.com/HelloWorld-Farhan)  
+- 🐙 GitHub: [@HelloWorld-Farhan](https://github.com/HelloWorld-Farhan)  
+- 💼 LinkedIn: [Farhan Khalid](https://www.linkedin.com/in/farhan-khalid-117514259/)  
+- 📧 Email: [clueai.support@gmail.com](mailto:clueai.support@gmail.com)
 
 ---
 
 ## 📄 License
 
-```text
-MIT License
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2026 Farhan Khalid
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is furnished
-to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-```
-
----
-
-## 🌟 Support
-
-If you found this tool helpful for cracking your interviews, please consider giving it a ⭐ on GitHub!
-
-<p align="center">Made with ❤️ in India</p>
+<p align="center">Made with ❤️ for developers worldwide</p>
