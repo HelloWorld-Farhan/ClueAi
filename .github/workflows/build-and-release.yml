@@ -22,6 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
+    env:
+      ELECTRON_MIRROR: "https://npmmirror.com/mirrors/electron/"
+      ELECTRON_BUILDER_BINARIES_MIRROR: "https://npmmirror.com/mirrors/electron-builder-binaries/"
 
     steps:
       - name: Checkout repository
@@ -52,6 +55,26 @@ jobs:
             BUILDER_CACHE="$LOCALAPPDATA/electron-builder/Cache/electron"
             mkdir -p "$BUILDER_CACHE"
             cp "$TARGET_ZIP" "$BUILDER_CACHE/" 2>/dev/null || true
+
+            # Pre-cache winCodeSign
+            WCS_DIR="$LOCALAPPDATA/electron-builder/Cache/winCodeSign"
+            mkdir -p "$WCS_DIR"
+            WCS_ZIP="$WCS_DIR/winCodeSign-2.6.0.7z"
+            if [ ! -f "$WCS_ZIP" ]; then
+              echo "Pre-fetching winCodeSign..."
+              curl -fL --retry 5 --retry-delay 3 --retry-all-errors -o "$WCS_ZIP" "https://npmmirror.com/mirrors/electron-builder-binaries/winCodeSign-2.6.0/winCodeSign-2.6.0.7z" || \
+              curl -fL --retry 5 --retry-delay 3 -o "$WCS_ZIP" "https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z" || true
+            fi
+
+            # Pre-cache nsis
+            NSIS_DIR="$LOCALAPPDATA/electron-builder/Cache/nsis"
+            mkdir -p "$NSIS_DIR"
+            NSIS_ZIP="$NSIS_DIR/nsis-3.0.4.1.7z"
+            if [ ! -f "$NSIS_ZIP" ]; then
+              echo "Pre-fetching nsis..."
+              curl -fL --retry 5 --retry-delay 3 --retry-all-errors -o "$NSIS_ZIP" "https://npmmirror.com/mirrors/electron-builder-binaries/nsis-3.0.4.1/nsis-3.0.4.1.7z" || \
+              curl -fL --retry 5 --retry-delay 3 -o "$NSIS_ZIP" "https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z" || true
+            fi
           else
             CACHE_DIR="$HOME/Library/Caches/electron"
             mkdir -p "$CACHE_DIR"
