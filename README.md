@@ -20,13 +20,13 @@
 
 ---
 
-## ⚡ Quick Download & Instant Setup (Latest Release v5.9.5)
+## ⚡ Quick Download & Instant Setup (Latest Release v5.9.6)
 
-### 🚀 What's New in v5.9.5
-- 🚀 **Turbocharged Instant Startup Architecture**: Instant single-instance guard, tuned Chromium V8 bytecode caching flags, and deferred audio/updater subsystem initialization deliver near-zero cold-boot startup latency.
-- 📦 **Vite Code Splitting & Payload Minimization**: Dynamic manual vendor chunk splitting (`syntax-highlighter`, `markdown`, `ai-sdks`, `icons`, `vendor`) reduces the main critical bundle footprint by over 70%.
-- ⚡ **Instant Inline Dock Skeleton**: Inline pre-rendered glassmorphic skeleton displays on the first frame (~15ms) while React hydrates.
-- 🔄 **Deferred Startup Background Tasks**: Update checks and disk scans are deferred by 3.5 seconds to dedicate 100% CPU and network resources to the initial UI paint.
+### 🚀 What's New in v5.9.6
+- 🌟 **Instant Cosmic Branded Splash Screen**: A high-performance, frameless rounded splash window renders in `< 10ms` upon launch, eliminating all empty-box lag before transitioning seamlessly into the fully hydrated copilot interface.
+- 🔕 **100% Headless, Silent In-App Updates**: Replaced batch command scripts with an in-memory Windows Script Host runner (`wscript.exe` with `SW_HIDE`), completely eliminating all terminal/cmd window flashes during downloads and installations.
+- 📬 **Universal Multi-Inbox Registration & Update Broadcasts**: Every verified or saved user email address is automatically registered with the Google Apps Script cloud webhook backend, guaranteeing that all user inboxes receive release announcements.
+- ⚙️ **Dynamic Auto-Versioning Backend**: Google Apps Script automatically discovers new release versions from GitHub without requiring manual hardcoded script updates.
 
 ### 🪟 1. For Windows
 

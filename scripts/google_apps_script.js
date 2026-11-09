@@ -19,7 +19,7 @@
 const SUPPORT_EMAIL = "clueai.support@gmail.com";
 const DEVELOPER_EMAIL = "farhankhalid17968@gmail.com";
 const PORTFOLIO_URL = "https://farhan-khalid-portfolio.vercel.app/";
-const BASE_FALLBACK_VERSION = "5.9.5";
+const BASE_FALLBACK_VERSION = "5.9.6";
 const DEFAULT_VERSION = BASE_FALLBACK_VERSION;
 
 /**
@@ -670,11 +670,49 @@ function doPost(e) {
     }
 
     // ----------------------------------------------------
+    // ACTION 2.5: REGISTER USER INBOX (MULTI-ACCOUNT SYNC)
+    // ----------------------------------------------------
+    if (type === 'register_user' || type === 'register') {
+      const email = (data.to_email || data.email || data.user_email || '').trim();
+      const userName = (data.user_name || data.name || '').trim() || 'ClueAI User';
+
+      if (email && email.includes('@')) {
+        registerUserEmail(email, userName);
+      }
+
+      // Also support syncing a bulk list of emails if provided
+      if (Array.isArray(data.saved_emails)) {
+        data.saved_emails.forEach(e => {
+          if (e && typeof e === 'string' && e.includes('@')) {
+            registerUserEmail(e.trim(), userName);
+          }
+        });
+      }
+
+      const totalCount = getRegisteredUsers().length;
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "User inbox registered successfully",
+        totalRegisteredUsers: totalCount
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ----------------------------------------------------
     // ACTION 3: BROADCAST UPDATE NOTIFICATION TO ALL USERS
     // ----------------------------------------------------
     if (type === 'broadcast_update') {
       const version = getDynamicAppVersion(data.version || data.app_version);
-      const highlights = data.highlights || data.release_notes || data.summary || "Performance optimizations, resilient 1-click update installations with live progress, zero-lag relaunch, and turbocharged startup speed.";
+      const highlights = data.highlights || data.release_notes || data.summary || "Performance optimizations, instant cosmic splash screen, zero-terminal silent updates, and multi-inbox broadcast notification delivery.";
+
+      // If caller passed extra_emails or all_emails, register them before broadcasting
+      const extraList = Array.isArray(data.extra_emails) ? data.extra_emails :
+                        (typeof data.extra_emails === 'string' ? data.extra_emails.split(',') : []);
+      extraList.forEach(e => {
+        if (e && typeof e === 'string' && e.includes('@')) {
+          registerUserEmail(e.trim(), "ClueAI User");
+        }
+      });
+
       const res = broadcastNewUpdate(version, highlights);
       const msg = typeof res === 'object' ? res.message : res;
       const recipients = typeof res === 'object' ? res.sentEmails : [];

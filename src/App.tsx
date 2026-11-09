@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.5');
+  const [appVersion, setAppVersion] = useState('5.9.6');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -624,6 +624,18 @@ function App() {
         localStorage.setItem('clueai_saved_emails', JSON.stringify(savedList));
       }
       localStorage.setItem('clueai_saved_email', email.trim());
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'register_user',
+          email: clean,
+          user_name: localStorage.getItem('clueai_username') || 'ClueAI User',
+          app_version: '5.9.6'
+        })
+      }).catch(() => {});
     } catch {}
   }, []);
 
@@ -2362,6 +2374,33 @@ function App() {
 
   // Auto-updater IPC event listeners & version retrieval & initial checks
   useEffect(() => {
+    // Notify main process that React UI has painted so splash window smoothly closes
+    try {
+      ipcRenderer.send('app-mounted');
+    } catch {}
+
+    // Auto-sync all local inboxes with Google Apps Script registered user pool for update broadcasts
+    try {
+      const primaryEmail = localStorage.getItem('clueai_user_email');
+      const savedEmails: string[] = JSON.parse(localStorage.getItem('clueai_saved_emails') || '[]');
+      const verifiedEmails: string[] = JSON.parse(localStorage.getItem('clueai_verified_emails') || '[]');
+      const allEmails = Array.from(new Set([primaryEmail, ...savedEmails, ...verifiedEmails].filter(Boolean) as string[]));
+      if (allEmails.length > 0) {
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'register_user',
+            email: primaryEmail || allEmails[0],
+            saved_emails: allEmails,
+            user_name: localStorage.getItem('clueai_username') || 'ClueAI User',
+            app_version: '5.9.6'
+          })
+        }).catch(() => {});
+      }
+    } catch {}
+
     ipcRenderer.invoke('get-app-version').then((v: string) => {
       if (v) setAppVersion(v);
     }).catch(() => { });
@@ -3968,7 +4007,7 @@ function App() {
           </div>
         </div>
         <div class="brand-badges">
-          <span class="badge-version">V5.9.5</span>
+          <span class="badge-version">V5.9.6</span>
           <span class="badge-status">Export Verified</span>
         </div>
       </div>

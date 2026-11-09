@@ -2,8 +2,8 @@
 !include "LogicLib.nsh"
 
 !macro customInit
-  ; Terminate running installed ClueAI instances instantly so binaries are never locked during update
-  nsExec::Exec 'taskkill /F /IM ClueAI.exe'
+  ; Terminate running installed ClueAI instances silently without console window popups
+  nsExec::ExecToNull 'taskkill /F /IM ClueAI.exe'
   Sleep 500
 !macroend
 

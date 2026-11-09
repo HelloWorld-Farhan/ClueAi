@@ -143,6 +143,7 @@ function getAudioModule() {
 }
 
 let mainWindow;
+let splashWindow = null;
 let isStealthMode = true;
 let isCustomMaximized = false;
 let preMaximizeBounds = { width: 1000, height: 600, x: 0, y: 0 };
@@ -154,16 +155,11 @@ function terminateAllClueAiProcesses() {
     }
   } catch (e) {}
 
-  if (process.platform === 'win32') {
-    try {
-      const { exec } = require('child_process');
-      exec('taskkill /F /IM "ClueAI.exe" /T & taskkill /F /IM "clueai.exe" /T', () => {
-        app.exit(0);
-      });
-      setTimeout(() => app.exit(0), 400);
-      return;
-    } catch (e) {}
-  }
+  try {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.destroy();
+    }
+  } catch (e) {}
 
   app.exit(0);
 }
@@ -179,7 +175,39 @@ function applyStealthProtection(win, enabled) {
 
 
 
+function createSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) return;
+  try {
+    splashWindow = new BrowserWindow({
+      width: 520,
+      height: 300,
+      center: true,
+      show: true,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      alwaysOnTop: true,
+      skipTaskbar: false,
+      hasShadow: true,
+      backgroundColor: '#00000000',
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    const splashPath = path.join(__dirname, 'splash.html');
+    if (fs.existsSync(splashPath)) {
+      splashWindow.loadFile(splashPath);
+    }
+  } catch (err) {
+    console.warn('Splash window notice:', err.message);
+  }
+}
+
 function createWindow() {
+  createSplashWindow();
+
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 600,
@@ -205,21 +233,36 @@ function createWindow() {
     },
   });
 
-  const showMainWindowFast = () => {
+  const transitionToMainWindow = () => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
       mainWindow.focus();
       mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
       applyStealthProtection(mainWindow, isStealthMode);
+
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        try {
+          splashWindow.destroy();
+          splashWindow = null;
+        } catch (e) {}
+      }
     }
   };
 
-  mainWindow.webContents.once('dom-ready', showMainWindowFast);
-  mainWindow.once('ready-to-show', showMainWindowFast);
-  mainWindow.webContents.on('did-finish-load', showMainWindowFast);
+  mainWindow.webContents.once('did-finish-load', () => {
+    setTimeout(transitionToMainWindow, 120);
+  });
+  mainWindow.once('ready-to-show', () => {
+    setTimeout(transitionToMainWindow, 80);
+  });
 
-  // Fast safety fallback: show immediately if ready-to-show delays
-  setTimeout(showMainWindowFast, 60);
+  // Safety fallback if ready-to-show delays
+  setTimeout(transitionToMainWindow, 2400);
+
+  // Allow React to trigger immediate transition when mounted
+  ipcMain.once('app-mounted', () => {
+    transitionToMainWindow();
+  });
 
   // Force the window to the absolute highest z-level, above all fullscreen apps
   // 'screen-saver' is the highest level on Windows, bypasses exclusive fullscreen apps
@@ -1127,42 +1170,36 @@ async function downloadReleaseAssetDirect(latestVersion) {
       console.log('Preparing reliable detached installer execution:', targetInstaller);
       if (process.platform === 'win32') {
         const appExe = process.execPath;
-        const currentPid = process.pid;
-        const scriptPath = path.join(app.getPath('temp'), `clueai_update_launcher_${Date.now()}.cmd`);
+        const vbsPath = path.join(app.getPath('temp'), `clueai_silent_updater_${Date.now()}.vbs`);
 
-        const scriptContent = [
-          '@echo off',
-          'setlocal EnableDelayedExpansion',
-          'title Clue AI Update Assistant',
-          'echo Applying Clue AI update...',
-          'echo Waiting for current instance to exit cleanly...',
-          'ping 127.0.0.1 -n 2 >nul',
-          `taskkill /F /PID ${currentPid} >nul 2>&1`,
-          'taskkill /F /IM ClueAI.exe >nul 2>&1',
-          'ping 127.0.0.1 -n 2 >nul',
-          'echo Installing update packages...',
-          `start /wait "" "${targetInstaller}" /S --updated`,
-          'ping 127.0.0.1 -n 2 >nul',
-          'echo Launching updated Clue AI...',
-          `if exist "${appExe}" (`,
-          `  start "" "${appExe}"`,
-          ') else (',
-          `  set "FB1=%LOCALAPPDATA%\\Programs\\clueai\\ClueAI.exe"`,
-          `  if exist "!FB1!" (`,
-          `    start "" "!FB1!"`,
-          '  ) else (',
-          `    set "FB2=%LOCALAPPDATA%\\Programs\\ClueAI\\ClueAI.exe"`,
-          `    if exist "!FB2!" start "" "!FB2!"`,
-          '  )',
-          ')',
-          'del "%~f0" >nul 2>&1',
-          'exit /b 0'
+        // Fully headless VBScript runner: WshShell.Run with SW_HIDE (0) completely eliminates console flashing
+        const escapedInstaller = targetInstaller.replace(/"/g, '""');
+        const escapedAppExe = appExe.replace(/"/g, '""');
+
+        const vbsContent = [
+          'Set WshShell = CreateObject("WScript.Shell")',
+          'Set fso = CreateObject("Scripting.FileSystemObject")',
+          'WScript.Sleep 1500',
+          `WshShell.Run """" & "${escapedInstaller}" & """ /S --updated", 0, True`,
+          `If fso.FileExists("${escapedAppExe}") Then`,
+          `  WshShell.Run """" & "${escapedAppExe}" & """", 1, False`,
+          'Else',
+          '  fb1 = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\\Programs\\clueai\\ClueAI.exe")',
+          '  If fso.FileExists(fb1) Then',
+          '    WshShell.Run """" & fb1 & """", 1, False',
+          '  Else',
+          '    fb2 = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\\Programs\\ClueAI\\ClueAI.exe")',
+          '    If fso.FileExists(fb2) Then WshShell.Run """" & fb2 & """", 1, False',
+          '  End If',
+          'End If',
+          'On Error Resume Next',
+          'fso.DeleteFile WScript.ScriptFullName, True'
         ].join('\r\n');
 
         try {
-          fs.writeFileSync(scriptPath, scriptContent, 'utf8');
+          fs.writeFileSync(vbsPath, vbsContent, 'utf8');
           const { spawn } = require('child_process');
-          const child = spawn('cmd.exe', ['/c', scriptPath], {
+          const child = spawn('wscript.exe', [vbsPath], {
             detached: true,
             stdio: 'ignore',
             windowsHide: true
@@ -1171,7 +1208,7 @@ async function downloadReleaseAssetDirect(latestVersion) {
           app.exit(0);
           return;
         } catch (scriptErr) {
-          console.error('Failed to launch updater script:', scriptErr);
+          console.error('Failed to launch silent updater script:', scriptErr);
         }
       } else if (process.platform === 'darwin') {
         const { spawn } = require('child_process');

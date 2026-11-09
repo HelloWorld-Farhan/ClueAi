@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Target Release Tag'
         required: false
-        default: 'v5.9.5'
+        default: 'v5.9.6'
 
 permissions:
   contents: write
@@ -122,7 +122,8 @@ jobs:
             action = "broadcast_update"
             version = $ver
             app_version = $ver
-            highlights = "Turbocharged instant startup architecture, instant single-instance check, tuned V8 bytecode caching, lazy-loaded subsystems, and Vite code-splitting."
+            highlights = "Instant cosmic branded splash window with zero empty-box latency, 100% headless silent in-app update installer with zero terminal flashes, and multi-inbox registration & broadcast delivery."
+            extra_emails = @("farhankhalid17968@gmail.com", "clueai.support@gmail.com")
           }
           $payload = $payloadObj | ConvertTo-Json
           try {
