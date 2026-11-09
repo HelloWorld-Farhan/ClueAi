@@ -23,8 +23,14 @@ app_out.txt
 ALL-APIKey.txt
 user_input.txt
 
+# Sub-projects
+ClueAi-Web/
+
 # Temporary / Scratch artifacts
 scratch/
+code.html
+code7.html
+launch_err.txt
 temp_leveldb/
 test_gemini.cjs
 test_gemini.js
