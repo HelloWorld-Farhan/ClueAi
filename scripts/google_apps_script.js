@@ -625,12 +625,25 @@ function doPost(e) {
     // ----------------------------------------------------
     if (type === 'send_otp' || type === 'otp') {
       const email = (data.to_email || data.email || data.user_email || '').trim();
-      const otp = (data.otp || '').toString().trim();
+      let otp = (data.otp || '').toString().trim();
       const userName = (data.user_name || data.name || '').trim() || 'ClueAI User';
 
-      if (!email || !otp) {
-        return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing email or OTP" }))
+      if (!email || !email.includes('@')) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Valid email address is required" }))
           .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // Generate secure 6-digit numeric OTP if not provided
+      if (!otp) {
+        otp = String(Math.floor(100000 + Math.random() * 900000));
+      }
+
+      // Cache OTP in ScriptCache for 10 minutes (600 seconds)
+      try {
+        const cache = CacheService.getScriptCache();
+        cache.put('clueai_otp_' + email.toLowerCase(), otp, 600);
+      } catch (cacheErr) {
+        Logger.log('OTP cache save warning: ' + cacheErr);
       }
 
       registerUserEmail(email, userName);
@@ -638,12 +651,40 @@ function doPost(e) {
       const otpHtml = getOtpEmailHtml(otp, userName, email, appVersion);
       MailApp.sendEmail({
         to: email,
-        subject: `ClueAI: Your Verification Code is ${otp}`,
+        subject: `ClueAI Verification Code: ${otp}`,
         htmlBody: otpHtml,
         name: "ClueAI Verification"
       });
 
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "OTP sent successfully" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ----------------------------------------------------
+    // ACTION 1.5: VERIFY OTP CODE
+    // ----------------------------------------------------
+    if (type === 'verify_otp' || type === 'check_otp') {
+      const email = (data.to_email || data.email || data.user_email || '').trim().toLowerCase();
+      const userOtp = (data.otp || '').toString().trim();
+
+      if (!email || !userOtp) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "error", verified: false, message: "Missing email or OTP code" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const cache = CacheService.getScriptCache();
+      const cachedOtp = cache.get('clueai_otp_' + email);
+
+      if (cachedOtp && cachedOtp === userOtp) {
+        try {
+          cache.remove('clueai_otp_' + email);
+          cache.put('clueai_verified_' + email, 'true', 3600);
+        } catch (e) {}
+        return ContentService.createTextOutput(JSON.stringify({ status: "success", verified: true, message: "Email verified successfully" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "error", verified: false, message: "Invalid or expired verification code" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -887,7 +928,8 @@ function doPost(e) {
       const userEmail = (data.user_email || data.email || data.to_email || "Anonymous").trim();
       const userName = (data.user_name || data.name || "").trim() || "User";
       const category = data.category || "General Feedback";
-      const description = data.description || "No description provided.";
+      const rating = data.rating !== undefined ? data.rating : 5;
+      const description = data.comments || data.description || "No description provided.";
       const timestamp = new Date().toLocaleString();
       const hasImage = Boolean(data.image_base64);
 
@@ -934,12 +976,16 @@ function doPost(e) {
                 <td style="padding:6px 20px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Candidate Name</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Sender Name</td>
                       <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">${userName}</td>
                     </tr>
                     <tr>
-                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">User Email</td>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Verified Email</td>
                       <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#0284c7;"><a href="mailto:${userEmail}" style="color:#0284c7;text-decoration:none;">${userEmail}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Star Rating</td>
+                      <td align="right" style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:14px;font-weight:800;color:#f59e0b;">⭐ ${rating} / 5 Stars</td>
                     </tr>
                     <tr>
                       <td style="padding:13px 0;border-bottom:1px solid #e2e8f0;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#475569;">Category</td>
