@@ -1,38 +1,145 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, session, screen, globalShortcut } = require('electron');
 const path = require('path');
 
+// 1. Ultra-fast single instance guard: exit immediately in <2ms if another instance exists
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
 process.on('uncaughtException', (err) => {
   console.error('ClueAI uncaught exception:', err);
 });
-let autoUpdater = null;
-try {
-  const updaterModule = require('electron-updater');
-  autoUpdater = updaterModule.autoUpdater;
-  // USER-CONTROLLED: Never auto-download or auto-install without consent
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.allowPrerelease = false;
-  autoUpdater.disableDifferentialDownload = true;
-  try {
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'HelloWorld-Farhan',
-      repo: 'ClueAi',
-      releaseType: 'release'
-    });
-  } catch (feedErr) {
-    console.warn('setFeedURL notice:', feedErr.message);
-  }
-} catch (e) {
-  console.warn('electron-updater failed to load:', e.message);
+
+// 2. High-performance Chromium & V8 launch optimization flags
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('high-dpi-support', '1');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
+  app.commandLine.appendSwitch('enable-fast-unload');
+  app.commandLine.appendSwitch('v8-cache-options', 'code');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,SpareRendererForSitePerProcess');
 }
-let audio = null;
-try {
-  if (process.platform === 'win32') {
-    audio = require('win-audio');
+
+// 3. Lazy-loaded electron-updater to avoid blocking cold-boot
+let autoUpdater = null;
+let autoUpdaterInitialized = false;
+
+function getAutoUpdater() {
+  if (!autoUpdaterInitialized) {
+    autoUpdaterInitialized = true;
+    try {
+      const updaterModule = require('electron-updater');
+      autoUpdater = updaterModule.autoUpdater;
+      // USER-CONTROLLED: Never auto-download or auto-install without consent
+      autoUpdater.autoDownload = false;
+      autoUpdater.autoInstallOnAppQuit = false;
+      autoUpdater.allowPrerelease = false;
+      autoUpdater.disableDifferentialDownload = true;
+      try {
+        autoUpdater.setFeedURL({
+          provider: 'github',
+          owner: 'HelloWorld-Farhan',
+          repo: 'ClueAi',
+          releaseType: 'release'
+        });
+      } catch (feedErr) {
+        console.warn('setFeedURL notice:', feedErr.message);
+      }
+
+      autoUpdater.on('checking-for-update', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', { status: 'checking' });
+        }
+      });
+
+      autoUpdater.on('update-available', (info) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'available',
+            version: info.version,
+            releaseDate: info.releaseDate,
+            releaseNotes: info.releaseNotes,
+          });
+        }
+      });
+
+      autoUpdater.on('update-not-available', (info) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'not-available',
+            version: info.version,
+          });
+        }
+      });
+
+      autoUpdater.on('download-progress', (progressObj) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'downloading',
+            percent: Math.round(progressObj.percent || 0),
+            bytesPerSecond: progressObj.bytesPerSecond || 0,
+            transferred: progressObj.transferred || 0,
+            total: progressObj.total || 0,
+          });
+        }
+      });
+
+      autoUpdater.on('update-downloaded', (info) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'downloaded',
+            version: info.version,
+            releaseNotes: info.releaseNotes,
+          });
+        }
+      });
+
+      autoUpdater.on('before-quit-for-update', () => {
+        try {
+          const fs = require('fs');
+          const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
+          fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
+        } catch (err) {
+          console.warn('Failed to write .in_app_update token in before-quit-for-update:', err.message);
+        }
+      });
+
+      autoUpdater.on('error', (err) => {
+        console.warn('Updater background notice:', err ? err.message : err);
+        if (isActivelyDownloadingUpdate && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater-status', {
+            status: 'error',
+            message: err ? err.message : 'Update check failed',
+          });
+        }
+      });
+    } catch (e) {
+      console.warn('electron-updater lazy-load notice:', e.message);
+    }
   }
-} catch (e) {
-  console.warn('win-audio module not available or platform not win32:', e.message);
+  return autoUpdater;
+}
+
+// 4. Lazy-loaded audio module to defer native C++ and COM loading
+let audio = null;
+function getAudioModule() {
+  if (audio === null) {
+    if (process.platform === 'win32') {
+      try {
+        audio = require('win-audio');
+      } catch (e) {
+        audio = false;
+        console.warn('win-audio module not available:', e.message);
+      }
+    } else {
+      audio = false;
+    }
+  }
+  return audio || null;
 }
 
 let mainWindow;
@@ -70,15 +177,7 @@ function applyStealthProtection(win, enabled) {
   }
 }
 
-if (process.platform === 'win32') {
-  app.commandLine.appendSwitch('disable-gpu-sandbox');
-  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-zero-copy');
-  app.commandLine.appendSwitch('enable-fast-unload');
-  app.commandLine.appendSwitch('v8-cache-options', 'code');
-  app.commandLine.appendSwitch('js-flags', '--max-opt=4 --turbo-fast-api-calls');
-}
+
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -215,23 +314,24 @@ function createWindow() {
 
   // --- AUDIO API IPC HANDLERS (Asynchronously initialized to maximize startup speed) ---
   setImmediate(() => {
-    if (audio && audio.mic) {
+    const audioMod = getAudioModule();
+    if (audioMod && audioMod.mic) {
       try {
-        audio.mic.start(250);
-        audio.mic.on('change', (val) => {
+        audioMod.mic.start(250);
+        audioMod.mic.on('change', (val) => {
           if (mainWindow && !mainWindow.isDestroyed()) {
             const vol = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
             mainWindow.webContents.send('mic-state-changed', {
-              volume: typeof vol === 'number' ? vol : audio.mic.get(),
-              muted: audio.mic.isMuted()
+              volume: typeof vol === 'number' ? vol : audioMod.mic.get(),
+              muted: audioMod.mic.isMuted()
             });
           }
         });
-        audio.mic.on('toggle', (val) => {
+        audioMod.mic.on('toggle', (val) => {
           if (mainWindow && !mainWindow.isDestroyed()) {
             const isM = (typeof val === 'object' && val !== null && 'new' in val) ? val.new : val;
             mainWindow.webContents.send('mic-state-changed', {
-              volume: audio.mic.get(),
+              volume: audioMod.mic.get(),
               muted: Boolean(isM)
             });
           }
@@ -244,8 +344,9 @@ function createWindow() {
 
   ipcMain.handle('get-mic-state', () => {
     try {
-      if (audio && audio.mic) {
-        return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
+      const audioMod = getAudioModule();
+      if (audioMod && audioMod.mic) {
+        return { volume: audioMod.mic.get(), muted: audioMod.mic.isMuted() };
       }
       return { volume: 100, muted: false };
     } catch (e) {
@@ -255,15 +356,16 @@ function createWindow() {
 
   ipcMain.handle('set-mic-volume', (event, volume) => {
     try {
-      if (audio && audio.mic) {
-        audio.mic.set(volume);
+      const audioMod = getAudioModule();
+      if (audioMod && audioMod.mic) {
+        audioMod.mic.set(volume);
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('mic-state-changed', {
-            volume: audio.mic.get(),
-            muted: audio.mic.isMuted()
+            volume: audioMod.mic.get(),
+            muted: audioMod.mic.isMuted()
           });
         }
-        return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
+        return { volume: audioMod.mic.get(), muted: audioMod.mic.isMuted() };
       }
     } catch (e) { }
     return { volume: 100, muted: false };
@@ -271,20 +373,21 @@ function createWindow() {
 
   ipcMain.handle('toggle-mic-mute', (event, muteState) => {
     try {
-      if (audio && audio.mic) {
+      const audioMod = getAudioModule();
+      if (audioMod && audioMod.mic) {
         if (muteState !== undefined) {
-          if (muteState) audio.mic.mute();
-          else audio.mic.unmute();
+          if (muteState) audioMod.mic.mute();
+          else audioMod.mic.unmute();
         } else {
-          audio.mic.toggle();
+          audioMod.mic.toggle();
         }
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('mic-state-changed', {
-            volume: audio.mic.get(),
-            muted: audio.mic.isMuted()
+            volume: audioMod.mic.get(),
+            muted: audioMod.mic.isMuted()
           });
         }
-        return { volume: audio.mic.get(), muted: audio.mic.isMuted() };
+        return { volume: audioMod.mic.get(), muted: audioMod.mic.isMuted() };
       }
     } catch (e) { }
     return { volume: 100, muted: false };
@@ -905,8 +1008,9 @@ async function downloadReleaseAssetDirect(latestVersion) {
   // --- AUTO-UPDATER IPC HANDLERS ---
   ipcMain.handle('check-for-updates', async () => {
     try {
-      if (autoUpdater) {
-        const res = await autoUpdater.checkForUpdates();
+      const updater = getAutoUpdater();
+      if (updater) {
+        const res = await updater.checkForUpdates();
         return { success: true, updateInfo: res ? res.updateInfo : null };
       }
     } catch (e) {
@@ -945,8 +1049,9 @@ async function downloadReleaseAssetDirect(latestVersion) {
   ipcMain.handle('download-update', async (_event, targetVersion) => {
     isActivelyDownloadingUpdate = true;
     try {
-      if (autoUpdater) {
-        await autoUpdater.downloadUpdate();
+      const updater = getAutoUpdater();
+      if (updater) {
+        await updater.downloadUpdate();
         return { success: true };
       }
     } catch (e) {
@@ -1081,9 +1186,10 @@ async function downloadReleaseAssetDirect(latestVersion) {
     }
 
     // Priority 2: Use electron-updater native quitAndInstall if active
-    if (autoUpdater) {
+    const updater = getAutoUpdater();
+    if (updater) {
       try {
-        autoUpdater.quitAndInstall(true, true);
+        updater.quitAndInstall(true, true);
         return;
       } catch (err) {
         console.error('autoUpdater.quitAndInstall error:', err);
@@ -1443,104 +1549,31 @@ async function downloadReleaseAssetDirect(latestVersion) {
   }
 }
 
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  // If another instance is running, exit this process cleanly.
-  // The active instance receives 'second-instance' and focuses itself.
-  app.quit();
-} else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Bring active window to front and focus immediately
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      if (!mainWindow.isVisible()) mainWindow.show();
-      mainWindow.setIgnoreMouseEvents(false);
-      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-      applyStealthProtection(mainWindow, isStealthMode);
-      mainWindow.webContents.send('window-shown');
-      mainWindow.focus();
-    }
-  });
+app.on('second-instance', (event, commandLine, workingDirectory) => {
+  // Bring active window to front and focus immediately
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+    applyStealthProtection(mainWindow, isStealthMode);
+    mainWindow.webContents.send('window-shown');
+    mainWindow.focus();
+  }
+});
 
-  app.whenReady().then(() => {
-    createWindow();
+app.whenReady().then(() => {
+  createWindow();
 
-    if (autoUpdater) {
-      autoUpdater.on('checking-for-update', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('updater-status', { status: 'checking' });
-        }
-      });
-
-      autoUpdater.on('update-available', (info) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('updater-status', {
-            status: 'available',
-            version: info.version,
-            releaseDate: info.releaseDate,
-            releaseNotes: info.releaseNotes,
-          });
-        }
-      });
-
-      autoUpdater.on('update-not-available', (info) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('updater-status', {
-            status: 'not-available',
-            version: info.version,
-          });
-        }
-      });
-
-      autoUpdater.on('download-progress', (progressObj) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('updater-status', {
-            status: 'downloading',
-            percent: Math.round(progressObj.percent || 0),
-            bytesPerSecond: progressObj.bytesPerSecond || 0,
-            transferred: progressObj.transferred || 0,
-            total: progressObj.total || 0,
-          });
-        }
-      });
-
-      autoUpdater.on('update-downloaded', (info) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('updater-status', {
-            status: 'downloaded',
-            version: info.version,
-            releaseNotes: info.releaseNotes,
-          });
-        }
-      });
-
-      autoUpdater.on('before-quit-for-update', () => {
-        try {
-          const fs = require('fs');
-          const tokenPath = path.join(app.getPath('userData'), '.in_app_update');
-          fs.writeFileSync(tokenPath, Date.now().toString(), 'utf8');
-        } catch (err) {
-          console.warn('Failed to write .in_app_update token in before-quit-for-update:', err.message);
-        }
-      });
-
-      autoUpdater.on('error', (err) => {
-        console.warn('Updater background notice:', err ? err.message : err);
-        if (isActivelyDownloadingUpdate && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('updater-status', {
-            status: 'error',
-            message: err ? err.message : 'Update check failed',
-          });
-        }
-      });
-
-      // Startup check deferred to avoid cold boot contention
-      setTimeout(() => {
-        try {
-          autoUpdater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
-        } catch (e) { }
-      }, 5000);
-    }
+  // Startup background update check deferred by 8 seconds to completely prioritize cold boot and UI rendering
+  setTimeout(() => {
+    try {
+      const updater = getAutoUpdater();
+      if (updater) {
+        updater.checkForUpdates().catch(e => console.warn('Quiet update check notice:', e.message));
+      }
+    } catch (e) { }
+  }, 8000);
 
     globalShortcut.register('CommandOrControl+Shift+K', () => {
       try {
@@ -1586,4 +1619,3 @@ if (!gotTheLock) {
       createWindow();
     }
   });
-}

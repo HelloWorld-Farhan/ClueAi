@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Target Release Tag'
         required: false
-        default: 'v5.9.4'
+        default: 'v5.9.5'
 
 permissions:
   contents: write
@@ -122,7 +122,7 @@ jobs:
             action = "broadcast_update"
             version = $ver
             app_version = $ver
-            highlights = "Guaranteed instant update relaunch, NSIS silent installer execution hooks, interactive HTML session exports with custom Clue AI atom favicon, and high-contrast email delivery."
+            highlights = "Turbocharged instant startup architecture, instant single-instance check, tuned V8 bytecode caching, lazy-loaded subsystems, and Vite code-splitting."
           }
           $payload = $payloadObj | ConvertTo-Json
           try {

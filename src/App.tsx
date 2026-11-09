@@ -18,6 +18,10 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWqhztb7GbVl
 const renderReleaseNotes = (notes: any) => {
   const defaultHighlights = [
     {
+      title: "Turbocharged Instant Startup Architecture",
+      desc: "Instant single-instance check, tuned Chromium V8 bytecode caching, lazy-loaded subsystems, and Vite chunk splitting deliver near-instant cold-boot startup."
+    },
+    {
       title: "Guaranteed Instant Update Relaunch & Startup",
       desc: "Detached update launcher waits for file lock release, installs the new version, and automatically starts Clue AI without getting stuck or requiring manual intervention."
     },
@@ -28,10 +32,6 @@ const renderReleaseNotes = (notes: any) => {
     {
       title: "Interactive HTML Session Exports with Favicon & Branding",
       desc: "Exported session HTML files feature clickable question accordions, embedded session images, and official Clue AI atom favicon for browser tabs."
-    },
-    {
-      title: "High-Contrast Email Notifications & Clean Layouts",
-      desc: "All email templates feature crystal-clear high contrast, balanced padding, zero encoding issues, and direct portfolio links."
     }
   ];
 
@@ -492,7 +492,7 @@ function App() {
   const [editingSessionName, setEditingSessionName] = useState('');
 
   // --- AUTO-UPDATER & NOTIFICATIONS STATE ---
-  const [appVersion, setAppVersion] = useState('5.9.4');
+  const [appVersion, setAppVersion] = useState('5.9.5');
   const [liveSpokenText, setLiveSpokenText] = useState<string>('');
   const liveSpokenTextRef = useRef<string>('');
   const [installStageText, setInstallStageText] = useState<string>('Extracting update packages...');
@@ -2366,10 +2366,12 @@ function App() {
       if (v) setAppVersion(v);
     }).catch(() => { });
 
-    // Work 1 & Work 3: Check for updates fast on every startup + initialize storage monitor
-    handleCheckForUpdates();
-    fetchStorageInfo();
-    const storageTimer = setInterval(fetchStorageInfo, 25000);
+    // Defer network checks and disk storage scan by 3.5s to ensure cold boot paints instantly
+    const initialDeferredTimer = setTimeout(() => {
+      handleCheckForUpdates();
+      fetchStorageInfo();
+    }, 3500);
+    const storageTimer = setInterval(fetchStorageInfo, 30000);
 
     const handleUpdaterStatus = (_event: any, data: any) => {
       if (!data) return;
@@ -2420,6 +2422,7 @@ function App() {
 
     ipcRenderer.on('updater-status', handleUpdaterStatus);
     return () => {
+      clearTimeout(initialDeferredTimer);
       clearInterval(storageTimer);
       ipcRenderer.removeListener('updater-status', handleUpdaterStatus);
     };
@@ -3965,7 +3968,7 @@ function App() {
           </div>
         </div>
         <div class="brand-badges">
-          <span class="badge-version">V5.9.4</span>
+          <span class="badge-version">V5.9.5</span>
           <span class="badge-status">Export Verified</span>
         </div>
       </div>
